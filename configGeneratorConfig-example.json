@@ -1,0 +1,11 @@
+{
+  "service": "config-generator",
+  "config": {
+    "tenant": "default",
+    "qwc2_themes_config_file": "../qwc-docker/volumes/qwc2/themesConfig-example.json",
+    "config_db_url": "postgresql:///?service=qwc_configdb",
+    "config_path": "../qwc-docker/demo-config/"
+  },
+  "services": [
+  ]
+}
