@@ -4,6 +4,12 @@ from datetime import datetime
 import json
 import os
 
+import jsonschema
+import requests
+
+from capabilities_reader import CapabilitiesReader
+from ogc_service_config import OGCServiceConfig
+
 
 class Logger():
     """Simple logger class"""
@@ -44,6 +50,19 @@ class ConfigGenerator():
         self.logger.info("Using tenant '%s'" % self.tenant)
         self.config_path = generator_config.get('config_path', '/tmp/')
 
+        # load capabilites for all QWC2 theme items
+        capabilities_reader = CapabilitiesReader(
+            generator_config, self.logger
+        )
+        capabilities_reader.load_all_project_settings()
+
+        # create service config handlers
+        self.config_handler = {
+            'ogc': OGCServiceConfig(
+                generator_config, capabilities_reader, self.logger
+            )
+        }
+
         try:
             # check tenant dir
             tenant_path = os.path.join(self.config_path, self.tenant)
@@ -66,8 +85,28 @@ class ConfigGenerator():
 
         :param obj service_config: Additional service config
         """
-        # TODO: generate service configs
-        pass
+        service = service_config['name']
+        config_handler = self.config_handler.get(service)
+        if config_handler:
+            # generate service config
+            config = config_handler.config(service_config)
+
+            # validate JSON schema
+            if self.validate_schema(config, config_handler.schema):
+                self.logger.info(
+                    "'%s' service config validates against schema" % service
+                )
+            else:
+                self.logger.error(
+                    "'%s' service config failed schema validation" % service
+                )
+
+            # write service config file
+            filename = '%sConfig.json' % config_handler.service_name
+            self.logger.info("Writing '%s' service config file" % filename)
+            self.write_json_file(config, filename)
+        else:
+            self.logger.warning("Service '%s' not found" % service)
 
     def write_permissions(self):
         """Generate and save service permissions."""
@@ -93,6 +132,86 @@ class ConfigGenerator():
             self.logger.error(
                 "Could not write '%s' config file:\n%s" % (filename, e)
             )
+
+    def validate_schema(self, config, schema_url):
+        """Validate config against its JSON schema.
+
+        :param OrderedDict config: Config data
+        :param str schema_url: JSON schema URL
+        """
+        # download JSON schema
+        response = requests.get(schema_url)
+        if response.status_code != requests.codes.ok:
+            self.logger.error(
+                "Could not download JSON schema from %s:\n%s" %
+                (schema_url, response.text)
+            )
+            return False
+
+        # parse JSON
+        try:
+            schema = json.loads(response.text)
+        except Exception as e:
+            self.logger.error("Could not parse JSON schema:\n%s" % e)
+            return False
+
+        # validate against schema
+        valid = True
+        validator = jsonschema.validators.validator_for(schema)(schema)
+        for error in validator.iter_errors(config):
+            valid = False
+
+            # collect error messages
+            messages = [
+                e.message for e in error.context
+            ]
+            if not messages:
+                messages = [error.message]
+
+            # collect path to concerned subconfig
+            # e.g. ['resources', 'wms_services', 0]
+            #      => ".resources.wms_services[0]"
+            path = ""
+            for p in error.absolute_path:
+                if isinstance(p, int):
+                    path += "[%d]" % p
+                else:
+                    path += ".%s" % p
+
+            # get concerned subconfig
+            instance = error.instance
+            if isinstance(error.instance, dict):
+                # get first level of properties of concerned subconfig
+                instance = OrderedDict()
+                for key, value in error.instance.items():
+                    if isinstance(value, dict) and value.keys():
+                        first_value_key = list(value.keys())[0]
+                        instance[key] = {
+                            first_value_key: '...'
+                        }
+                    elif isinstance(value, list):
+                        instance[key] = ['...']
+                    else:
+                        instance[key] = value
+
+            # log errors
+            message = ""
+            if len(messages) == 1:
+                message = "Validation error: %s" % messages[0]
+            else:
+                message = "\nValidation errors:\n"
+                for msg in messages:
+                    message += "  * %s\n" % msg
+            self.logger.error(message)
+            self.logger.warning("Location: %s" % path)
+            self.logger.warning(
+                "Value: %s" %
+                json.dumps(
+                    instance, sort_keys=False, indent=2, ensure_ascii=False
+                )
+            )
+
+        return valid
 
 
 # command line interface
