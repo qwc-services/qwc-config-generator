@@ -136,9 +136,17 @@ class CapabilitiesReader():
             capabilities['name'] = service_name
             capabilities['wms_url'] = full_url
 
+            # collect internal print layers
+            internal_print_layers = [
+                bg_layer.get('printLayer') for bg_layer
+                in item.get('backgroundLayers', [])
+                if 'printLayer' in bg_layer
+            ]
+
+            # collect WMS layers
             default_root_name = urlparse(full_url).path.split('/')[-1]
             capabilities['root_layer'] = self.collect_wms_layers(
-                root_layer, ns, np, default_root_name
+                root_layer, internal_print_layers, ns, np, default_root_name
             )
 
             # collect print templates
@@ -150,12 +158,6 @@ class CapabilitiesReader():
             if print_templates:
                 capabilities['print_templates'] = print_templates
 
-            # collect internal print layers
-            internal_print_layers = [
-                bg_layer.get('printLayer') for bg_layer
-                in item.get('backgroundLayers', [])
-                if 'printLayer' in bg_layer
-            ]
             if internal_print_layers:
                 capabilities['internal_print_layers'] = internal_print_layers
 
@@ -200,11 +202,14 @@ class CapabilitiesReader():
 
         return service_name
 
-    def collect_wms_layers(self, layer, ns, np, fallback_name=""):
+    def collect_wms_layers(self, layer, internal_print_layers, ns, np,
+                           fallback_name=""):
         """Recursively collect layer info for layer subtree from
         WMS GetProjectSettings.
 
         :param Element layer: GetProjectSettings layer node
+        :param list(str) internal_print_layers: List of internal print layers
+                                                to filter
         :param obj ns: Namespace dict
         :param str np: Namespace prefix
         :param str fallback_name: Layer name if empty in GetProjectSettings
@@ -228,7 +233,16 @@ class CapabilitiesReader():
         group_layers = []
         for sub_layer in layer.findall('%sLayer' % np, ns):
             sub_layer_name = sub_layer.find('%sName' % np, ns).text
-            group_layers.append(self.collect_wms_layers(sub_layer, ns, np))
+
+            if sub_layer_name in internal_print_layers:
+                # skip internal print layers
+                continue
+
+            group_layers.append(
+                self.collect_wms_layers(
+                    sub_layer, internal_print_layers, ns, np
+                )
+            )
 
         if group_layers:
             # group layer
