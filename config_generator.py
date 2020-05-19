@@ -7,8 +7,11 @@ import os
 import jsonschema
 import requests
 
+from qwc_services_core.config_models import ConfigModels
+from qwc_services_core.database import DatabaseEngine
 from capabilities_reader import CapabilitiesReader
 from ogc_service_config import OGCServiceConfig
+from permissions_config import PermissionsConfig
 
 
 class Logger():
@@ -49,6 +52,21 @@ class ConfigGenerator():
         self.tenant = generator_config.get('tenant', 'default')
         self.logger.info("Using tenant '%s'" % self.tenant)
         self.config_path = generator_config.get('config_path', '/tmp/')
+
+        try:
+            # load ORM models for ConfigDB
+            config_db_url = generator_config.get(
+                'config_db_url', 'postgresql:///?service=qwc_configdb'
+            )
+            db_engine = DatabaseEngine()
+            self.config_models = ConfigModels(db_engine, config_db_url)
+        except Exception as e:
+            msg = (
+                "Could not load ConfigModels for ConfigDB at '%s':\n%s" %
+                (config_db_url, e)
+            )
+            self.logger.error(msg)
+            raise Exception(msg)
 
         # load capabilites for all QWC2 theme items
         capabilities_reader = CapabilitiesReader(
@@ -110,8 +128,30 @@ class ConfigGenerator():
 
     def write_permissions(self):
         """Generate and save service permissions."""
-        # TODO: collect service permissions
-        permissions = {}
+        permissions_config = PermissionsConfig(self.config_models, self.logger)
+        permissions = permissions_config.base_config()
+
+        # collect service permissions
+        for service_config in self.config.get('services', []):
+            service = service_config['name']
+            config_handler = self.config_handler.get(service)
+            if config_handler:
+                self.logger.info(
+                    "Collecting '%s' service permissions" % service
+                )
+                for role in permissions['roles']:
+                    permissions_config.merge_service_permissions(
+                        role['permissions'],
+                        config_handler.permissions(role['role'])
+                    )
+            else:
+                self.logger.warning("Service '%s' not found" % service)
+
+        # validate JSON schema
+        if self.validate_schema(permissions, permissions_config.schema):
+            self.logger.info("Service permissions validate against schema")
+        else:
+            self.logger.error("Service permissions failed schema validation")
 
         self.logger.info("Writing 'permissions.json' permissions file")
         self.write_json_file(permissions, 'permissions.json')
