@@ -84,6 +84,9 @@ class CapabilitiesReader():
         try:
             # get GetProjectSettings
             full_url = urljoin(self.default_qgis_server_url, url)
+            self.logger.info(
+                "Downloading GetProjectSettings from %s" % full_url
+            )
             response = requests.get(
                 full_url,
                 params={
