@@ -74,10 +74,16 @@ class ConfigGenerator():
         )
         capabilities_reader.load_all_project_settings()
 
+        # lookup for additional service configs by name
+        self.service_configs = {}
+        for service_config in self.config.get('services', []):
+            self.service_configs[service_config['name']] = service_config
+
         # create service config handlers
         self.config_handler = {
             'ogc': OGCServiceConfig(
-                generator_config, capabilities_reader, self.logger
+                generator_config, capabilities_reader,
+                self.service_config('ogc'), self.logger
             )
         }
 
@@ -93,21 +99,27 @@ class ConfigGenerator():
         except Exception as e:
             self.logger.error("Could not create tenant dir:\n%s" % e)
 
+    def service_config(self, service):
+        """Return any additional service config for service.
+
+        :param str service: Service name
+        """
+        return self.service_configs.get(service, {})
+
     def write_configs(self):
         """Generate and save service config files."""
-        for service in self.config.get('services', []):
-            self.write_service_config(service)
+        for service_config in self.config.get('services', []):
+            self.write_service_config(service_config['name'])
 
-    def write_service_config(self, service_config):
+    def write_service_config(self, service):
         """Write service config file as JSON.
 
-        :param obj service_config: Additional service config
+        :param str service: Service name
         """
-        service = service_config['name']
         config_handler = self.config_handler.get(service)
         if config_handler:
             # generate service config
-            config = config_handler.config(service_config)
+            config = config_handler.config()
 
             # validate JSON schema
             if self.validate_schema(config, config_handler.schema):

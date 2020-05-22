@@ -9,16 +9,19 @@ class OGCServiceConfig(ServiceConfig):
     Generate OGC service config and permissions.
     """
 
-    def __init__(self, generator_config, capabilities_reader, logger):
+    def __init__(self, generator_config, capabilities_reader, service_config,
+                 logger):
         """Constructor
 
         :param obj generator_config: ConfigGenerator config
         :param CapabilitiesReader capabilities_reader: CapabilitiesReader
+        :param obj service_config: Additional service config
         :param Logger logger: Logger
         """
         super().__init__(
             'ogc',
             'https://raw.githubusercontent.com/qwc-services/qwc-ogc-service/v2/schemas/qwc-ogc-service.json',
+            service_config,
             logger
         )
 
@@ -29,16 +32,13 @@ class OGCServiceConfig(ServiceConfig):
 
         self.capabilities_reader = capabilities_reader
 
-    def config(self, service_config):
-        """Return service config.
-
-        :param obj service_config: Additional service config
-        """
+    def config(self):
+        """Return service config."""
         # get base config
-        config = super().config(service_config)
+        config = super().config()
 
         # additional service config
-        cfg_config = service_config.get('config', {})
+        cfg_config = self.service_config.get('config', {})
         if 'default_qgis_server_url' not in cfg_config:
             # use default QGIS server URL from ConfigGenerator config
             # if not set in service config
@@ -51,7 +51,7 @@ class OGCServiceConfig(ServiceConfig):
         config['resources'] = resources
 
         # collect resources from capabilities
-        resources['wms_services'] = self.wms_services(service_config)
+        resources['wms_services'] = self.wms_services()
         # TODO: WFS service resources
         resources['wfs_services'] = []
 
@@ -71,15 +71,12 @@ class OGCServiceConfig(ServiceConfig):
 
         return permissions
 
-    def wms_services(self, service_config):
-        """Collect WMS service resources from capabilities.
-
-        :param obj service_config: Additional service config
-        """
+    def wms_services(self):
+        """Collect WMS service resources from capabilities."""
         wms_services = []
 
         # additional service config
-        cfg_resources = service_config.get('resources', {})
+        cfg_resources = self.service_config.get('resources', {})
         cfg_wms_services = cfg_resources.get('wms_services', [])
 
         for service_name in self.capabilities_reader.wms_service_names():
