@@ -101,7 +101,9 @@ class OGCServiceConfig(ServiceConfig):
             )
 
             if 'print_templates' in cap:
-                wms_service['print_templates'] = cap['print_templates']
+                wms_service['print_templates'] = [
+                    template['name'] for template in cap['print_templates']
+                ]
             if 'internal_print_layers' in cap:
                 wms_service['internal_print_layers'] = \
                     cap['internal_print_layers']
@@ -169,7 +171,9 @@ class OGCServiceConfig(ServiceConfig):
             # print templates
             print_templates = cap.get('print_templates', [])
             if print_templates:
-                wms_permissions['print_templates'] = print_templates
+                wms_permissions['print_templates'] = [
+                    template['name'] for template in print_templates
+                ]
 
             if layers or print_templates:
                 permissions.append(wms_permissions)

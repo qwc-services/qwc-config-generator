@@ -152,12 +152,15 @@ class CapabilitiesReader():
                 root_layer, internal_print_layers, ns, np, default_root_name
             )
 
-            # collect print templates
-            print_templates = []
-            for template in root.findall('.//%sComposerTemplate' % np, ns):
-                template_name = template.get('name')
-                print_templates.append(template_name)
+            # get drawing order
+            drawing_order = root.find(
+                '%sCapability/%sLayerDrawingOrder' % (np, np), ns
+            )
+            if drawing_order is not None:
+                capabilities['drawing_order'] = drawing_order.text.split(',')
 
+            # collect print templates
+            print_templates = self.print_templates(root, np, ns)
             if print_templates:
                 capabilities['print_templates'] = print_templates
 
@@ -265,6 +268,53 @@ class CapabilitiesReader():
             if attributes:
                 wms_layer['attributes'] = attributes
 
+        wms_layer['visible'] = layer.get('visible') == '1'
         wms_layer['queryable'] = layer.get('queryable') == '1'
+        if wms_layer['queryable'] and layer.get('displayField'):
+            wms_layer['display_field'] = layer.get('displayField')
+
+        # NOTE: get geographic bounding box, as default CRS may have
+        #       inverted axis order with WMS 1.3.0
+        bbox = layer.find('%sEX_GeographicBoundingBox' % np, ns)
+        if bbox is not None:
+            wms_layer['bbox'] = [
+                float(bbox.find('%swestBoundLongitude' % np, ns).text),
+                float(bbox.find('%ssouthBoundLatitude' % np, ns).text),
+                float(bbox.find('%seastBoundLongitude' % np, ns).text),
+                float(bbox.find('%snorthBoundLatitude' % np, ns).text)
+            ]
 
         return wms_layer
+
+    def print_templates(self, root, np, ns):
+        """Collect print templates from WMS GetProjectSettings.
+
+        :param Element root: GetProjectSettings root node
+        :param obj ns: Namespace dict
+        :param str np: Namespace prefix
+        """
+        print_templates = []
+        for template in root.findall('.//%sComposerTemplate' % np, ns):
+            template_name = template.get('name')
+
+            # NOTE: use ordered keys
+            print_template = OrderedDict()
+            print_template['name'] = template.get('name')
+
+            composer_map = template.find('%sComposerMap' % np, ns)
+            if composer_map is not None:
+                print_map = OrderedDict()
+                print_map['name'] = composer_map.get('name')
+                print_map['width'] = float(composer_map.get('width'))
+                print_map['height'] = float(composer_map.get('height'))
+                print_template['map'] = print_map
+
+            labels = []
+            for label in template.findall('%sComposerLabel' % np, ns):
+                labels.append(label.get('name'))
+            if labels:
+                print_template['labels'] = labels
+
+            print_templates.append(print_template)
+
+        return print_templates

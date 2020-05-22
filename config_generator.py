@@ -10,6 +10,7 @@ import requests
 from qwc_services_core.config_models import ConfigModels
 from qwc_services_core.database import DatabaseEngine
 from capabilities_reader import CapabilitiesReader
+from map_viewer_config import MapViewerConfig
 from ogc_service_config import OGCServiceConfig
 from permissions_config import PermissionsConfig
 
@@ -84,6 +85,10 @@ class ConfigGenerator():
             'ogc': OGCServiceConfig(
                 generator_config, capabilities_reader,
                 self.service_config('ogc'), self.logger
+            ),
+            'mapViewer': MapViewerConfig(
+                capabilities_reader, self.service_config('mapViewer'),
+                self.logger
             )
         }
 
@@ -206,6 +211,30 @@ class ConfigGenerator():
         except Exception as e:
             self.logger.error("Could not parse JSON schema:\n%s" % e)
             return False
+
+        # FIXME: remove external schema refs from MapViewer schema for now
+        #        until QWC2 JSON schemas are available
+        if config.get('service') == 'map-viewer':
+            self.logger.warning(
+                "Removing external QWC2 schema refs from MapViewer JSON schema"
+            )
+            resources = schema['properties']['resources']['properties']
+            # QWC2 application configuration as simple dict
+            resources['qwc2_config']['properties']['config'] = {
+                'type': 'object'
+            }
+            # QWC2 themes configuration as simple dict with 'themes'
+            resources['qwc2_themes'] = {
+                'type': 'object',
+                'properties': {
+                    'themes': {
+                        'type': 'object'
+                    }
+                },
+                'required': [
+                    'themes'
+                ]
+            }
 
         # validate against schema
         valid = True

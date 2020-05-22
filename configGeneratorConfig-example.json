@@ -22,6 +22,29 @@
           }
         }
       }
+    },
+    {
+      "name": "mapViewer",
+      "generator_config": {
+        "qwc2_config": {
+          "qwc2_config_file": "../qwc-docker/volumes/qwc2/config.json"
+        }
+      },
+      "config": {
+        "qwc2_path": "/qwc2/",
+        "auth_service_url": "/auth/",
+        "data_service_url": "/api/v1/data/",
+        "#document_service_url": "/api/v1/document/",
+        "elevation_service_url": "/elevation/",
+        "#info_service_url": "/api/v1/featureinfo/",
+        "#legend_service_url": "/api/v1/legend/",
+        "mapinfo_service_url": "/api/v1/mapinfo/",
+        "ogc_service_url": "/ows/",
+        "permalink_service_url": "/api/v1/permalink/",
+        "#print_service_url": "/api/v1/print/",
+        "search_data_service_url": "/api/v1/data/",
+        "search_service_url": "/api/v2/search/"
+      }
     }
   ]
 }
