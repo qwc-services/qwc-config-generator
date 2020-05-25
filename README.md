@@ -62,10 +62,53 @@ Example `configGeneratorConfig.json`:
         "search_data_service_url": "/api/v1/data/",
         "search_service_url": "/api/v2/search/"
       }
+    },
+    {
+      "name": "search",
+      "config": {
+        "solr_service_url": "http://qwc-solr:8983/solr/gdi/select",
+        "search_result_limit": 50,
+        "db_url": "postgresql:///?service=qwc_geodb"
+      },
+      "resources": {
+        "facets": [
+          {
+            "name": "background",
+            "filter_word": "Background"
+          },
+          {
+            "name": "foreground",
+            "filter_word": "Map"
+          },
+          {
+            "name": "ne_10m_admin_0_countries",
+            "filter_word": "Country",
+            "table_name": "qwc_geodb.search_v",
+            "geometry_column": "geom",
+            "facet_column": "subclass"
+          }
+        ]
+      },
+      "permissions": [
+        {
+          "role": "public",
+          "permissions": {
+            "dataproducts": [
+              "qwc_demo"
+            ],
+            "solr_facets": [
+              "foreground",
+              "ne_10m_admin_0_countries"
+            ]
+          }
+        }
+      ]
     }
   ]
 }
 ```
+
+*NOTE:* the Search service config takes its resources and permissions directly from the ConfigGenerator config
 
 For a full example see [configGeneratorConfig-example.json](configGeneratorConfig-example.json).
 

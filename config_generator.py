@@ -13,6 +13,7 @@ from capabilities_reader import CapabilitiesReader
 from map_viewer_config import MapViewerConfig
 from ogc_service_config import OGCServiceConfig
 from permissions_config import PermissionsConfig
+from search_service_config import SearchServiceConfig
 from service_config import ServiceConfig
 
 
@@ -91,6 +92,9 @@ class ConfigGenerator():
             'mapViewer': MapViewerConfig(
                 capabilities_reader, self.service_config('mapViewer'),
                 self.logger
+            ),
+            'search': SearchServiceConfig(
+                self.service_config('search'), self.logger
             ),
 
             # config-only services
