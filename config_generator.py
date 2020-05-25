@@ -13,6 +13,7 @@ from capabilities_reader import CapabilitiesReader
 from map_viewer_config import MapViewerConfig
 from ogc_service_config import OGCServiceConfig
 from permissions_config import PermissionsConfig
+from service_config import ServiceConfig
 
 
 class Logger():
@@ -82,6 +83,7 @@ class ConfigGenerator():
 
         # create service config handlers
         self.config_handler = {
+            # services with resources
             'ogc': OGCServiceConfig(
                 generator_config, capabilities_reader,
                 self.service_config('ogc'), self.logger
@@ -89,6 +91,33 @@ class ConfigGenerator():
             'mapViewer': MapViewerConfig(
                 capabilities_reader, self.service_config('mapViewer'),
                 self.logger
+            ),
+
+            # config-only services
+            'adminGui': ServiceConfig(
+                'adminGui',
+                'https://raw.githubusercontent.com/qwc-services/qwc-admin-gui/master/schemas/qwc-admin-gui.json',
+                self.service_config('adminGui'), self.logger, 'admin-gui'
+            ),
+            'dbAuth': ServiceConfig(
+                'dbAuth',
+                'https://raw.githubusercontent.com/qwc-services/qwc-db-auth/master/schemas/qwc-db-auth.json',
+                self.service_config('dbAuth'), self.logger, 'db-auth'
+            ),
+            'elevation': ServiceConfig(
+                'elevation',
+                'https://github.com/qwc-services/qwc-elevation-service/raw/master/schemas/qwc-elevation-service.json',
+                self.service_config('elevation'), self.logger
+            ),
+            'mapinfo': ServiceConfig(
+                'mapinfo',
+                'https://raw.githubusercontent.com/qwc-services/qwc-mapinfo-service/master/schemas/qwc-mapinfo-service.json',
+                self.service_config('mapinfo'), self.logger
+            ),
+            'permalink': ServiceConfig(
+                'permalink',
+                'https://raw.githubusercontent.com/qwc-services/qwc-permalink-service/master/schemas/qwc-permalink-service.json',
+                self.service_config('permalink'), self.logger
             )
         }
 

@@ -45,6 +45,46 @@
         "search_data_service_url": "/api/v1/data/",
         "search_service_url": "/api/v2/search/"
       }
+    },
+    {
+      "name": "adminGui",
+      "config": {
+        "db_url": "postgresql:///?service=qwc_configdb",
+        "totp_enabled": false,
+        "user_info_fields": [],
+        "proxy_url_whitelist": [],
+        "proxy_timeout": 60
+      }
+    },
+    {
+      "name": "dbAuth",
+      "config": {
+        "db_url": "postgresql:///?service=qwc_configdb"
+      }
+    },
+    {
+      "name": "elevation",
+      "config": {
+        "elevation_dataset": "/vsicurl/https://data.sourcepole.com/srtm_1km_3857.tif"
+      }
+    },
+    {
+      "name": "mapinfo",
+      "config": {
+        "db_url": "postgresql:///?service=qwc_geodb",
+        "info_table": "qwc_geodb.ne_10m_admin_0_countries",
+        "info_geom_col": "wkb_geometry",
+        "info_display_col": "name",
+        "info_title": "Country"
+      }
+    },
+    {
+      "name": "permalink",
+      "config": {
+        "db_url": "postgresql:///?service=qwc_configdb",
+        "permalinks_table": "qwc_config.permalinks",
+        "user_permalink_table": "qwc_config.user_permalinks"
+      }
     }
   ]
 }
