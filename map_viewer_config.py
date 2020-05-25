@@ -138,11 +138,17 @@ class MapViewerConfig(ServiceConfig):
         themes['subdirs'] = groups
 
         themes['defaultTheme'] = self.default_theme
-        themes['externalLayers'] = themes_config.get('externalLayers', [])
-        themes['backgroundLayers'] = themes_config.get('backgroundLayers', [])
+        themes['externalLayers'] = themes_config_themes.get(
+            'externalLayers', []
+        )
+        themes['backgroundLayers'] = themes_config_themes.get(
+            'backgroundLayers', []
+        )
 
-        themes['pluginData'] = themes_config.get('pluginData', [])
-        themes['themeInfoLinks'] = themes_config.get('themeInfoLinks', [])
+        themes['pluginData'] = themes_config_themes.get('pluginData', [])
+        themes['themeInfoLinks'] = themes_config_themes.get(
+            'themeInfoLinks', []
+        )
 
         themes['defaultWMSVersion'] = themes_config.get(
             'defaultWMSVersion', '1.3.0'
