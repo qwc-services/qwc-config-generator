@@ -76,8 +76,8 @@ class OGCServiceConfig(ServiceConfig):
         wms_services = []
 
         # additional service config
-        cfg_resources = self.service_config.get('resources', {})
-        cfg_wms_services = cfg_resources.get('wms_services', [])
+        cfg_generator_config = self.service_config.get('generator_config', {})
+        cfg_wms_services = cfg_generator_config.get('wms_services', [])
 
         for service_name in self.capabilities_reader.wms_service_names():
             cap = self.capabilities_reader.wms_capabilities.get(service_name)

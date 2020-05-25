@@ -27,10 +27,7 @@ Example `configGeneratorConfig.json`:
   "services": [
     {
       "name": "ogc",
-      "config": {
-        "default_qgis_server_url": "http://qwc-qgis-server/ows/"
-      },
-      "resources": {
+      "generator_config": {
         "wms_services": {
           "online_resources": {
             "service": "http://localhost:8088/ows/",
@@ -38,6 +35,9 @@ Example `configGeneratorConfig.json`:
             "legend": "http://localhost:8088/ows/"
           }
         }
+      },
+      "config": {
+        "default_qgis_server_url": "http://qwc-qgis-server/ows/"
       }
     },
     {
