@@ -57,7 +57,9 @@ class MapViewerConfig(ServiceConfig):
 
         # TODO: collect permissions from ConfigDB
         permissions['wms_services'] = []
-        permissions['background_layers'] = []
+        permissions['background_layers'] = self.permitted_background_layers(
+            role
+        )
         permissions['data_datasets'] = []
 
         return permissions
@@ -400,3 +402,27 @@ class MapViewerConfig(ServiceConfig):
             # TODO: featureReport
 
         return item_layer
+
+    # permissions
+
+    def permitted_background_layers(self, role):
+        """Return permitted internal print layers for background layers from
+        capabilities and ConfigDB.
+
+        :param str role: Role name
+        """
+        background_layers = []
+
+        # TODO: get permissions and restrictions from ConfigDB
+        #       everything permitted to public role for now
+        if role != 'public':
+            return []
+
+        # QWC2 themes config
+        themes_config = self.capabilities_reader.themes_config
+        themes_config_themes = themes_config.get('themes', {})
+
+        for bg_layer in themes_config_themes.get('backgroundLayers', []):
+            background_layers.append(bg_layer.get('name'))
+
+        return background_layers
