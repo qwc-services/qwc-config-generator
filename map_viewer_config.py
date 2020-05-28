@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import json
+import os
 
 from service_config import ServiceConfig
 
@@ -10,9 +11,11 @@ class MapViewerConfig(ServiceConfig):
     Generate Map Viewer service config and permissions.
     """
 
-    def __init__(self, capabilities_reader, service_config, logger):
+    def __init__(self, tenant_path, capabilities_reader, service_config,
+                 logger):
         """Constructor
 
+        :param str tenant_path: Path to config files of tenant
         :param CapabilitiesReader capabilities_reader: CapabilitiesReader
         :param obj service_config: Additional service config
         :param Logger logger: Logger
@@ -24,6 +27,7 @@ class MapViewerConfig(ServiceConfig):
             logger
         )
 
+        self.tenant_path = tenant_path
         self.capabilities_reader = capabilities_reader
 
         # keep track of theme IDs for uniqueness
@@ -44,6 +48,9 @@ class MapViewerConfig(ServiceConfig):
         # collect resources from QWC2 config and capabilities
         resources['qwc2_config'] = self.qwc2_config()
         resources['qwc2_themes'] = self.qwc2_themes()
+
+        # copy index.html
+        self.copy_index_html()
 
         return config
 
@@ -414,6 +421,29 @@ class MapViewerConfig(ServiceConfig):
             # TODO: featureReport
 
         return item_layer
+
+    def copy_index_html(self):
+        """Copy index.html to tenant dir."""
+
+        # copy index.html
+        # additional service config
+        cfg_generator_config = self.service_config.get('generator_config', {})
+        cfg_qwc2_config = cfg_generator_config.get('qwc2_config', {})
+
+        self.logger.info("Copying 'index.html' to tenant dir")
+        try:
+            # read index.html
+            index_file = cfg_qwc2_config.get('qwc2_index_file', 'index.html')
+            index_contents = None
+            with open(index_file) as f:
+                index_contents = f.read()
+
+            # write to tenant dir
+            target_path = os.path.join(self.tenant_path, 'index.html')
+            with open(target_path, 'w') as f:
+                f.write(index_contents)
+        except Exception as e:
+            self.logger.error("Could not copy QWC2 index.html:\n%s" % e)
 
     # permissions
 

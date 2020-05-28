@@ -55,6 +55,7 @@ class ConfigGenerator():
         self.tenant = generator_config.get('tenant', 'default')
         self.logger.info("Using tenant '%s'" % self.tenant)
         self.config_path = generator_config.get('config_path', '/tmp/')
+        tenant_path = os.path.join(self.config_path, self.tenant)
 
         try:
             # load ORM models for ConfigDB
@@ -90,8 +91,8 @@ class ConfigGenerator():
                 self.service_config('ogc'), self.logger
             ),
             'mapViewer': MapViewerConfig(
-                capabilities_reader, self.service_config('mapViewer'),
-                self.logger
+                tenant_path, capabilities_reader,
+                self.service_config('mapViewer'), self.logger
             ),
             'search': SearchServiceConfig(
                 self.service_config('search'), self.logger
@@ -127,7 +128,6 @@ class ConfigGenerator():
 
         try:
             # check tenant dir
-            tenant_path = os.path.join(self.config_path, self.tenant)
             if not os.path.isdir(tenant_path):
                 # create tenant dir
                 self.logger.info(

@@ -44,7 +44,8 @@ Example `configGeneratorConfig.json`:
       "name": "mapViewer",
       "generator_config": {
         "qwc2_config": {
-          "qwc2_config_file": "../qwc-docker/volumes/qwc2/config.json"
+          "qwc2_config_file": "../qwc-docker/volumes/qwc2/config.json",
+          "qwc2_index_file": "../qwc-docker/volumes/qwc2/index.html"
         }
       },
       "config": {
