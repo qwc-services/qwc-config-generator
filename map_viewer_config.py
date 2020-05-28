@@ -130,7 +130,9 @@ class MapViewerConfig(ServiceConfig):
         # collect theme items
         items = []
         for item in themes_config_themes.get('items', []):
-            items.append(self.theme_item(item))
+            theme_item = self.theme_item(item)
+            if theme_item is not None:
+                items.append(theme_item)
         themes['items'] = items
 
         # collect theme groups
@@ -178,7 +180,9 @@ class MapViewerConfig(ServiceConfig):
         # collect sub theme items
         items = []
         for item in cfg_group.get('items', []):
-            items.append(self.theme_item(item))
+            theme_item = self.theme_item(item)
+            if theme_item is not None:
+                items.append(theme_item)
         group['items'] = items
 
         # recursively collect sub theme groups
@@ -206,6 +210,13 @@ class MapViewerConfig(ServiceConfig):
         # get capabilities
         service_name = self.capabilities_reader.service_name(cfg_item['url'])
         cap = self.capabilities_reader.wms_capabilities.get(service_name)
+        if cap is None:
+            self.logger.warning(
+                "Skipping theme item '%s': Could not get capabilities for %s" %
+                (cfg_item.get('title', ""), cfg_item['url'])
+            )
+            return None
+
         root_layer = cap.get('root_layer', {})
 
         name = service_name
