@@ -173,6 +173,7 @@ class MapViewerConfig(ServiceConfig):
         """
         # NOTE: use ordered keys
         group = OrderedDict()
+        group['title'] = cfg_group.get('title')
 
         # collect sub theme items
         items = []
