@@ -1,6 +1,6 @@
 from collections import OrderedDict
 
-from service_config import ServiceConfig
+from .service_config import ServiceConfig
 
 
 class OGCServiceConfig(ServiceConfig):

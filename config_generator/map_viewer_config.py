@@ -2,7 +2,7 @@ from collections import OrderedDict
 import json
 import os
 
-from service_config import ServiceConfig
+from .service_config import ServiceConfig
 
 
 class MapViewerConfig(ServiceConfig):

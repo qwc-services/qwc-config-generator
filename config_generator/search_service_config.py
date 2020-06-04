@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import json
 
-from service_config import ServiceConfig
+from .service_config import ServiceConfig
 
 
 class SearchServiceConfig(ServiceConfig):

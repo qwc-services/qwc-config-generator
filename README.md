@@ -119,19 +119,19 @@ Usage
 
 Show command options:
 
-    python config_generator/config_generator.py --help
+    python config_generator_cli.py --help
 
 Generate both service configs and permissions:
 
-    python config_generator/config_generator.py ./configGeneratorConfig.json all
+    python config_generator_cli.py ./configGeneratorConfig.json all
 
 Generate service config files:
 
-    python config_generator/config_generator.py ./configGeneratorConfig.json service_configs
+    python config_generator_cli.py ./configGeneratorConfig.json service_configs
 
 Generate permissions file:
 
-    python config_generator/config_generator.py ./configGeneratorConfig.json permissions
+    python config_generator_cli.py ./configGeneratorConfig.json permissions
 
 
 Development
@@ -155,4 +155,4 @@ Run Demo-DB and QGIS Server:
 
 Generate service configs and permissions for Docker:
 
-    python config_generator/config_generator.py ./configGeneratorConfig-example.json all
+    python config_generator_cli.py ./configGeneratorConfig-example.json all
