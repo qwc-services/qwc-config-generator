@@ -13,9 +13,9 @@
       "generator_config": {
         "wms_services": {
           "online_resources": {
-            "service": "http://localhost:8088/ows/",
-            "feature_info": "http://localhost:8088/ows/",
-            "legend": "http://localhost:8088/ows/"
+            "service": "http://qwc-qgis-server/ows/",
+            "feature_info": "http://qwc-qgis-server/ows/",
+            "legend": "http://qwc-qgis-server/ows/"
           }
         }
       },
