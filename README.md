@@ -1,3 +1,6 @@
+[![](https://github.com/qwc-services/qwc-config-generator/workflows/build/badge.svg)](https://github.com/qwc-services/qwc-config-generator/actions)
+[![](https://img.shields.io/docker/pulls/sourcepole/qwc-config-generator)](https://hub.docker.com/r/sourcepole/qwc-config-generator)
+
 QWC Config Generator
 ====================
 
