@@ -1,7 +1,7 @@
 from collections import OrderedDict
 import os
 
-from flask import Flask, json
+from flask import Flask, json, request
 
 from config_generator.config_generator import ConfigGenerator
 
@@ -12,6 +12,10 @@ app = Flask(__name__)
 # get path to ConfigGenerator config file
 config_file = os.environ.get(
     'CONFIG_GENERATOR_CONFIG', 'configGeneratorConfig.json'
+)
+
+config_in_path = os.environ.get(
+    'INPUT_CONFIG_PATH', 'config-in/'
 )
 
 
@@ -35,6 +39,15 @@ def config_generator():
 @app.route("/generate_configs", methods=['POST'])
 def generate_configs():
     """Generate service configs and permissions."""
+    tenant_name = request.args.get("tenant")
+
+    if tenant_name:
+        global config_file
+        config_file = os.path.join(
+            config_in_path,
+            tenant_name,
+            "configGeneratorConfig.json")
+
     try:
         # create ConfigGenerator
         generator = config_generator()
@@ -48,6 +61,9 @@ def generate_configs():
         return {
             'error': str(e)
         }
+    finally:
+        config_file = os.environ.get(
+            'CONFIG_GENERATOR_CONFIG', 'configGeneratorConfig.json')
 
 
 # local webserver
