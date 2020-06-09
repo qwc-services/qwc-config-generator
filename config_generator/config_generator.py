@@ -53,7 +53,15 @@ class ConfigGenerator():
         generator_config = config.get('config', {})
         self.tenant = generator_config.get('tenant', 'default')
         self.logger.info("Using tenant '%s'" % self.tenant)
-        self.config_path = generator_config.get('config_path', '/tmp/')
+        # Set output config path for the generated configuration files.
+        # If `config_path` is not set in the configGeneratorConfig.json,
+        # then either use the `OUTPUT_CONFIG_PATH` ENV variable (if it is set)
+        # or default back to the `/tmp/` directory
+        self.config_path = generator_config.get(
+            'config_path',
+            os.environ.get(
+               'OUTPUT_CONFIG_PATH', '/tmp/'
+               ))
         tenant_path = os.path.join(self.config_path, self.tenant)
 
         try:
