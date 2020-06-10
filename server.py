@@ -58,9 +58,8 @@ def generate_configs():
             'message': "Finished writing service configs and permissions"
         }
     except Exception as e:
-        return {
-            'error': str(e)
-        }
+        return (str(e), 500)
+
     finally:
         config_file = os.environ.get(
             'CONFIG_GENERATOR_CONFIG', 'configGeneratorConfig.json')
