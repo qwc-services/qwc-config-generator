@@ -22,7 +22,7 @@ class MapViewerConfig(ServiceConfig):
         """
         super().__init__(
             'mapViewer',
-            'https://raw.githubusercontent.com/qwc-services/qwc-map-viewer/v2/schemas/qwc-map-viewer.json',
+            'https://raw.githubusercontent.com/qwc-services/qwc-map-viewer/master/schemas/qwc-map-viewer.json',
             service_config,
             logger
         )

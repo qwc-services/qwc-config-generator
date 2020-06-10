@@ -20,7 +20,7 @@ class OGCServiceConfig(ServiceConfig):
         """
         super().__init__(
             'ogc',
-            'https://raw.githubusercontent.com/qwc-services/qwc-ogc-service/v2/schemas/qwc-ogc-service.json',
+            'https://raw.githubusercontent.com/qwc-services/qwc-ogc-service/master/schemas/qwc-ogc-service.json',
             service_config,
             logger
         )
