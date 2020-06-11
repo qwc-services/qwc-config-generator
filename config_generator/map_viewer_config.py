@@ -306,6 +306,13 @@ class MapViewerConfig(ServiceConfig):
 
         self.set_optional_config(cfg_item, 'skipEmptyFeatureAttributes', item)
 
+        if "minSearchScaleDenom" in cfg_item.keys():
+            item["minSearchScaleDenom"] = cfg_item.get("minSearchScaleDenom")
+        elif "minSearchScale" in cfg_item.keys():  # Legacy name
+            item["minSearchScaleDenom"] = cfg_item.get("minSearchScale")
+
+        self.set_optional_config(cfg_item, "visibility", item)
+
         item['searchProviders'] = cfg_item.get('searchProviders', [])
 
         # TODO edit config
@@ -402,9 +409,10 @@ class MapViewerConfig(ServiceConfig):
             item_layer['sublayers'] = sublayers
 
             # TODO: expanded
-            item_layer['expanded'] = True
+            item_layer['expanded'] = layer.get("expanded")
 
             # TODO: mutuallyExclusive
+            item_layer["mutuallyExclusive"] = layer.get("mutuallyExclusive")
         else:
             # layer
             item_layer['visibility'] = layer['visible']
@@ -415,9 +423,15 @@ class MapViewerConfig(ServiceConfig):
             item_layer['opacity'] = 255
             if 'bbox' in layer:
                 item_layer['bbox'] = layer.get('bbox')
-
             # TODO: metadata
+
             # TODO: min/max scale
+            minScale = layer.get("minScale")
+            maxScale = layer.get("maxScale")
+            if minScale:
+                item_layer["minScale"] = int(float(minScale))
+            if maxScale:
+                item_layer["maxScale"] = int(float(maxScale))
             # TODO: featureReport
 
         return item_layer

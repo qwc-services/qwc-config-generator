@@ -252,6 +252,10 @@ class CapabilitiesReader():
 
         if group_layers:
             # group layer
+            wms_layer["expanded"] = layer.get(
+                'expanded') == '1'
+            wms_layer["mutuallyExclusive"] = layer.get(
+                'mutuallyExclusive') == '1'
             wms_layer['layers'] = group_layers
         else:
             # layer
@@ -268,7 +272,21 @@ class CapabilitiesReader():
             if attributes:
                 wms_layer['attributes'] = attributes
 
-        wms_layer['visible'] = layer.get('visible') == '1'
+        minScale = layer.find('%sMinScaleDenominator' % np, ns)
+        maxScale = layer.find('%sMaxScaleDenominator' % np, ns)
+        if minScale:
+            wms_layer["minScale"] = minScale.text
+        if maxScale:
+            wms_layer["maxScale"] = maxScale.text
+
+        if layer.get("geometryType") is None or \
+            layer.get("geometryType") == "WKBNoGeometry" or \
+                layer.get("geometryType") == "NoGeometry":
+
+            wms_layer['visible'] = False
+        else:
+            wms_layer['visible'] = layer.get('visible') == '1'
+
         wms_layer['queryable'] = layer.get('queryable') == '1'
         if wms_layer['queryable'] and layer.get('displayField'):
             wms_layer['display_field'] = layer.get('displayField')
