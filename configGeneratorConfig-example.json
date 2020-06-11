@@ -128,6 +128,10 @@
         "permalinks_table": "qwc_config.permalinks",
         "user_permalink_table": "qwc_config.user_permalinks"
       }
+    },
+    {
+      "name": "data",
+      "config": {}
     }
   ]
 }

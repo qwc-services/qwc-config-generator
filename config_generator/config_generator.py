@@ -13,6 +13,7 @@ from .map_viewer_config import MapViewerConfig
 from .ogc_service_config import OGCServiceConfig
 from .permissions_config import PermissionsConfig
 from .search_service_config import SearchServiceConfig
+from .data_service_config import DataServiceConfig
 from .service_config import ServiceConfig
 
 
@@ -26,6 +27,9 @@ class Logger():
 
     def warning(self, msg):
         print("[%s] \033[33mWARNING: %s\033[0m" % (self.timestamp(), msg))
+
+    def warn(self, msg):
+        self.warning(msg)
 
     def error(self, msg):
         print("[%s] \033[31mERROR: %s\033[0m" % (self.timestamp(), msg))
@@ -103,6 +107,9 @@ class ConfigGenerator():
             ),
             'search': SearchServiceConfig(
                 self.service_config('search'), self.logger
+            ),
+            'data': DataServiceConfig(
+                self.service_config('data'), self.config_models, self.logger
             ),
 
             # config-only services
