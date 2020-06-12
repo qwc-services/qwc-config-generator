@@ -88,8 +88,12 @@ class DataServiceConfig(ServiceConfig):
             self.logger.info("Reading '%s'" % qgs_name)
             if qgs_reader.read(qgs_name):
                 for layer_name in qgs_reader.pg_layers():
-                    meta = qgs_reader.layer_metadata(layer_name)
-                    self._lookup_attribute_data_types(meta)
+                    try:
+                        meta = qgs_reader.layer_metadata(layer_name)
+                        self._lookup_attribute_data_types(meta)
+                    except Exception as e:
+                        self.logger.error(e)
+                        continue
 
                     # NOTE: use ordered keys
                     dataset = OrderedDict()
