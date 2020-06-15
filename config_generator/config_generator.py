@@ -16,26 +16,85 @@ from .search_service_config import SearchServiceConfig
 from .data_service_config import DataServiceConfig
 from .service_config import ServiceConfig
 
+from logging import Logger as Log
 
-class Logger():
-    """Simple logger class"""
+
+class Logger:
+    """Logger class
+
+    Show and collect log entries.
+    """
+
+    LEVEL_DEBUG = 'debug'
+    LEVEL_INFO = 'info'
+    LEVEL_WARNING = 'warning'
+    LEVEL_ERROR = 'error'
+
+    def __init__(self, logger=None):
+        """Constructor
+
+        :param Logger logger: Logger
+        """
+        if logger:
+            self.logger = logger
+        else:
+            self.logger = Log("Config Generator")
+
+        self.logs = []
+
+    def clear(self):
+        """Clear log entries."""
+        self.logs = []
+
+    def log_entries(self):
+        """Return log entries."""
+        return self.logs
+
     def debug(self, msg):
-        print("[%s] \033[36mDEBUG: %s\033[0m" % (self.timestamp(), msg))
+        """Show debug log entry.
+
+        :param str msg: Log message
+        """
+        self.logger.debug(msg)
+        # do not collect debug entries
 
     def info(self, msg):
-        print("[%s] INFO: %s" % (self.timestamp(), msg))
+        """Add info log entry.
+
+        :param str msg: Log message
+        """
+        self.logger.info(msg)
+        self.add_log_entry(msg, self.LEVEL_INFO)
 
     def warning(self, msg):
-        print("[%s] \033[33mWARNING: %s\033[0m" % (self.timestamp(), msg))
+        """Add warning log entry.
+
+        :param str msg: Log message
+        """
+        self.logger.warning(msg)
+        self.add_log_entry(msg, self.LEVEL_WARNING)
 
     def warn(self, msg):
         self.warning(msg)
 
     def error(self, msg):
-        print("[%s] \033[31mERROR: %s\033[0m" % (self.timestamp(), msg))
+        """Add error log entry.
 
-    def timestamp(self):
-        return datetime.now()
+        :param str msg: Log message
+        """
+        self.logger.error(msg)
+        self.add_log_entry(msg, self.LEVEL_ERROR)
+
+    def add_log_entry(self, msg, level):
+        """Append log entry with level.
+
+        :param str msg: Log message
+        :param str level: Log level
+        """
+        self.logs.append({
+            'msg': msg,
+            'level': level
+        })
 
 
 class ConfigGenerator():
@@ -51,7 +110,7 @@ class ConfigGenerator():
         :param obj config: ConfigGenerator config
         :param Logger logger: Logger
         """
-        self.logger = logger
+        self.logger = Logger(logger)
 
         self.config = config
         generator_config = config.get('config', {})
@@ -340,3 +399,6 @@ class ConfigGenerator():
             )
 
         return valid
+
+    def get_logger(self):
+        return self.logger
