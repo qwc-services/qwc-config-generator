@@ -53,10 +53,13 @@ def generate_configs():
         generator = config_generator()
         generator.write_configs()
         generator.write_permissions()
+        logger = generator.get_logger()
 
-        return {
-            'message': "Finished writing service configs and permissions"
-        }
+        log_output = ""
+        for entry in logger.log_entries():
+            log_output += entry["level"].upper() + ": " + entry["msg"] + "\n"
+
+        return (log_output, 200)
     except Exception as e:
         return (str(e), 500)
 
