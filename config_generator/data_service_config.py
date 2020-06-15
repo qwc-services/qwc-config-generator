@@ -7,7 +7,7 @@ from qwc_services_core.database import DatabaseEngine
 
 from .service_config import ServiceConfig
 
-from .permission_query import PermissionQuery
+from .permissions_query import PermissionsQuery
 from .qgs_reader import QGSReader
 
 
@@ -31,7 +31,7 @@ class DataServiceConfig(ServiceConfig):
         )
 
         self.config_models = config_models
-        self.permissions_query = PermissionQuery(config_models, logger)
+        self.permissions_query = PermissionsQuery(config_models, logger)
 
         self.db_engine = DatabaseEngine()
 

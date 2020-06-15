@@ -2,8 +2,8 @@ from sqlalchemy import distinct
 from sqlalchemy.sql import text as sql_text
 
 
-class PermissionQuery:
-    """PermissionQuery base class
+class PermissionsQuery:
+    """PermissionsQuery class
 
     Query permissions for a QWC resource.
     """
