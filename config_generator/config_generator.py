@@ -239,7 +239,7 @@ class ConfigGenerator():
             self.write_service_config(service_config['name'])
 
         for log in self.logger.log_entries():
-            if log["level"] == self.logger.LEVEL_ERROR:
+            if log["level"] == self.logger.LEVEL_CRITICAL:
                 return False
 
         for file_name in os.listdir(
@@ -316,7 +316,7 @@ class ConfigGenerator():
         self.write_json_file(permissions, 'permissions.json')
 
         for log in self.logger.log_entries():
-            if log["level"] == self.logger.LEVEL_ERROR:
+            if log["level"] == self.logger.LEVEL_CRITICAL:
                 return False
 
         copyfile(
