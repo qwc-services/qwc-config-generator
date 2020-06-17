@@ -31,6 +31,7 @@ class Logger:
     LEVEL_INFO = 'info'
     LEVEL_WARNING = 'warning'
     LEVEL_ERROR = 'error'
+    LEVEL_CRITICAL = 'critical'
 
     def __init__(self, logger=None):
         """Constructor
@@ -86,6 +87,14 @@ class Logger:
         """
         self.logger.error(msg)
         self.add_log_entry(msg, self.LEVEL_ERROR)
+
+    def critical(self, msg):
+        """Add critical log entry.
+
+        :param str msg: Log message
+        """
+        self.logger.critical(msg)
+        self.add_log_entry(msg, self.LEVEL_CRITICAL)
 
     def add_log_entry(self, msg, level):
         """Append log entry with level.
