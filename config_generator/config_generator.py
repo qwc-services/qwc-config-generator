@@ -170,7 +170,7 @@ class ConfigGenerator():
         self.config_handler = {
             # services with resources
             'ogc': OGCServiceConfig(
-                generator_config, capabilities_reader,
+                generator_config, capabilities_reader, self.config_models,
                 self.service_config('ogc'), self.logger
             ),
             'mapViewer': MapViewerConfig(
