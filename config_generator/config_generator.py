@@ -1,7 +1,9 @@
 from collections import OrderedDict
 from datetime import datetime
+from shutil import copyfile
 import json
 import os
+import tempfile
 
 import jsonschema
 import requests
@@ -125,7 +127,9 @@ class ConfigGenerator():
             os.environ.get(
                'OUTPUT_CONFIG_PATH', '/tmp/'
                ))
-        tenant_path = os.path.join(self.config_path, self.tenant)
+
+        self.config_path_tmp = tempfile.mkdtemp()
+        tenant_path = os.path.join(self.config_path_tmp, self.tenant)
 
         try:
             # load ORM models for ConfigDB
@@ -218,9 +222,29 @@ class ConfigGenerator():
         return self.service_configs.get(service, {})
 
     def write_configs(self):
-        """Generate and save service config files."""
+        """Generate and save service config files.
+
+        Return True if the config files could be generated.
+        """
         for service_config in self.config.get('services', []):
             self.write_service_config(service_config['name'])
+
+        for log in self.logger.log_entries():
+            if log["level"] == self.logger.LEVEL_ERROR:
+                return False
+
+        for file_name in os.listdir(
+                os.path.join(self.config_path_tmp, self.tenant)):
+            file_path = os.path.join(
+                    self.config_path_tmp, self.tenant, file_name)
+
+            if os.path.isfile(file_path):
+
+                copyfile(
+                    file_path,
+                    os.path.join(
+                        self.config_path, self.tenant, file_name))
+        return True
 
     def write_service_config(self, service):
         """Write service config file as JSON.
@@ -250,7 +274,10 @@ class ConfigGenerator():
             self.logger.warning("Service '%s' not found" % service)
 
     def write_permissions(self):
-        """Generate and save service permissions."""
+        """Generate and save service permissions.
+
+        Return True if the service permissions could be generated.
+        """
         permissions_config = PermissionsConfig(self.config_models, self.logger)
         permissions = permissions_config.base_config()
 
@@ -279,13 +306,22 @@ class ConfigGenerator():
         self.logger.info("Writing 'permissions.json' permissions file")
         self.write_json_file(permissions, 'permissions.json')
 
+        for log in self.logger.log_entries():
+            if log["level"] == self.logger.LEVEL_ERROR:
+                return False
+
+        copyfile(
+            os.path.join(self.config_path_tmp, self.tenant, 'permissions.json'),
+            os.path.join(self.config_path, self.tenant, 'permissions.json'))
+        return True
+
     def write_json_file(self, config, filename):
         """Write config to JSON file in config path.
 
         :param OrderedDict config: Config data
         """
         try:
-            path = os.path.join(self.config_path, self.tenant, filename)
+            path = os.path.join(self.config_path_tmp, self.tenant, filename)
             with open(path, 'w') as f:
                 # NOTE: keep order of keys
                 f.write(json.dumps(
