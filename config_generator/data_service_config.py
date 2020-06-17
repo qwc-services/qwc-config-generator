@@ -108,10 +108,10 @@ class DataServiceConfig(ServiceConfig):
                         # NOTE: use ordered keys
                         field = OrderedDict()
                         field['name'] = key
-                        field['data_type'] = attr_meta['data_type']
+                        field['data_type'] = attr_meta.get('data_type')
                         if attr_meta.get('constraints'):
                             # add any constraints
-                            field['constraints'] = attr_meta['constraints']
+                            field['constraints'] = attr_meta.get('constraints')
                         dataset['fields'].append(field)
 
                     if meta.get('geometry_column'):
@@ -367,15 +367,15 @@ class DataServiceConfig(ServiceConfig):
         :param obj meta: Data service meta
         """
         try:
-            connection_string = meta['database']
-            schema = meta['schema']
-            table_name = meta['table_name']
+            connection_string = meta.get('database')
+            schema = meta.get('schema')
+            table_name = meta.get('table_name')
 
             # connect to GeoDB
             geo_db = self.db_engine.db_engine(connection_string)
             conn = geo_db.connect()
 
-            for attr in meta['attributes']:
+            for attr in meta.get('attributes'):
                 # build query SQL
                 sql = sql_text("""
                     SELECT data_type, character_maximum_length,
@@ -424,7 +424,7 @@ class DataServiceConfig(ServiceConfig):
                             'max': 9223372036854775807
                         }
 
-                if attr not in meta['fields']:
+                if attr not in meta.get('fields'):
                     meta['fields'][attr] = {}
 
                 if data_type:

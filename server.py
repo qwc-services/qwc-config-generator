@@ -57,7 +57,8 @@ def generate_configs():
 
         log_output = ""
         for entry in logger.log_entries():
-            log_output += entry["level"].upper() + ": " + entry["msg"] + "\n"
+            log_output += entry["level"].upper() + ": " + \
+                          str(entry["msg"]) + "\n"
 
         return (log_output, 200)
     except Exception as e:
