@@ -61,7 +61,7 @@ def generate_configs():
 
         return (log_output, 200)
     except Exception as e:
-        return (str(e), 500)
+        return (log_output + "\n\nPython Exception: " + str(e), 500)
 
     finally:
         config_file = os.environ.get(
