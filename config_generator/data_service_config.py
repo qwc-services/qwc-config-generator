@@ -25,7 +25,7 @@ class DataServiceConfig(ServiceConfig):
         """
         super().__init__(
             'data',
-            'https://raw.githubusercontent.com/qwc-services/qwc-data-service/master/schemas/qwc-data-service.json',
+            'https://github.com/qwc-services/qwc-data-service/raw/master/schemas/qwc-data-service.json',
             service_config,
             logger
         )

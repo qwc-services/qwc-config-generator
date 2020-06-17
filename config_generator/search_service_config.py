@@ -18,7 +18,7 @@ class SearchServiceConfig(ServiceConfig):
         """
         super().__init__(
             'search',
-            'https://raw.githubusercontent.com/qwc-services/qwc-fulltext-search-service/master/schemas/qwc-search-service.json',
+            'https://github.com/qwc-services/qwc-fulltext-search-service/raw/master/schemas/qwc-search-service.json',
             service_config,
             logger
         )

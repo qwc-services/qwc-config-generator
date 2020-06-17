@@ -187,12 +187,12 @@ class ConfigGenerator():
             # config-only services
             'adminGui': ServiceConfig(
                 'adminGui',
-                'https://raw.githubusercontent.com/qwc-services/qwc-admin-gui/master/schemas/qwc-admin-gui.json',
+                'https://github.com/qwc-services/qwc-admin-gui/raw/master/schemas/qwc-admin-gui.json',
                 self.service_config('adminGui'), self.logger, 'admin-gui'
             ),
             'dbAuth': ServiceConfig(
                 'dbAuth',
-                'https://raw.githubusercontent.com/qwc-services/qwc-db-auth/master/schemas/qwc-db-auth.json',
+                'https://github.com/qwc-services/qwc-db-auth/raw/master/schemas/qwc-db-auth.json',
                 self.service_config('dbAuth'), self.logger, 'db-auth'
             ),
             'elevation': ServiceConfig(
@@ -202,12 +202,12 @@ class ConfigGenerator():
             ),
             'mapinfo': ServiceConfig(
                 'mapinfo',
-                'https://raw.githubusercontent.com/qwc-services/qwc-mapinfo-service/master/schemas/qwc-mapinfo-service.json',
+                'https://github.com/qwc-services/qwc-mapinfo-service/raw/master/schemas/qwc-mapinfo-service.json',
                 self.service_config('mapinfo'), self.logger
             ),
             'permalink': ServiceConfig(
                 'permalink',
-                'https://raw.githubusercontent.com/qwc-services/qwc-permalink-service/master/schemas/qwc-permalink-service.json',
+                'https://github.com/qwc-services/qwc-permalink-service/raw/master/schemas/qwc-permalink-service.json',
                 self.service_config('permalink'), self.logger
             )
         }

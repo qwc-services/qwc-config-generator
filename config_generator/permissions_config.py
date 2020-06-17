@@ -16,7 +16,7 @@ class PermissionsConfig():
         self.config_models = config_models
         self.logger = logger
 
-        self.schema = 'https://raw.githubusercontent.com/qwc-services/qwc-services-core/master/schemas/qwc-services-permissions.json'
+        self.schema = 'https://github.com/qwc-services/qwc-services-core/raw/master/schemas/qwc-services-permissions.json'
 
     def base_config(self):
         """Return basic config with user, groups and roles."""
