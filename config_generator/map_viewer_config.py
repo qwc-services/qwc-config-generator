@@ -92,7 +92,7 @@ class MapViewerConfig(ServiceConfig):
                 # parse config JSON with original order of keys
                 config = json.load(f, object_pairs_hook=OrderedDict)
         except Exception as e:
-            self.logger.error("Could not load QWC2 config.json:\n%s" % e)
+            self.logger.critical("Could not load QWC2 config.json:\n%s" % e)
             config['ERROR'] = str(e)
 
         # remove service URLs

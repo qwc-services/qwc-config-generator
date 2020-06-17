@@ -34,7 +34,8 @@ class CapabilitiesReader():
                   f, object_pairs_hook=OrderedDict
                 )
         except Exception as e:
-            self.logger.error("Error loading QWC2 themes config file:\n%s" % e)
+            self.logger.critical(
+                "Error loading QWC2 themes config file:\n%s" % e)
 
         # get default QGIS server URL from ConfigGenerator config
         self.default_qgis_server_url = generator_config.get(
@@ -98,7 +99,7 @@ class CapabilitiesReader():
             )
 
             if response.status_code != requests.codes.ok:
-                self.logger.warning(
+                self.logger.critical(
                     "Could not get GetProjectSettings from %s:\n%s" %
                     (full_url, response.content)
                 )
@@ -169,7 +170,7 @@ class CapabilitiesReader():
 
             self.wms_capabilities[service_name] = capabilities
         except Exception as e:
-            self.logger.error(
+            self.logger.critical(
                 "Could not get GetProjectSettings from %s:\n%s" %
                 (full_url, e)
             )
