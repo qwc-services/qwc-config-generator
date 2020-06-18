@@ -4,6 +4,7 @@ from urllib.parse import urljoin, urlparse
 from xml.etree import ElementTree
 
 import requests
+import os
 
 
 class CapabilitiesReader():
@@ -47,6 +48,32 @@ class CapabilitiesReader():
 
         # lookup for services names by URL: {<url>: <service_name>}
         self.service_name_lookup = {}
+
+        self.add_qgs_projects_to_themes_config(generator_config)
+
+    def add_qgs_projects_to_themes_config(self, generator_config):
+        qgis_projects_directory = generator_config.get(
+                'qgis_projects_directory')
+
+        for file_name in os.listdir(qgis_projects_directory):
+            absolute_file_path = os.path.join(
+                qgis_projects_directory, file_name)
+
+            filename, file_extension = os.path.splitext(file_name)
+            if file_extension in [".qgs", ".qgz"]:
+
+                item = OrderedDict()
+                default_config = generator_config.get(
+                    'default_qgis_projects_themes_config')
+
+                item["url"] = urljoin(
+                    self.default_qgis_server_url, filename)
+                for key in default_config.keys():
+                    item[key] = default_config.get(key)
+
+                themes = self.themes_config.get("themes")
+                if themes and "items" in themes.keys():
+                    themes.get("items").append(item)
 
     def load_all_project_settings(self):
         """Load and parse GetProjectSettings for all theme items from
