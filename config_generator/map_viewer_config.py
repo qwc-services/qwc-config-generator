@@ -252,10 +252,6 @@ class MapViewerConfig(ServiceConfig):
         attribution['OnlineResource'] = cfg_item.get('attributionUrl')
         item['attribution'] = attribution
 
-        # TODO: get abstract
-        item['abstract'] = ''
-        # TODO: get keywords
-        item['keywords'] = ''
         item['mapCrs'] = cfg_item.get('mapCrs', 'EPSG:3857')
         self.set_optional_config(cfg_item, 'additionalMouseCrs', item)
 
@@ -408,10 +404,10 @@ class MapViewerConfig(ServiceConfig):
 
             item_layer['sublayers'] = sublayers
 
-            # TODO: expanded
+            # expanded
             item_layer['expanded'] = layer.get("expanded")
 
-            # TODO: mutuallyExclusive
+            # mutuallyExclusive
             item_layer["mutuallyExclusive"] = layer.get("mutuallyExclusive")
         else:
             # layer
@@ -425,7 +421,7 @@ class MapViewerConfig(ServiceConfig):
                 item_layer['bbox'] = layer.get('bbox')
             # TODO: metadata
 
-            # TODO: min/max scale
+            # min/max scale
             minScale = layer.get("minScale")
             maxScale = layer.get("maxScale")
             if minScale:
