@@ -5,7 +5,8 @@
     "qwc2_themes_config_file": "../qwc-docker/volumes/qwc2/themesConfig-example.json",
     "default_qgis_server_url": "http://localhost:8001/ows/",
     "config_db_url": "postgresql:///?service=qwc_configdb",
-    "config_path": "../qwc-docker/demo-config/"
+    "config_path": "../qwc-docker/demo-config/",
+    "permissions_default_allow": true
   },
   "services": [
     {

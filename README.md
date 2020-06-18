@@ -25,7 +25,8 @@ Example `configGeneratorConfig.json`:
     "qwc2_themes_config_file": "../qwc-docker/volumes/qwc2/themesConfig-example.json",
     "default_qgis_server_url": "http://localhost:8001/ows/",
     "config_db_url": "postgresql:///?service=qwc_configdb",
-    "config_path": "../qwc-docker/demo-config/"
+    "config_path": "../qwc-docker/demo-config/",
+    "permissions_default_allow": true
   },
   "services": [
     {
@@ -112,9 +113,16 @@ Example `configGeneratorConfig.json`:
 }
 ```
 
+For a full example see [configGeneratorConfig-example.json](configGeneratorConfig-example.json).
+
 *NOTE:* the Search service config takes its resources and permissions directly from the ConfigGenerator config
 
-For a full example see [configGeneratorConfig-example.json](configGeneratorConfig-example.json).
+### Permissions
+
+Using the `permissions_default_allow` setting, some resources can be set to be permitted or restricted by default if no permissions are set (default: `true`). Affected resources are `map`, `layer`, `print_template` and `viewer_task`.
+
+* i.e. `permissions_default_allow: true`: all maps, layers and attributes are permitted by default
+* i.e. `permissions_default_allow: false`: maps and layers are only available if their resources and permissions are explicitly configured; though attributes are still permitted by default
 
 
 Usage

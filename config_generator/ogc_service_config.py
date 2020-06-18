@@ -163,19 +163,9 @@ class OGCServiceConfig(ServiceConfig):
         """
         permissions = []
 
-        # TODO: permissions for permissions_default_allow == false
-
         # helper method aliases
         non_public_resources = self.permissions_query.non_public_resources
         permitted_resources = self.permissions_query.permitted_resources
-
-        # collect public restrictions from ConfigDB
-        public_restrictions = {
-            'maps': non_public_resources('map', session),
-            'layers': non_public_resources('layer', session),
-            'attributes': non_public_resources('attribute', session),
-            'print_templates': non_public_resources('print_template', session)
-        }
 
         # collect role permissions from ConfigDB
         role_permissions = {
@@ -186,11 +176,36 @@ class OGCServiceConfig(ServiceConfig):
                 permitted_resources('print_template', role, session)
         }
 
+        # collect public permissions from ConfigDB
+        public_role = self.permissions_query.public_role()
+        public_permissions = {
+            'maps': permitted_resources('map', public_role, session),
+            'layers': permitted_resources('layer', public_role, session),
+            'attributes':
+                permitted_resources('attribute', public_role, session),
+            'print_templates':
+                permitted_resources('print_template', public_role, session)
+        }
+
+        # collect public restrictions from ConfigDB
+        public_restrictions = {
+            'maps': non_public_resources('map', session),
+            'layers': non_public_resources('layer', session),
+            'attributes': non_public_resources('attribute', session),
+            'print_templates':
+                non_public_resources('print_template', session)
+        }
+
         is_public_role = (role == self.permissions_query.public_role())
 
         for service_name in self.capabilities_reader.wms_service_names():
             # lookup permissions
-            restricted_for_public = service_name in public_restrictions['maps']
+            if self.permissions_default_allow:
+                restricted_for_public = service_name in \
+                    public_restrictions['maps']
+            else:
+                restricted_for_public = service_name not in \
+                    public_permissions['maps']
             permitted_for_role = service_name in role_permissions['maps']
             if restricted_for_public and not permitted_for_role:
                 # WMS not permitted
@@ -205,18 +220,21 @@ class OGCServiceConfig(ServiceConfig):
             # collect WMS layers
             layers = self.collect_wms_layer_permissions(
                 service_name, cap['root_layer'], is_public_role,
-                role_permissions, public_restrictions, restricted_for_public
+                role_permissions, public_permissions, public_restrictions,
+                restricted_for_public,
             )
+
             # add internal print layers
             layers += self.permitted_print_layers(
                 service_name, cap, is_public_role, role_permissions,
-                public_restrictions
+                public_permissions, public_restrictions
             )
             wms_permissions['layers'] = layers
 
             # print templates
             print_templates = self.permitted_print_templates(
-                service_name, cap, role_permissions, public_restrictions
+                service_name, cap, is_public_role, role_permissions,
+                public_permissions, public_restrictions
             )
             if print_templates:
                 wms_permissions['print_templates'] = [
@@ -230,7 +248,8 @@ class OGCServiceConfig(ServiceConfig):
 
     def collect_wms_layer_permissions(self, service_name, layer,
                                       is_public_role, role_permissions,
-                                      public_restrictions, parent_restricted):
+                                      public_permissions, public_restrictions,
+                                      parent_restricted):
         """Recursively collect WMS layer permissions for a role for layer
         subtree from capabilities and permissions and return flat list of
         permitted WMS layers.
@@ -239,6 +258,7 @@ class OGCServiceConfig(ServiceConfig):
         :param obj layer: Layer or group layer
         :param bool is_public_role: Whether current role is public
         :param obj role_permissions: Lookup for role permissions
+        :param obj public_permissions: Lookup for public permissions
         :param obj public_restrictions: Lookup for public restrictions
         :param bool parent_restricted: Whether parent resource is restricted
                                        for public
@@ -246,8 +266,12 @@ class OGCServiceConfig(ServiceConfig):
         wms_layers = []
 
         # lookup permissions
-        restricted_for_public = layer['name'] in \
-            public_restrictions['layers'].get(service_name, {})
+        if self.permissions_default_allow:
+            restricted_for_public = layer['name'] in \
+                public_restrictions['layers'].get(service_name, {})
+        else:
+            restricted_for_public = layer['name'] not in \
+                public_permissions['layers'].get(service_name, {})
         permitted_for_role = layer['name'] in \
             role_permissions['layers'].get(service_name, {})
         layer_or_parent_restricted = restricted_for_public or parent_restricted
@@ -267,7 +291,8 @@ class OGCServiceConfig(ServiceConfig):
                 # recursively collect sub layer
                 sublayers += self.collect_wms_layer_permissions(
                     service_name, sublayer, is_public_role, role_permissions,
-                    public_restrictions, layer_or_parent_restricted
+                    public_permissions, public_restrictions,
+                    layer_or_parent_restricted
                 )
 
             if sublayers:
@@ -284,6 +309,7 @@ class OGCServiceConfig(ServiceConfig):
         else:
             # layer
             if 'attributes' in layer:
+                # NOTE: attributes are always allowed by default
                 if is_public_role:
                     # collect all permitted attributes
                     restricted_attributes = (
@@ -310,7 +336,7 @@ class OGCServiceConfig(ServiceConfig):
                         restricted_attributes -= permitted_attributes
 
                         # collect all permitted attributes
-                        wms_layer['attributes'] = [
+                        attributes = [
                             attr for attr in layer['attributes']
                             if attr not in restricted_attributes
                         ]
@@ -341,7 +367,8 @@ class OGCServiceConfig(ServiceConfig):
         return wms_layers
 
     def permitted_print_layers(self, service_name, cap, is_public_role,
-                               role_permissions, public_restrictions):
+                               role_permissions, public_permissions,
+                               public_restrictions):
         """Return permitted internal print layers for background layers from
         capabilities and permissions.
 
@@ -349,32 +376,50 @@ class OGCServiceConfig(ServiceConfig):
         :param obj cap: Capabilities
         :param bool is_public_role: Whether current role is public
         :param obj role_permissions: Lookup for role permissions
+        :param obj public_permissions: Lookup for public permissions
         :param obj public_restrictions: Lookup for public restrictions
         """
         print_layers = []
 
-        internal_print_layers = cap.get('internal_print_layers', [])
+        # collect print layer permissions and restrictions
+        role_permitted_layers = set(
+            role_permissions['layers'].get(service_name, {}).keys()
+        )
+        public_permitted_layers = set(
+            public_permissions['layers'].get(service_name, {}).keys()
+        )
+        public_restricted_layers = set(
+            public_restrictions['layers'].get(service_name, {}).keys()
+        )
 
+        internal_print_layers = cap.get('internal_print_layers', [])
         if is_public_role:
             # collect all permitted print layers
-            restricted_layers = (
-                public_restrictions['layers'].get(service_name, {}).keys()
-            )
-            internal_print_layers = [
-                layer for layer in internal_print_layers
-                if layer not in restricted_layers
-            ]
+            if self.permissions_default_allow:
+                internal_print_layers = [
+                    layer for layer in internal_print_layers
+                    if layer not in public_restricted_layers
+                ]
+            else:
+                internal_print_layers = [
+                    layer for layer in internal_print_layers
+                    if layer in public_permitted_layers
+                ]
         else:
-            # collect print layers permitted for role and restricted for public
-            permitted_layers = set(
-                role_permissions['layers'].get(service_name, {}).keys()
-            )
-            restricted_layers = set(
-                public_restrictions['layers'].get(service_name, {}).keys()
-            )
-            permitted_layers = permitted_layers or restricted_layers
-
             # collect additional print layers
+            if self.permissions_default_allow:
+                # collect print layers permitted for role
+                #   and restricted for public
+                permitted_layers = (
+                    role_permitted_layers & public_restricted_layers
+                )
+            else:
+                # collect print layers permitted for role
+                #   and not permitted for public
+                permitted_layers = (
+                    role_permitted_layers - public_permitted_layers
+                )
+
             internal_print_layers = [
                 layer for layer in internal_print_layers
                 if layer in permitted_layers
@@ -389,28 +434,61 @@ class OGCServiceConfig(ServiceConfig):
 
         return print_layers
 
-    def permitted_print_templates(self, service_name, cap, role_permissions,
+    def permitted_print_templates(self, service_name, cap, is_public_role,
+                                  role_permissions, public_permissions,
                                   public_restrictions):
         """Return permitted print templates from
         capabilities and permissions.
 
         :param str service_name: Name of parent WMS service
         :param obj cap: Capabilities
+        :param bool is_public_role: Whether current role is public
         :param obj role_permissions: Lookup for role permissions
+        :param obj public_permissions: Lookup for public permissions
         :param obj public_restrictions: Lookup for public restrictions
         """
-        print_templates = []
-
-        # collect restricted print templates not permitted for role
-        restricted_templates = set(
-            public_restrictions['print_templates'].get(service_name, {}).keys()
-        )
-        permitted_templates = set(
+        # collect print template permissions and restrictions
+        role_permitted_templates = set(
             role_permissions['print_templates'].get(service_name, {}).keys()
         )
-        restricted_templates -= permitted_templates
+        public_permitted_templates = set(
+            public_permissions['print_templates'].get(service_name, {}).keys()
+        )
+        public_restricted_templates = set(
+            public_restrictions['print_templates'].get(service_name, {}).keys()
+        )
 
-        return [
-            template for template in cap.get('print_templates', [])
-            if template['name'] not in restricted_templates
-        ]
+        print_templates = cap.get('print_templates', [])
+        if is_public_role:
+            # collect all permitted print templates
+            if self.permissions_default_allow:
+                print_templates = [
+                    template for template in print_templates
+                    if template['name'] not in public_restricted_templates
+                ]
+            else:
+                print_templates = [
+                    template for template in print_templates
+                    if template['name'] in public_permitted_templates
+                ]
+        else:
+            # collect additional print templates
+            if self.permissions_default_allow:
+                # collect print templates permitted for role
+                #   and restricted for public
+                permitted_templates = (
+                    role_permitted_templates & public_restricted_templates
+                )
+            else:
+                # collect print templates permitted for role
+                #   and not permitted for public
+                permitted_templates = (
+                    role_permitted_templates - public_permitted_templates
+                )
+
+            print_templates = [
+                template for template in print_templates
+                if template['name'] in permitted_templates
+            ]
+
+        return print_templates
