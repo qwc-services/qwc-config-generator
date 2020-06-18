@@ -1,8 +1,30 @@
 import argparse
 from collections import OrderedDict
+from datetime import datetime
 import json
 
-from config_generator.config_generator import ConfigGenerator, Logger
+from config_generator.config_generator import ConfigGenerator
+
+
+class Logger():
+    """Simple logger class"""
+    def debug(self, msg):
+        print("[%s] \033[36mDEBUG: %s\033[0m" % (self.timestamp(), msg))
+
+    def info(self, msg):
+        print("[%s] INFO: %s" % (self.timestamp(), msg))
+
+    def warning(self, msg):
+        print("[%s] \033[33mWARNING: %s\033[0m" % (self.timestamp(), msg))
+
+    def warn(self, msg):
+        self.warning(msg)
+
+    def error(self, msg):
+        print("[%s] \033[31mERROR: %s\033[0m" % (self.timestamp(), msg))
+
+    def timestamp(self):
+        return datetime.now()
 
 
 print("QWC ConfigGenerator")
