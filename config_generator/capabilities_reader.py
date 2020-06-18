@@ -273,6 +273,20 @@ class CapabilitiesReader():
             if attributes:
                 wms_layer['attributes'] = attributes
 
+        if layer.find(f'{np}Abstract', ns) is not None:
+            wms_layer["abstract"] = layer.find(f'{np}Abstract', ns).text
+        else:
+            wms_layer["abstract"] = ""
+
+        if layer.find(f'{np}KeywordList', ns):
+            keywords = []
+            for keyword in layer.find(f'{np}KeywordList', ns).findall(
+                    f'{np}Keyword', ns):
+                keywords.append(keyword.text)
+            wms_layer["keywords"] = ", ".join(keywords)
+        else:
+            wms_layer["keywords"] = ""
+
         minScale = layer.find('%sMinScaleDenominator' % np, ns)
         maxScale = layer.find('%sMaxScaleDenominator' % np, ns)
         if minScale:
