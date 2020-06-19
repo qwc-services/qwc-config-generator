@@ -49,6 +49,12 @@
       }
     },
     {
+      "name": "featureInfo",
+      "config": {
+        "default_qgis_server_url": "http://qwc-qgis-server/ows/"
+      },
+    },
+    {
       "name": "search",
       "config": {
         "solr_service_url": "http://qwc-solr:8983/solr/gdi/select",

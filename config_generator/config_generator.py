@@ -1,8 +1,8 @@
 from collections import OrderedDict
 from datetime import datetime
-from shutil import copyfile
 import json
 import os
+from shutil import copyfile
 import tempfile
 
 import jsonschema
@@ -11,11 +11,12 @@ import requests
 from qwc_services_core.config_models import ConfigModels
 from qwc_services_core.database import DatabaseEngine
 from .capabilities_reader import CapabilitiesReader
+from .data_service_config import DataServiceConfig
+from .feature_info_service_config import FeatureInfoServiceConfig
 from .map_viewer_config import MapViewerConfig
 from .ogc_service_config import OGCServiceConfig
 from .permissions_config import PermissionsConfig
 from .search_service_config import SearchServiceConfig
-from .data_service_config import DataServiceConfig
 from .service_config import ServiceConfig
 
 from logging import Logger as Log
@@ -176,6 +177,10 @@ class ConfigGenerator():
             'mapViewer': MapViewerConfig(
                 tenant_path, capabilities_reader,
                 self.service_config('mapViewer'), self.logger
+            ),
+            'featureInfo': FeatureInfoServiceConfig(
+                generator_config, capabilities_reader,
+                self.service_config('featureInfo'), self.logger
             ),
             'search': SearchServiceConfig(
                 self.service_config('search'), self.logger
