@@ -23,6 +23,9 @@ class Logger():
     def error(self, msg):
         print("[%s] \033[31mERROR: %s\033[0m" % (self.timestamp(), msg))
 
+    def critical(self, msg):
+        print("[%s] \033[91mCRITICAL: %s\033[0m" % (self.timestamp(), msg))
+
     def timestamp(self):
         return datetime.now()
 
