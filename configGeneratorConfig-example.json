@@ -57,7 +57,7 @@
     {
       "name": "print",
       "config": {
-        "ogc_service_url": "http://qwc-qgis-server/ows/",
+        "ogc_service_url": "http://qwc-ogc-service/",
         "qgis_server_version": "3.10.6"
       }
     },
