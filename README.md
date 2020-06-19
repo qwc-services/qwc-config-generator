@@ -69,6 +69,12 @@ Example `configGeneratorConfig.json`:
       }
     },
     {
+      "name": "featureInfo",
+      "config": {
+        "default_qgis_server_url": "http://qwc-qgis-server/ows/"
+      }
+    },
+    {
       "name": "search",
       "config": {
         "solr_service_url": "http://qwc-solr:8983/solr/gdi/select",
@@ -116,6 +122,67 @@ Example `configGeneratorConfig.json`:
 For a full example see [configGeneratorConfig-example.json](configGeneratorConfig-example.json).
 
 *NOTE:* the Search service config takes its resources and permissions directly from the ConfigGenerator config
+
+*NOTE:* the FeatureInfo service config may take additional WMS service resources and permissions directly from the ConfigGenerator config, e.g. for external info layers:
+
+```json
+    {
+      "name": "featureInfo",
+      "config": {
+        "default_qgis_server_url": "http://qwc-qgis-server/ows/"
+      },
+      "resources": {
+        "wms_services": [
+          {
+            "name": "external_info_layers",
+            "root_layer": {
+              "name": "external_info_layers",
+              "layers": [
+                {
+                  "name": "example_info_layer",
+                  "title": "External info layer",
+                  "attributes": [
+                    {
+                      "name": "name"
+                    },
+                    {
+                      "name": "geometry"
+                    }
+                  ],
+                  "info_template": {
+                    "type": "wms",
+                    "wms_url": "https://example.com/wms/demo"
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "permissions": [
+        {
+          "role": "public",
+          "permissions": {
+            "wms_services": [
+              {
+                "name": "external_info_layers",
+                "layers": [
+                  {
+                    "name": "external_info_layers"
+                  },
+                  {
+                    "name": "example_info_layer",
+                    "attributes": ["name", "geometry"],
+                    "info_template": true
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      ]
+    }
+```
 
 ### Permissions
 

@@ -54,6 +54,8 @@ class FeatureInfoServiceConfig(ServiceConfig):
 
         # collect resources from capabilities
         resources['wms_services'] = self.wms_services()
+        # get additional resources
+        resources['wms_services'] += self.additional_wms_services()
 
         return config
 
@@ -65,8 +67,9 @@ class FeatureInfoServiceConfig(ServiceConfig):
         # NOTE: use ordered keys
         permissions = OrderedDict()
 
-        # NOTE: WMS service permissions collected by OGC service config
-        permissions['wms_services'] = []
+        # NOTE: basic WMS service permissions collected by OGC service config
+        # get additional permissions
+        permissions['wms_services'] = self.additional_wms_permissions(role)
 
         return permissions
 
@@ -142,3 +145,42 @@ class FeatureInfoServiceConfig(ServiceConfig):
                 wms_layer['display_field'] = layer['display_field']
 
         return wms_layer
+
+    def additional_wms_services(self):
+        """Collect additional WMS service resources from service config.
+
+        These are resources e.g. for external info layers, which cannot be
+        collected from capabilities.
+        """
+        # additional service config
+        cfg_resources = self.service_config.get('resources', {})
+
+        # get WMS service resources directly from service config
+        return cfg_resources.get('wms_services', [])
+
+    # permissions
+
+    def additional_wms_permissions(self, role):
+        """Collect additional WMS Service permissions from service config.
+
+        These are permissions e.g. for external info layers, which cannot be
+        collected from capabilities or ConfigDB.
+
+        :param str role: Role name
+        """
+        # NOTE: use ordered keys
+        permissions = OrderedDict()
+
+        # additional service config
+        cfg_permissions = self.service_config.get('permissions', [])
+
+        for role_permissions in cfg_permissions:
+            # find role in permissions
+            if role_permissions.get('role') == role:
+                # get WMS service permissions for role directly
+                #   from service config
+                permissions = role_permissions.get('permissions', {}). \
+                    get('wms_services', [])
+                break
+
+        return permissions
