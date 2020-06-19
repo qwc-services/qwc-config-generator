@@ -52,7 +52,14 @@
       "name": "featureInfo",
       "config": {
         "default_qgis_server_url": "http://qwc-qgis-server/ows/"
-      },
+      }
+    },
+    {
+      "name": "print",
+      "config": {
+        "ogc_service_url": "http://qwc-qgis-server/ows/",
+        "qgis_server_version": "3.10.6"
+      }
     },
     {
       "name": "search",
