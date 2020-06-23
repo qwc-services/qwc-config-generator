@@ -17,7 +17,8 @@ class DataServiceConfig(ServiceConfig):
     Generate Data service config.
     """
 
-    def __init__(self, service_config, config_models, logger):
+    def __init__(self, service_config, generator_config,
+                 config_models, logger):
         """Constructor
 
         :param obj service_config: Additional service config
@@ -34,6 +35,7 @@ class DataServiceConfig(ServiceConfig):
         self.permissions_query = PermissionsQuery(config_models, logger)
 
         self.db_engine = DatabaseEngine()
+        self.generator_config = generator_config
 
     def config(self):
         """Return service config.
@@ -78,7 +80,8 @@ class DataServiceConfig(ServiceConfig):
         Resource = self.config_models.model('resources')
 
         # get layer metadata from QGIS project
-        qgs_reader = QGSReader(self.logger)
+        qgs_reader = QGSReader(self.logger, self.generator_config.get(
+            "qgis_projects_output_dir"))
 
         # Query all map resources
         query = session.query(Resource). \
@@ -204,7 +207,8 @@ class DataServiceConfig(ServiceConfig):
 
         if data_permissions['permitted']:
             # get layer metadata from QGIS project
-            qgs_reader = QGSReader(self.logger)
+            qgs_reader = QGSReader(self.logger, self.generator_config.get(
+                "qgis_projects_output_dir"))
             if qgs_reader.read(data_permissions['map_name']):
                 permissions = qgs_reader.layer_metadata(layer_name)
 
