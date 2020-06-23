@@ -5,6 +5,9 @@ from xml.etree import ElementTree
 
 import requests
 import os
+from shutil import move, copyfile
+
+from .categorize_groups_script import convert_layers
 
 
 class CapabilitiesReader():
@@ -49,31 +52,72 @@ class CapabilitiesReader():
         # lookup for services names by URL: {<url>: <service_name>}
         self.service_name_lookup = {}
 
-        self.add_qgs_projects_to_themes_config(generator_config)
-
     def add_qgs_projects_to_themes_config(self, generator_config):
-        qgis_projects_directory = generator_config.get(
-                'qgis_projects_directory')
+        """Copy all QGS/QGZ files from the specified
+         input directory (`qgis_projects_input_dir`) to
+         the output directory (`qgis_projects_output_dir`).
 
-        for file_name in os.listdir(qgis_projects_directory):
+
+        :param obj generator_config: ConfigGenerator config
+        """
+
+        if self.themes_config is None:
+            return
+
+        qgis_projects_input_dir = generator_config.get(
+                'qgis_projects_input_dir')
+
+        if qgis_projects_input_dir is None:
+            return
+
+        qgs_projects_list = os.listdir(qgis_projects_input_dir)
+
+        for file_name in qgs_projects_list:
             absolute_file_path = os.path.join(
-                qgis_projects_directory, file_name)
+                qgis_projects_input_dir, file_name)
 
-            filename, file_extension = os.path.splitext(file_name)
+            file_extension = os.path.splitext(file_name)[1]
             if file_extension in [".qgs", ".qgz"]:
+                categorized_qgs_project_path = convert_layers(
+                    [], absolute_file_path)
 
-                item = OrderedDict()
-                default_config = generator_config.get(
-                    'default_qgis_projects_themes_config')
+                project_basename = os.path.splitext(
+                    os.path.basename(
+                        categorized_qgs_project_path))[0]
 
-                item["url"] = urljoin(
-                    self.default_qgis_server_url, filename)
-                for key in default_config.keys():
-                    item[key] = default_config.get(key)
+                qgis_projects_output_dir = generator_config.get(
+                    'qgis_projects_output_dir')
+                if qgis_projects_output_dir:
+                    if "categorize" in categorized_qgs_project_path:
+                        move(
+                            os.path.join(categorized_qgs_project_path),
+                            os.path.join(
+                                qgis_projects_output_dir,
+                                os.path.basename(
+                                    categorized_qgs_project_path)))
+                    else:
+                        copyfile(
+                            os.path.join(categorized_qgs_project_path),
+                            os.path.join(
+                                qgis_projects_output_dir,
+                                os.path.basename(
+                                    categorized_qgs_project_path)))
 
-                themes = self.themes_config.get("themes")
-                if themes and "items" in themes.keys():
-                    themes.get("items").append(item)
+                    item = OrderedDict()
+
+                    item["url"] = urljoin(
+                        self.default_qgis_server_url,
+                        project_basename)
+                    item["backgroundLayers"] = self.themes_config.get(
+                        "defaultbackgroundLayers")
+                    item["searchProviders"] = self.themes_config.get(
+                        "defaultsearchProviders")
+                    item["mapCrs"] = self.themes_config.get(
+                        "defaultmapCrs")
+
+                    themes = self.themes_config.get("themes")
+                    if themes and "items" in themes.keys():
+                        themes.get("items").append(item)
 
     def load_all_project_settings(self):
         """Load and parse GetProjectSettings for all theme items from
