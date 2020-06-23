@@ -192,7 +192,8 @@ class ConfigGenerator():
                 self.service_config('search'), self.logger
             ),
             'data': DataServiceConfig(
-                self.service_config('data'), self.config_models, self.logger
+                self.service_config('data'), generator_config,
+                self.config_models, self.logger
             ),
 
             # config-only services

@@ -9,23 +9,23 @@ class QGSReader:
     Read QGIS 2.18 or 3.x projects and extract data for QWC config.
     """
 
-    def __init__(self, logger):
+    def __init__(self, logger, qgs_resources_path):
         """Constructor
 
         :param Logger logger: Application logger
+        :param str qgs_resources_path: Path to qgis server data dir
         """
         self.logger = logger
         self.root = None
         self.qgis_version = 0
 
-        # get path to QGIS projects from ENV
-        self.qgs_resources_path = os.environ.get('QGIS_RESOURCES_PATH', 'qgs/')
+        self.qgs_resources_path = qgs_resources_path
 
     def read(self, qgs_path):
         """Read QGIS project file and return True on success.
 
         :param str qgs_path: QGS name with optional path relative to
-                             QGIS_RESOURCES_PATH
+                             QGIS server data dir
         """
         qgs_file = "%s.qgs" % qgs_path
         qgs_path = os.path.join(self.qgs_resources_path, qgs_file)
