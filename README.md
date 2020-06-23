@@ -10,7 +10,7 @@ Generate JSON files for service configs and permissions from a `themesConfig.jso
 Setup
 -----
 
-Create a QWC2 themes config file `themesConfig.json` and a ConfigGenerator config file `configGeneratorConfig.json` for each tenant (see below).
+Create a ConfigGenerator config file `configGeneratorConfig.json` for each tenant (see below).
 
 
 Configuration
@@ -22,11 +22,59 @@ Example `configGeneratorConfig.json`:
   "service": "config-generator",
   "config": {
     "tenant": "default",
-    "qwc2_themes_config_file": "../qwc-docker/volumes/qwc2/themesConfig-example.json",
     "default_qgis_server_url": "http://localhost:8001/ows/",
     "config_db_url": "postgresql:///?service=qwc_configdb",
-    "config_path": "../qwc-docker/demo-config/",
-    "permissions_default_allow": true
+    "permissions_default_allow": true,
+    "qgis_projects_input_dir": "/qgis_projects",
+    "qgis_projects_output_dir": "/data"
+  },
+  "themesConfig": {
+      "defaultScales": [100000000, 50000000, 25000000, 10000000, 4000000, 2000000, 1000000, 400000, 200000, 80000, 40000, 20000, 10000, 8000, 6000, 4000, 2000, 1000, 500, 250, 100],
+      "defaultPrintGrid": [{"s": 10000000, "x": 1000000, "y": 1000000}, {"s": 1000000, "x": 100000, "y": 100000}, {"s": 100000, "x": 10000, "y": 10000}, {"s": 10000, "x": 1000, "y": 1000}, {"s": 1000, "x": 100, "y": 100}, {"s": 100, "x": 10, "y": 10}],
+      "defaultWMSVersion":"1.3.0",
+      "defaultbackgroundLayers": [],
+      "defaultsearchProviders": ["coordinates"],
+      "defaultmapCrs": "EPSG:3857",
+      "themes": {
+        "items": [
+          {
+            "title": "Demo",
+            "url": "/ows/qwc_demo",
+            "default": true,
+            "attribution": "Demo attribution",
+            "attributionUrl": "https://127.0.0.1/",
+            "backgroundLayers": [
+                {
+                  "name": "bluemarble",
+                  "printLayer": "bluemarble_bg",
+                  "visibility": true
+                },
+                {
+                  "name": "mapnik",
+                  "printLayer": "osm_bg"
+                }
+            ],
+            "searchProviders": ["coordinates"],
+            "mapCrs": "EPSG:3857",
+            "additionalMouseCrs": [],
+            "extent": [-1000000, 4000000, 3000000, 8000000],
+            "skipEmptyFeatureAttributes": true,
+            "printResolutions": [300],
+            "thumbnail": "default.jpg"
+          }
+        ],
+        "backgroundLayers": [
+          {
+            "name": "mapnik",
+            "title": "Open Street Map",
+            "type": "osm",
+            "source": "osm",
+            "thumbnail": "mapnik.jpg",
+            "attribution": "OpenStreetMap contributors",
+            "attributionUrl": "https://www.openstreetmap.org/copyright"
+          }
+        ]
+      }
   },
   "services": [
     {
@@ -120,6 +168,12 @@ Example `configGeneratorConfig.json`:
 ```
 
 For a full example see [configGeneratorConfig-example.json](configGeneratorConfig-example.json).
+
+*NOTE:* the QWC2 themes config is defined under `themesConfig` in the ConfigGenerator config and not in a separate file. There are also three new required fields used by the ConfigGenerator that need to be defined in the `themesConfig`.
+
+- `defaultbackgroundLayers`
+- `defaultsearchProviders`
+- `defaultmapCrs`
 
 *NOTE:* the Search service config takes its resources and permissions directly from the ConfigGenerator config
 
