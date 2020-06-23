@@ -159,7 +159,7 @@ class ConfigGenerator():
 
         # load capabilites for all QWC2 theme items
         capabilities_reader = CapabilitiesReader(
-            generator_config, self.logger
+            generator_config, config.get("themesConfig"), self.logger
         )
         capabilities_reader.add_qgs_projects_to_themes_config(generator_config)
         capabilities_reader.load_all_project_settings()
