@@ -17,27 +17,19 @@ class CapabilitiesReader():
     QWC2 themes config file (themesConfig.json).
     """
 
-    def __init__(self, generator_config, logger):
+    def __init__(self, generator_config, themes_config, logger):
         """Constructor
 
         :param obj generator_config: ConfigGenerator config
         :param Logger logger: Logger
+        :param dict themes_config: themes config
         """
         self.logger = logger
 
         # read QWC2 themes config file
-        self.themes_config = {}
-        try:
-            # get path to QWC themes config file from ConfigGenerator config
-            themes_config_file = generator_config.get(
-                'qwc2_themes_config_file', 'themesConfig.json'
-            )
-            with open(themes_config_file) as f:
-                # parse QWC2 themes config JSON with original order of keys
-                self.themes_config = json.load(
-                  f, object_pairs_hook=OrderedDict
-                )
-        except Exception as e:
+        self.themes_config = themes_config
+
+        if self.themes_config is None:
             self.logger.critical(
                 "Error loading QWC2 themes config file:\n%s" % e)
 
