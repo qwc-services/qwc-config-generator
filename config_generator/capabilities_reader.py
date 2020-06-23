@@ -59,7 +59,11 @@ class CapabilitiesReader():
         qgis_projects_input_dir = generator_config.get(
                 'qgis_projects_input_dir')
 
-        if qgis_projects_input_dir is None:
+        if qgis_projects_input_dir is None or \
+                os.path.exists(qgis_projects_input_dir) is False:
+            self.logger.warning(
+                "'qgis_projects_input_dir' is not defined or "
+                "the specified path does not exist")
             return
 
         qgs_projects_list = os.listdir(qgis_projects_input_dir)
