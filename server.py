@@ -56,6 +56,7 @@ def generate_configs():
             tenant_name,
             "configGeneratorConfig.json")
 
+    log_output = ""
     try:
         # create ConfigGenerator
         generator = config_generator()
@@ -63,7 +64,6 @@ def generate_configs():
         generator.write_permissions()
         logger = generator.get_logger()
 
-        log_output = ""
         for entry in logger.log_entries():
             log_output += entry["level"].upper() + ": " + \
                           str(entry["msg"]) + "\n"
