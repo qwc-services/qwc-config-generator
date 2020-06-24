@@ -369,9 +369,9 @@ class CapabilitiesReader():
 
         minScale = layer.find('%sMinScaleDenominator' % np, ns)
         maxScale = layer.find('%sMaxScaleDenominator' % np, ns)
-        if minScale:
+        if minScale is not None:
             wms_layer["minScale"] = minScale.text
-        if maxScale:
+        if maxScale is not None:
             wms_layer["maxScale"] = maxScale.text
 
         if layer.get("geometryType") is None or \
