@@ -13,3 +13,6 @@ ADD . /srv/qwc_service
 
 # Install requirements.txt
 RUN python3 -m pip install --no-cache-dir -r /srv/qwc_service/requirements.txt
+
+# This is needed because the qgis.core library is not capable of running in multiple threads
+ENV UWSGI_THREADS=1
