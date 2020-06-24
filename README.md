@@ -10,13 +10,13 @@ Generate JSON files for service configs and permissions from a `themesConfig.jso
 Setup
 -----
 
-Create a ConfigGenerator config file `configGeneratorConfig.json` for each tenant (see below).
+Create a ConfigGenerator config file `tenantConfig.json` for each tenant (see below).
 
 
 Configuration
 -------------
 
-Example `configGeneratorConfig.json`:
+Example `tenantConfig.json`:
 ```json
 {
   "service": "config-generator",
@@ -167,7 +167,7 @@ Example `configGeneratorConfig.json`:
 }
 ```
 
-For a full example see [configGeneratorConfig-example.json](configGeneratorConfig-example.json).
+For a full example see [tenantConfig-example.json](tenantConfig-example.json).
 
 *NOTE:* the QWC2 themes config is defined under `themesConfig` in the ConfigGenerator config and not in a separate file. There are also three new required fields used by the ConfigGenerator that need to be defined in the `themesConfig`.
 
@@ -255,15 +255,15 @@ Show command options:
 
 Generate both service configs and permissions:
 
-    python config_generator_cli.py ./configGeneratorConfig.json all
+    python config_generator_cli.py ./tenantConfig.json all
 
 Generate service config files:
 
-    python config_generator_cli.py ./configGeneratorConfig.json service_configs
+    python config_generator_cli.py ./tenantConfig.json service_configs
 
 Generate permissions file:
 
-    python config_generator_cli.py ./configGeneratorConfig.json permissions
+    python config_generator_cli.py ./tenantConfig.json permissions
 
 
 Development
@@ -271,7 +271,7 @@ Development
 
 Create a virtual environment:
 
-    virtualenv --python=/usr/bin/python3 .venv
+    virtualenv --python=/usr/bin/python3 --system-site-package .venv
 
 Activate virtual environment:
 
@@ -287,4 +287,4 @@ Run Demo-DB and QGIS Server:
 
 Generate service configs and permissions for Docker:
 
-    python config_generator_cli.py ./configGeneratorConfig-example.json all
+    python config_generator_cli.py ./tenantConfig-example.json all

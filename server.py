@@ -12,7 +12,7 @@ app = Flask(__name__)
 
 # get path to ConfigGenerator config file
 config_file = os.environ.get(
-    'CONFIG_GENERATOR_CONFIG', 'configGeneratorConfig.json'
+    'CONFIG_GENERATOR_CONFIG', 'tenantConfig.json'
 )
 
 config_in_path = os.environ.get(
@@ -54,7 +54,7 @@ def generate_configs():
         config_file = os.path.join(
             config_in_path,
             tenant_name,
-            "configGeneratorConfig.json")
+            "tenantConfig.json")
 
     log_output = ""
     try:
@@ -74,7 +74,7 @@ def generate_configs():
 
     finally:
         config_file = os.environ.get(
-            'CONFIG_GENERATOR_CONFIG', 'configGeneratorConfig.json')
+            'CONFIG_GENERATOR_CONFIG', 'tenantConfig.json')
 
 
 # local webserver
