@@ -161,7 +161,8 @@ class ConfigGenerator():
         capabilities_reader = CapabilitiesReader(
             generator_config, config.get("themesConfig"), self.logger
         )
-        capabilities_reader.add_qgs_projects_to_themes_config(generator_config)
+        capabilities_reader.add_qgs_projects_to_themes_config(
+            generator_config, self.tenant)
         capabilities_reader.load_all_project_settings()
 
         # lookup for additional service configs by name

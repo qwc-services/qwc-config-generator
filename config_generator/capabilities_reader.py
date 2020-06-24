@@ -44,7 +44,7 @@ class CapabilitiesReader():
         # lookup for services names by URL: {<url>: <service_name>}
         self.service_name_lookup = {}
 
-    def add_qgs_projects_to_themes_config(self, generator_config):
+    def add_qgs_projects_to_themes_config(self, generator_config, tenant):
         """Copy all QGS/QGZ files from the specified
          input directory (`qgis_projects_input_dir`) to
          the output directory (`qgis_projects_output_dir`).
@@ -66,16 +66,29 @@ class CapabilitiesReader():
                 "the specified path does not exist")
             return
 
-        qgs_projects_list = os.listdir(qgis_projects_input_dir)
+        tenant_dir = os.path.join(qgis_projects_input_dir, tenant)
+        if os.path.exists(tenant_dir) is False:
+            self.logger.warning(
+                "The tenant sub directory does not exist: " + tenant_dir)
+            return
 
+        qgs_projects_list = os.listdir(tenant_dir)
         for file_name in qgs_projects_list:
             absolute_file_path = os.path.join(
-                qgis_projects_input_dir, file_name)
+                tenant_dir, file_name)
 
             file_extension = os.path.splitext(file_name)[1]
             if file_extension in [".qgs", ".qgz"]:
                 categorized_qgs_project_path = convert_layers(
                     [], absolute_file_path)
+
+                if os.path.exists(categorized_qgs_project_path) is False:
+                    self.logger.warning(
+                        "The project: " + categorized_qgs_project_path +
+                        " could not be generated.\n"
+                        "Please check if needed permissions to create the"
+                        " file are granted.")
+                    continue
 
                 project_basename = os.path.splitext(
                     os.path.basename(
@@ -86,14 +99,14 @@ class CapabilitiesReader():
                 if qgis_projects_output_dir:
                     if "categorize" in categorized_qgs_project_path:
                         move(
-                            os.path.join(categorized_qgs_project_path),
+                            categorized_qgs_project_path,
                             os.path.join(
                                 qgis_projects_output_dir,
                                 os.path.basename(
                                     categorized_qgs_project_path)))
                     else:
                         copyfile(
-                            os.path.join(categorized_qgs_project_path),
+                            categorized_qgs_project_path,
                             os.path.join(
                                 qgis_projects_output_dir,
                                 os.path.basename(
