@@ -45,37 +45,36 @@ class CapabilitiesReader():
         self.service_name_lookup = {}
 
     def add_qgs_projects_to_themes_config(self, generator_config, tenant):
-        """Copy all QGS/QGZ files from the specified
-         input directory (`qgis_projects_input_dir`) to
+        """Copy all QGS/QGZ files from the
+         input directory (INPUT_CONFIG_PATH/tenant) to
          the output directory (`qgis_projects_output_dir`).
 
 
         :param obj generator_config: ConfigGenerator config
         """
-
         if self.themes_config is None:
             return
 
-        qgis_projects_input_dir = generator_config.get(
-                'qgis_projects_input_dir')
+        config_in_path = os.environ.get(
+            'INPUT_CONFIG_PATH', 'config-in/'
+        )
 
-        if qgis_projects_input_dir is None or \
-                os.path.exists(qgis_projects_input_dir) is False:
+        if os.path.exists(config_in_path) is False:
             self.logger.warning(
-                "'qgis_projects_input_dir' is not defined or "
-                "the specified path does not exist")
+                "The specified path does not exist: " + config_in_path)
             return
 
-        tenant_dir = os.path.join(qgis_projects_input_dir, tenant)
-        if os.path.exists(tenant_dir) is False:
+        qgs_projects_dir = os.path.join(
+            config_in_path, tenant, "qgis_projects")
+        if os.path.exists(qgs_projects_dir) is False:
             self.logger.warning(
-                "The tenant sub directory does not exist: " + tenant_dir)
+                "The qgis_projects sub directory does not exist: " + qgs_projects_dir)
             return
 
-        qgs_projects_list = os.listdir(tenant_dir)
+        qgs_projects_list = os.listdir(qgs_projects_dir)
         for file_name in qgs_projects_list:
             absolute_file_path = os.path.join(
-                tenant_dir, file_name)
+                qgs_projects_dir, file_name)
 
             file_extension = os.path.splitext(file_name)[1]
             if file_extension in [".qgs", ".qgz"]:
