@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import os
 import re
 from xml.etree import ElementTree
@@ -80,7 +81,8 @@ class QGSReader:
 
         :param str layer_name: Layer shortname
         """
-        config = {}
+        # NOTE: use ordered keys
+        config = OrderedDict()
 
         if self.root is None:
             self.logger.warning("Root element is empty")
@@ -165,7 +167,8 @@ class QGSReader:
 
         :param str datasource: QGIS datasource URI
         """
-        metadata = {}
+        # NOTE: use ordered keys
+        metadata = OrderedDict()
 
         # parse schema, table and geometry column
         m = re.search(r'table="(.+?)" \((\w+)\) \w+=', datasource)
@@ -204,7 +207,8 @@ class QGSReader:
         :param Element maplayer: QGS maplayer node
         """
         attributes = []
-        fields = {}
+        # NOTE: use ordered keys
+        fields = OrderedDict()
 
         aliases = maplayer.find('aliases')
         for alias in aliases.findall('alias'):
@@ -215,7 +219,8 @@ class QGSReader:
                 continue
 
             attributes.append(field)
-            fields[field] = {}
+            # NOTE: use ordered keys
+            fields[field] = OrderedDict()
 
             # get alias
             name = alias.get('name')
@@ -249,7 +254,8 @@ class QGSReader:
         :param Element maplayer: QGS maplayer node
         :param str field: Field name
         """
-        constraints = {}
+        # NOTE: use ordered keys
+        constraints = OrderedDict()
 
         edittype = maplayer.find("edittypes/edittype[@name='%s']" % field)
         widget_config = edittype.find('widgetv2config')
@@ -265,18 +271,17 @@ class QGSReader:
             constraints['placeholder'] = constraint_desc
 
         if edittype.get('widgetv2type') == 'Range':
-            constraints.update({
-                'min': self.parse_number(widget_config.get('Min')),
-                'max': self.parse_number(widget_config.get('Max')),
-                'step': self.parse_number(widget_config.get('Step'))
-            })
+            constraints['min'] = self.parse_number(widget_config.get('Min'))
+            constraints['max'] = self.parse_number(widget_config.get('Max'))
+            constraints['step'] = self.parse_number(widget_config.get('Step'))
         elif edittype.get('widgetv2type') == 'ValueMap':
             values = []
             for value in widget_config.findall('value'):
-                values.append({
-                    'label': value.get('key'),
-                    'value': value.get('value')
-                })
+                # NOTE: use ordered keys
+                value_item = OrderedDict()
+                value_item['label'] = value.get('key')
+                value_item['value'] = value.get('value')
+                values.append(value_item)
 
             if values:
                 constraints['values'] = values
@@ -289,7 +294,8 @@ class QGSReader:
         :param Element maplayer: QGS maplayer node
         :param str field: Field name
         """
-        constraints = {}
+        # NOTE: use ordered keys
+        constraints = OrderedDict()
 
         # NOTE: <editable /> is empty if Attributes Form is not configured
         editable_field = maplayer.find("editable/field[@name='%s']" % field)
@@ -321,24 +327,23 @@ class QGSReader:
                         "config/Option/Option[@name='Max']")
             step_option = edit_widget.find(
                         "config/Option/Option[@name='Step']")
-            constraints.update({
-                'min': self.parse_number(
-                    min_option.get('value')) if min_option else -2147483648,
-                'max': self.parse_number(
-                    max_option.get('value')) if max_option else 2147483647,
-                'step': self.parse_number(
-                    step_option.get('value')) if step_option else 1
-            })
+            constraints['min'] = self.parse_number(
+                min_option.get('value')) if min_option else -2147483648
+            constraints['max'] = self.parse_number(
+                max_option.get('value')) if max_option else 2147483647
+            constraints['step'] = self.parse_number(
+                step_option.get('value')) if step_option else 1
         elif edit_widget.get('type') == 'ValueMap':
             values = []
             for option_map in edit_widget.findall(
                     "config/Option/Option[@type='List']/Option"
             ):
                 option = option_map.find("Option")
-                values.append({
-                    'label': option.get('name'),
-                    'value': option.get('value')
-                })
+                # NOTE: use ordered keys
+                value = OrderedDict()
+                value['label'] = option.get('name')
+                value['value'] = option.get('value')
+                values.append(value)
 
             if values:
                 constraints['values'] = values

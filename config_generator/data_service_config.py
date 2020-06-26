@@ -630,7 +630,8 @@ class DataServiceConfig(ServiceConfig):
 
                 # execute query
                 data_type = None
-                constraints = {}
+                # NOTE: use ordered keys
+                constraints = OrderedDict()
                 result = conn.execute(sql)
                 for row in result:
                     data_type = row['data_type']
@@ -638,9 +639,8 @@ class DataServiceConfig(ServiceConfig):
                     # constraints from data type
                     if (data_type in ['character', 'character varying'] and
                             row['character_maximum_length']):
-                        constraints = {
-                            'maxlength': row['character_maximum_length']
-                        }
+                        constraints['maxlength'] = \
+                            row['character_maximum_length']
                     elif data_type in ['double precision', 'real']:
                         # NOTE: use text field with pattern for floats
                         constraints['pattern'] = '[0-9]+([\\.,][0-9]+)?'
@@ -649,22 +649,21 @@ class DataServiceConfig(ServiceConfig):
                         max_value = pow(
                             10, row['numeric_precision'] - row['numeric_scale']
                         ) - step
-                        constraints = {
-                            'numeric_precision': row['numeric_precision'],
-                            'numeric_scale': row['numeric_scale'],
-                            'min': -max_value,
-                            'max': max_value,
-                            'step': step
-                        }
+                        constraints['numeric_precision'] = \
+                            row['numeric_precision']
+                        constraints['numeric_scale'] = row['numeric_scale']
+                        constraints['min'] = -max_value
+                        constraints['max'] = max_value
+                        constraints['step'] = step
                     elif data_type == 'smallint':
-                        constraints = {'min': -32768, 'max': 32767}
+                        constraints['min'] = -32768
+                        constraints['max'] = 32767
                     elif data_type == 'integer':
-                        constraints = {'min': -2147483648, 'max': 2147483647}
+                        constraints['min'] = -2147483648
+                        constraints['max'] = 2147483647
                     elif data_type == 'bigint':
-                        constraints = {
-                            'min': -9223372036854775808,
-                            'max': 9223372036854775807
-                        }
+                        constraints['min'] = -9223372036854775808
+                        constraints['max'] = 9223372036854775807
 
                 if attr not in meta.get('fields'):
                     meta['fields'][attr] = {}
