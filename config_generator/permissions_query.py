@@ -1,4 +1,5 @@
 from sqlalchemy import distinct
+from sqlalchemy.orm import aliased
 from sqlalchemy.sql import text as sql_text
 
 
@@ -28,12 +29,12 @@ class PermissionsQuery:
 
     def resource_permissions(self, resource_type, resource_name, role,
                              session):
-        """Query permissions for a resource type and name.
+        """Query permissions for a resource type and optional name.
 
         Return resource permissions sorted by priority.
 
         :param str resource_type: QWC resource type
-        :param str resource_name: QWC resource name
+        :param str resource_name: optional QWC resource name (None for all)
         :param str role: Role name
         :param Session session: DB session
         """
@@ -43,14 +44,16 @@ class PermissionsQuery:
         # base query for all permissions of user
         query = self.role_permissions_query(role, session)
 
-        # filter permissions by QWC resource type and name
+        # filter permissions by QWC resource type
         query = query.join(Permission.resource) \
-            .filter(Resource.type == resource_type) \
-            .filter(Resource.name == resource_name)
+            .filter(Resource.type == resource_type)
+
+        if resource_name is not None:
+            # filter by resource name
+            query = query.filter(Resource.name == resource_name)
 
         # order by priority
-        query = query.order_by(Permission.priority.desc()) \
-            .distinct(Permission.priority)
+        query = query.order_by(Permission.priority.desc())
 
         # execute query and return results
         return query.all()
@@ -120,26 +123,66 @@ class PermissionsQuery:
         """Collect hierarchy of resources permitted for a role
         for a resource type.
 
+        NOTE: use 'attribute' resource type for layer attributes and
+              'data_attribute' for data attributes
+
         :param str resource_type: QWC resource type
         :param Session session: DB session
         """
+        parent_filter = None
+        if resource_type == 'attribute':
+            # only layer attributes
+            parent_filter = 'layer'
+        elif resource_type == 'data_attribute':
+            # only data attributes
+            resource_type = 'attribute'
+            parent_filter = 'data'
+
         # query resource permissions
         query = self.resource_permissions_query(
             resource_type, role, session
         )
+        if parent_filter:
+            # filter by attribute parent type
+            Resource = self.config_models.model('resources')
+            parent_alias = aliased(Resource)
+            query = query.join(
+                parent_alias, parent_alias.id == Resource.parent_id
+            ).filter(parent_alias.type == parent_filter)
+
         return self.resource_hierarchy(query.all())
 
     def non_public_resources(self, resource_type, session):
         """Collect hierarchy of resources restricted for public role
         for a resource type.
 
+        NOTE: use 'attribute' resource type for layer attributes and
+              'data_attribute' for data attributes
+
         :param str resource_type: QWC resource type
         :param Session session: DB session
         """
+        parent_filter = None
+        if resource_type == 'attribute':
+            # only layer attributes
+            parent_filter = 'layer'
+        elif resource_type == 'data_attribute':
+            # only data attributes
+            resource_type = 'attribute'
+            parent_filter = 'data'
+
         # query public resource restrictions
         query = self.resource_restrictions_query(
             resource_type, self.public_role(), session
         )
+        if parent_filter:
+            # filter by attribute parent type
+            Resource = self.config_models.model('resources')
+            parent_alias = aliased(Resource)
+            query = query.join(
+                parent_alias, parent_alias.id == Resource.parent_id
+            ).filter(parent_alias.type == parent_filter)
+
         return self.resource_hierarchy(query.all())
 
     def resource_hierarchy(self, resources):

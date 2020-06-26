@@ -37,6 +37,10 @@ class DataServiceConfig(ServiceConfig):
         self.db_engine = DatabaseEngine()
         self.generator_config = generator_config
 
+        self.qgis_projects_output_dir = generator_config.get(
+            'qgis_projects_output_dir', '/tmp/'
+        )
+
     def config(self):
         """Return service config.
 
@@ -69,6 +73,36 @@ class DataServiceConfig(ServiceConfig):
         session.close()
 
         return permissions
+
+    def available_datasets(self, session):
+        """Collect all available datasets from ConfigDB, grouped by map name.
+
+        :param Session session: DB session
+        """
+        # NOTE: use ordered keys
+        available_datasets = OrderedDict()
+
+        Resource = self.config_models.model('resources')
+
+        query = session.query(Resource) \
+            .filter(Resource.type == 'map') \
+            .order_by(Resource.name)
+        for map_obj in query.all():
+            # collect unique datasets for each map resource
+            resource_types = [
+                'data',
+                'data_create', 'data_read', 'data_update', 'data_delete'
+            ]
+            datasets_query = session.query(Resource) \
+                .filter(Resource.parent_id == map_obj.id) \
+                .filter(Resource.type.in_(resource_types)) \
+                .distinct(Resource.name) \
+                .order_by(Resource.name)
+            available_datasets[map_obj.name] = [
+                resource.name for resource in datasets_query.all()
+            ]
+
+        return available_datasets
 
     def _datasets(self, config, session):
         """Return data service resources.
@@ -133,44 +167,249 @@ class DataServiceConfig(ServiceConfig):
     def _dataset_permissions(self, role, session):
         """Collect edit dataset permissions from ConfigDB.
 
+        NOTE: maps and datasets are restricted by default and require
+              explicit permissions
+              attributes are allowed by default
+
         :param str role: Role name
         :param Session session: DB session
         """
         permissions = []
 
-        Permission = self.config_models.model('permissions')
-        Resource = self.config_models.model('resources')
+        # helper method aliases
+        non_public_resources = self.permissions_query.non_public_resources
+        permitted_resources = self.permissions_query.permitted_resources
+
+        # collect role permissions from ConfigDB
+        role_permissions = {
+            'maps': permitted_resources('map', role, session),
+            'data': permitted_resources('data', role, session),
+            'data_create': permitted_resources('data_create', role, session),
+            'data_read': permitted_resources('data_read', role, session),
+            'data_update': permitted_resources('data_update', role, session),
+            'data_delete': permitted_resources('data_delete', role, session),
+            'attributes': permitted_resources('data_attribute', role, session)
+        }
+
+        # collect public permissions from ConfigDB
+        public_role = self.permissions_query.public_role()
+        public_permissions = {
+            'maps': permitted_resources('map', public_role, session),
+            'data': permitted_resources('data', public_role, session),
+            'data_create':
+                permitted_resources('data_create', public_role, session),
+            'data_read':
+                permitted_resources('data_read', public_role, session),
+            'data_update':
+                permitted_resources('data_update', public_role, session),
+            'data_delete':
+                permitted_resources('data_delete', public_role, session)
+        }
+
+        # collect public restrictions from ConfigDB
+        public_restrictions = {
+            'attributes': non_public_resources('data_attribute', session)
+        }
+
+        # collect permitted datasets for role from all data resource types
         resource_types = [
             'data',
             'data_create', 'data_read', 'data_update', 'data_delete'
         ]
-        query = self.permissions_query.role_permissions_query(
-                role, session
-            ).join(Permission.resource). \
-            filter(Resource.type.in_(resource_types)). \
-            order_by(Permission.priority.desc()). \
-            distinct(Permission.priority)
+        role_permitted_datasets = {}
+        for resource_type in resource_types:
+            for map_name, datasets in role_permissions[resource_type].items():
+                if map_name not in role_permitted_datasets:
+                    # init lookup for map
+                    role_permitted_datasets[map_name] = set()
+                # add datasets to lookup
+                role_permitted_datasets[map_name].update(datasets.keys())
 
-        for permission in query.all():
-            # NOTE: use ordered keys
-            dataset_permissions = OrderedDict()
-            dataset_permissions['name'] = permission.resource.name
+        # collect public permitted datasets from all data resource types
+        public_permitted_datasets = {}
+        for resource_type in resource_types:
+            for map_name, datasets in public_permissions[resource_type].items():
+                if map_name not in public_permitted_datasets:
+                    # init lookup for map
+                    public_permitted_datasets[map_name] = set()
+                # add datasets to lookup
+                public_permitted_datasets[map_name].update(datasets.keys())
 
-            # collect attribute names
-            attributes = []
-            # TODO
-            dataset_permissions['attributes'] = attributes
+        # collect write permissions for role
+        # with highest priority for all datasets
+        role_writeable_datasets = {}
+        examined_datasets = {}
+        data_permissions = self.permissions_query.resource_permissions(
+            'data', None, role, session
+        )
+        for permission in data_permissions:
+            # lookup map resource for dataset
+            map_obj = self.permissions_query.get_resource(
+                permission.resource.parent_id
+            )
+            map_name = map_obj.name
 
-            writable = True  # TODO
-            dataset_permissions['writable'] = writable
-            dataset_permissions['creatable'] = writable
-            dataset_permissions['readable'] = True
-            dataset_permissions['updatable'] = writable
-            dataset_permissions['deletable'] = writable
+            if map_name not in role_writeable_datasets:
+                # init lookup for map
+                role_writeable_datasets[map_name] = set()
+                examined_datasets[map_name] = set()
 
-            if attributes or writable:
-                # only add additional permissions
-                permissions.append(dataset_permissions)
+            dataset = permission.resource.name
+            if dataset not in examined_datasets[map_name]:
+                # check permission with highest priority
+                if permission.write:
+                    # mark as writable
+                    role_writeable_datasets[map_name].add(dataset)
+                examined_datasets[map_name].add(dataset)
+
+        is_public_role = (role == self.permissions_query.public_role())
+
+        # collect edit dataset permissions for each map
+        for map_name, datasets in self.available_datasets(session).items():
+            # lookup permissions (map restricted by default)
+            map_restricted_for_public = map_name not in \
+                public_permissions['maps']
+            map_permitted_for_role = map_name in role_permissions['maps']
+            if map_restricted_for_public and not map_permitted_for_role:
+                # map not permitted
+                continue
+
+            qgs_reader = QGSReader(self.logger, self.qgis_projects_output_dir)
+            if qgs_reader.read(map_name):
+                for layer_name in qgs_reader.pg_layers():
+                    if layer_name not in datasets:
+                        # skip layers not in datasets
+                        continue
+
+                    # lookup permissions (dataset restricted by default)
+                    restricted_for_public = layer_name not in \
+                        public_permitted_datasets.get(map_name, {})
+                    permitted_for_role = layer_name in \
+                        role_permitted_datasets.get(map_name, {})
+                    if restricted_for_public and not permitted_for_role:
+                        # dataset not permitted
+                        continue
+
+                    # get layer metadata from QGIS project
+                    meta = qgs_reader.layer_metadata(layer_name)
+
+                    # NOTE: use ordered keys
+                    dataset_permissions = OrderedDict()
+                    dataset_permissions['name'] = (
+                        "%s.%s" % (map_name, layer_name)
+                    )
+
+                    # collect attribute names (allowed by default)
+                    attributes = []
+                    if is_public_role:
+                        # collect all permitted attributes
+                        restricted_attributes = (
+                            public_restrictions['attributes'].
+                            get(map_name, {}).get(layer_name, {})
+                        )
+                        attributes = [
+                            attr for attr in meta['attributes']
+                            if attr not in restricted_attributes
+                        ]
+                    else:
+                        if restricted_for_public:
+                            # collect restricted attributes not permitted
+                            # for role
+                            restricted_attributes = set(
+                                public_restrictions['attributes'].
+                                get(map_name, {}).get(layer_name, {}).keys()
+                            )
+                            permitted_attributes = set(
+                                role_permissions['attributes'].
+                                get(map_name, {}).get(layer_name, {}).keys()
+                            )
+                            restricted_attributes -= permitted_attributes
+
+                            # collect all permitted attributes
+                            attributes = [
+                                attr for attr in meta['attributes']
+                                if attr not in restricted_attributes
+                            ]
+                        else:
+                            # collect additional attributes
+                            permitted_attributes = (
+                                role_permissions['attributes'].
+                                get(map_name, {}).get(layer_name, {}).keys()
+                            )
+                            attributes = [
+                                attr for attr in meta['attributes']
+                                if attr in permitted_attributes
+                            ]
+
+                    dataset_permissions['attributes'] = attributes
+
+                    # collect CRUD permissions
+                    writable = False
+                    creatable = False
+                    readable = False
+                    updatable = False
+                    deletable = False
+                    additional_crud = False
+
+                    if (
+                        layer_name in
+                        role_permissions['data'].get(map_name, {})
+                    ):
+                        # 'data' permitted
+                        writable = layer_name in \
+                            role_writeable_datasets.get(map_name, {})
+                        creatable = writable
+                        readable = True
+                        updatable = writable
+                        deletable = writable
+
+                    # combine with detailed CRUD data permissions
+                    creatable |= layer_name in \
+                        role_permissions['data_create'].get(map_name, {})
+                    readable |= layer_name in \
+                        role_permissions['data_read'].get(map_name, {})
+                    updatable |= layer_name in \
+                        role_permissions['data_update'].get(map_name, {})
+                    deletable |= layer_name in \
+                        role_permissions['data_delete'].get(map_name, {})
+
+                    writable |= (
+                        creatable and readable and updatable and deletable
+                    )
+
+                    if is_public_role or restricted_for_public:
+                        # collect all CRUD permissions
+                        dataset_permissions['writable'] = writable
+                        dataset_permissions['creatable'] = creatable
+                        dataset_permissions['readable'] = readable
+                        dataset_permissions['updatable'] = updatable
+                        dataset_permissions['deletable'] = deletable
+
+                        additional_crud = restricted_for_public
+                    else:
+                        # collect additional CRUD permissions
+                        if writable:
+                            dataset_permissions['writable'] = writable
+                        if creatable:
+                            dataset_permissions['creatable'] = creatable
+                        if readable:
+                            dataset_permissions['readable'] = readable
+                        if updatable:
+                            dataset_permissions['updatable'] = updatable
+                        if deletable:
+                            dataset_permissions['deletable'] = deletable
+
+                        additional_crud = creatable or readable or updatable or deletable
+
+                    if is_public_role:
+                        # add public dataset
+                        permissions.append(dataset_permissions)
+                    elif restricted_for_public:
+                        # add dataset permitted for role
+                        permissions.append(dataset_permissions)
+                    elif attributes or additional_crud:
+                        # only add additional permissions
+                        permissions.append(dataset_permissions)
 
         return permissions
 
