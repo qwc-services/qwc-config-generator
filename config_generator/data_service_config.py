@@ -111,25 +111,24 @@ class DataServiceConfig(ServiceConfig):
         """
         datasets = []
 
-        Resource = self.config_models.model('resources')
-
-        # get layer metadata from QGIS project
-        qgs_reader = QGSReader(self.logger, self.generator_config.get(
-            "qgis_projects_output_dir"))
-
-        # Query all map resources
-        query = session.query(Resource). \
-            filter(Resource.type == 'map')
-        for resource in query.all():
-            qgs_name = resource.name
-            self.logger.info("Reading '%s'" % qgs_name)
+        for qgs_name, map_datasets in self.available_datasets(session).items():
+            qgs_reader = QGSReader(self.logger, self.qgis_projects_output_dir)
+            self.logger.info("Reading '%s.qgs'" % qgs_name)
             if qgs_reader.read(qgs_name):
                 for layer_name in qgs_reader.pg_layers():
+                    if layer_name not in map_datasets:
+                        # skip layers not in datasets
+                        continue
+
                     try:
+                        # get layer metadata from QGIS project
                         meta = qgs_reader.layer_metadata(layer_name)
                         self._lookup_attribute_data_types(meta)
                     except Exception as e:
-                        self.logger.error(e)
+                        self.logger.error(
+                            "Could not get metadata for dataset '%s.%s':\n%s" %
+                            (qgs_name, layer_name, e)
+                        )
                         continue
 
                     # NOTE: use ordered keys
