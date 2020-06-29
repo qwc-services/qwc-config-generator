@@ -177,7 +177,7 @@ class QGSReader:
         metadata = OrderedDict()
 
         # parse schema, table and geometry column
-        m = re.search(r'table="(.+?)" \((\w+)\) \w+=', datasource)
+        m = re.search(r'table="(.+?)" \((\w+)\)', datasource)
         if m is not None:
             table = m.group(1)
             parts = table.split('"."')
@@ -186,12 +186,10 @@ class QGSReader:
 
             metadata['geometry_column'] = m.group(2)
         else:
-            m = re.search(r'table="(.+?)" \w+=', datasource)
+            m = re.search(r'table="(.+?)"."(.+?)"', datasource)
             if m is not None:
-                table = m.group(1)
-                parts = table.split('"."')
-                metadata['schema'] = parts[0]
-                metadata['table_name'] = parts[1]
+                metadata['schema'] = m.group(1)
+                metadata['table_name'] = m.group(2)
 
         m = re.search(r"key='(.+?)' \w+=", datasource)
         if m is not None:
