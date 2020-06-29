@@ -178,7 +178,8 @@ class ConfigGenerator():
                 self.service_config('ogc'), self.logger
             ),
             'mapViewer': MapViewerConfig(
-                tenant_path, capabilities_reader,
+                tenant_path,
+                generator_config, capabilities_reader, self.config_models,
                 self.service_config('mapViewer'), self.logger
             ),
             'featureInfo': FeatureInfoServiceConfig(
@@ -275,6 +276,8 @@ class ConfigGenerator():
         """
         config_handler = self.config_handler.get(service)
         if config_handler:
+            self.logger.info("Collecting '%s' service config" % service)
+
             # generate service config
             config = config_handler.config()
 

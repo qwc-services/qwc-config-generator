@@ -2,6 +2,7 @@ from collections import OrderedDict
 import json
 import os
 
+from .qgs_reader import QGSReader
 from .service_config import ServiceConfig
 
 
@@ -11,12 +12,44 @@ class MapViewerConfig(ServiceConfig):
     Generate Map Viewer service config and permissions.
     """
 
-    def __init__(self, tenant_path, capabilities_reader, service_config,
-                 logger):
+    # lookup for edit geometry types:
+    #     PostGIS geometry type -> QWC2 edit geometry type
+    EDIT_GEOM_TYPES = {
+        'POINT': 'Point',
+        'MULTIPOINT': 'MultiPoint',
+        'LINESTRING': 'LineString',
+        'MULTILINESTRING': 'MultiLineString',
+        'POLYGON': 'Polygon',
+        'MULTIPOLYGON': 'MultiPolygon'
+    }
+
+    # lookup for edit field types:
+    #     PostgreSQL data_type -> QWC2 edit field type
+    EDIT_FIELD_TYPES = {
+        'bigint': 'number',
+        'boolean': 'boolean',
+        'character varying': 'text',
+        'date': 'date',
+        'double precision': 'text',
+        'integer': 'number',
+        'numeric': 'number',
+        'real': 'text',
+        'smallint': 'number',
+        'text': 'text',
+        'time': 'time',
+        'timestamp with time zone': 'date',
+        'timestamp without time zone': 'date',
+        'uuid': 'text'
+    }
+
+    def __init__(self, tenant_path, generator_config, capabilities_reader,
+                 config_models, service_config, logger):
         """Constructor
 
         :param str tenant_path: Path to config files of tenant
+        :param obj generator_config: ConfigGenerator config
         :param CapabilitiesReader capabilities_reader: CapabilitiesReader
+        :param ConfigModels config_models: Helper for ORM models
         :param obj service_config: Additional service config
         :param Logger logger: Logger
         """
@@ -29,6 +62,11 @@ class MapViewerConfig(ServiceConfig):
 
         self.tenant_path = tenant_path
         self.capabilities_reader = capabilities_reader
+        self.config_models = config_models
+
+        self.qgis_projects_output_dir = generator_config.get(
+            'qgis_projects_output_dir', '/tmp/'
+        )
 
         # keep track of theme IDs for uniqueness
         self.theme_ids = []
@@ -45,7 +83,7 @@ class MapViewerConfig(ServiceConfig):
         resources = OrderedDict()
         config['resources'] = resources
 
-        # collect resources from QWC2 config and capabilities
+        # collect resources from QWC2 config, capabilities and ConfigDB
         resources['qwc2_config'] = self.qwc2_config()
         resources['qwc2_themes'] = self.qwc2_themes()
 
@@ -63,10 +101,13 @@ class MapViewerConfig(ServiceConfig):
         permissions = OrderedDict()
 
         # TODO: collect permissions from ConfigDB
+
+        # NOTE: WMS service permissions collected by OGC service config
         permissions['wms_services'] = []
         permissions['background_layers'] = self.permitted_background_layers(
             role
         )
+        # NOTE: Data permissions collected by Data service config
         permissions['data_datasets'] = []
 
         return permissions
@@ -114,7 +155,8 @@ class MapViewerConfig(ServiceConfig):
         return qwc2_config
 
     def qwc2_themes(self):
-        """Collect QWC2 themes configuration from capabilities."""
+        """Collect QWC2 themes configuration from capabilities,
+        and edit config from ConfigDB."""
         # NOTE: use ordered keys
         qwc2_themes = OrderedDict()
 
@@ -311,8 +353,8 @@ class MapViewerConfig(ServiceConfig):
 
         item['searchProviders'] = cfg_item.get('searchProviders', [])
 
-        # TODO edit config
-        item['editConfig'] = None
+        # edit config
+        item['editConfig'] = self.edit_config(name)
 
         self.set_optional_config(cfg_item, 'watermark', item)
         self.set_optional_config(cfg_item, 'config', item)
@@ -436,6 +478,124 @@ class MapViewerConfig(ServiceConfig):
             # TODO: featureReport
 
         return item_layer
+
+    def edit_config(self, map_name):
+        """Collect edit config for a map from ConfigDB.
+
+        :param str map_name: Map name (matches WMS and QGIS project)
+        """
+        # NOTE: use ordered keys
+        edit_config = OrderedDict()
+
+        Permission = self.config_models.model('permissions')
+        Resource = self.config_models.model('resources')
+
+        session = self.config_models.session()
+
+        # find map resource
+        query = session.query(Resource) \
+            .filter(Resource.type == 'map') \
+            .filter(Resource.name == map_name)
+        map_id = None
+        for map_obj in query.all():
+            map_id = map_obj.id
+
+        if map_id is None:
+            # map not found
+            return edit_config
+
+        # query writable data permissions
+        resource_types = [
+            'data',
+            'data_create', 'data_read', 'data_update', 'data_delete'
+        ]
+        datasets_query = session.query(Permission) \
+            .join(Permission.resource) \
+            .filter(Permission.write) \
+            .filter(Resource.parent_id == map_obj.id) \
+            .filter(Resource.type.in_(resource_types)) \
+            .distinct(Resource.name) \
+            .order_by(Resource.name)
+        edit_datasets = [
+            permission.resource.name for permission in datasets_query.all()
+        ]
+
+        session.close()
+
+        if not edit_datasets:
+            # no edit datasets for this map
+            return edit_config
+
+        qgs_reader = QGSReader(self.logger, self.qgis_projects_output_dir)
+        self.logger.info("Reading '%s.qgs'" % map_name)
+        if qgs_reader.read(map_name):
+            # collect edit datasets
+            for layer_name in qgs_reader.pg_layers():
+                if layer_name not in edit_datasets:
+                    # skip layers not in datasets
+                    continue
+
+                dataset_name = "%s.%s" % (map_name, layer_name)
+
+                try:
+                    # get layer metadata from QGIS project
+                    meta = qgs_reader.layer_metadata(layer_name)
+                    qgs_reader.lookup_attribute_data_types(meta)
+                except Exception as e:
+                    self.logger.error(
+                        "Could not get metadata for edit dataset '%s':\n%s" %
+                        (dataset_name, e)
+                    )
+                    continue
+
+                # check geometry type
+                if meta['geometry_type'] not in self.EDIT_GEOM_TYPES:
+                    table = (
+                        "%s.%s" % meta.get('schema'), meta.get('table_name')
+                    )
+                    self.logger.warning(
+                        "Unsupported geometry type '%s' for edit dataset '%s' "
+                        "on table '%s'" %
+                        (meta.get('geometry_type', None), dataset_name, table)
+                    )
+                    continue
+
+                # NOTE: use ordered keys
+                dataset = OrderedDict()
+                dataset['layerName'] = layer_name
+                dataset['editDataset'] = dataset_name
+
+                # collect fields
+                fields = []
+                for attr in meta.get('attributes'):
+                    field = meta['fields'].get(attr, {})
+                    alias = field.get('alias', attr)
+                    data_type = self.EDIT_FIELD_TYPES.get(
+                        field.get('data_type'), 'text'
+                    )
+
+                    # NOTE: use ordered keys
+                    edit_field = OrderedDict()
+                    edit_field['id'] = attr
+                    edit_field['name'] = alias
+                    edit_field['type'] = data_type
+
+                    if 'constraints' in field:
+                        # add any constraints
+                        edit_field['constraints'] = field['constraints']
+                        if 'values' in field['constraints']:
+                            edit_field['type'] = 'list'
+
+                    fields.append(edit_field)
+
+                dataset['fields'] = fields
+                dataset['geomType'] = self.EDIT_GEOM_TYPES.get(
+                    meta['geometry_type']
+                )
+
+                edit_config[layer_name] = dataset
+
+        return edit_config
 
     def copy_index_html(self):
         """Copy index.html to tenant dir."""

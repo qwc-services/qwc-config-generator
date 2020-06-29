@@ -1,8 +1,5 @@
 from collections import OrderedDict
 from sqlalchemy.orm import joinedload
-from sqlalchemy.sql import text as sql_text
-
-from qwc_services_core.database import DatabaseEngine
 
 from .service_config import ServiceConfig
 
@@ -33,7 +30,6 @@ class DataServiceConfig(ServiceConfig):
         self.config_models = config_models
         self.permissions_query = PermissionsQuery(config_models, logger)
 
-        self.db_engine = DatabaseEngine()
         self.generator_config = generator_config
 
         self.qgis_projects_output_dir = generator_config.get(
@@ -122,7 +118,7 @@ class DataServiceConfig(ServiceConfig):
                     try:
                         # get layer metadata from QGIS project
                         meta = qgs_reader.layer_metadata(layer_name)
-                        self._lookup_attribute_data_types(meta)
+                        qgs_reader.lookup_attribute_data_types(meta)
                     except Exception as e:
                         self.logger.error(
                             "Could not get metadata for dataset '%s.%s':\n%s" %
@@ -410,96 +406,3 @@ class DataServiceConfig(ServiceConfig):
                         permissions.append(dataset_permissions)
 
         return permissions
-
-    def _lookup_attribute_data_types(self, meta):
-        """Query column data types and add them to Data service meta data.
-
-        :param obj meta: Data service meta
-        """
-        try:
-            connection_string = meta.get('database')
-            schema = meta.get('schema')
-            table_name = meta.get('table_name')
-
-            # connect to GeoDB
-            geo_db = self.db_engine.db_engine(connection_string)
-            conn = geo_db.connect()
-
-            for attr in meta.get('attributes'):
-                # build query SQL
-                sql = sql_text("""
-                    SELECT data_type, character_maximum_length,
-                        numeric_precision, numeric_scale
-                    FROM information_schema.columns
-                    WHERE table_schema = '{schema}' AND table_name = '{table}'
-                        AND column_name = '{column}'
-                    ORDER BY ordinal_position;
-                """.format(schema=schema, table=table_name, column=attr))
-
-                # execute query
-                data_type = None
-                # NOTE: use ordered keys
-                constraints = OrderedDict()
-                result = conn.execute(sql)
-                for row in result:
-                    data_type = row['data_type']
-
-                    # constraints from data type
-                    if (data_type in ['character', 'character varying'] and
-                            row['character_maximum_length']):
-                        constraints['maxlength'] = \
-                            row['character_maximum_length']
-                    elif data_type in ['double precision', 'real']:
-                        # NOTE: use text field with pattern for floats
-                        constraints['pattern'] = '[0-9]+([\\.,][0-9]+)?'
-                    elif data_type == 'numeric' and row['numeric_precision']:
-                        step = pow(10, -row['numeric_scale'])
-                        max_value = pow(
-                            10, row['numeric_precision'] - row['numeric_scale']
-                        ) - step
-                        constraints['numeric_precision'] = \
-                            row['numeric_precision']
-                        constraints['numeric_scale'] = row['numeric_scale']
-                        constraints['min'] = -max_value
-                        constraints['max'] = max_value
-                        constraints['step'] = step
-                    elif data_type == 'smallint':
-                        constraints['min'] = -32768
-                        constraints['max'] = 32767
-                    elif data_type == 'integer':
-                        constraints['min'] = -2147483648
-                        constraints['max'] = 2147483647
-                    elif data_type == 'bigint':
-                        constraints['min'] = -9223372036854775808
-                        constraints['max'] = 9223372036854775807
-
-                if attr not in meta.get('fields'):
-                    meta['fields'][attr] = {}
-
-                if data_type:
-                    # add data type
-                    meta['fields'][attr]['data_type'] = data_type
-                else:
-                    self.logger.warn(
-                        "Could not find data type of column '%s' "
-                        "of table '%s.%s'" % (attr, schema, table_name)
-                    )
-
-                if constraints:
-                    if 'constraints' in meta['fields'][attr]:
-                        # merge constraints from QGIS project
-                        constraints.update(
-                            meta['fields'][attr]['constraints']
-                        )
-
-                    # add constraints
-                    meta['fields'][attr]['constraints'] = constraints
-
-            # close database connection
-            conn.close()
-
-        except Exception as e:
-            self.logger.error(
-                "Error while querying attribute data types:\n\n%s" % e
-            )
-            raise
