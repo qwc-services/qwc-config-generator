@@ -248,6 +248,8 @@ Using the `permissions_default_allow` setting, some resources can be set to be p
 Usage
 -----
 
+### Script
+
 Show command options:
 
     python config_generator_cli.py --help
@@ -264,6 +266,21 @@ Generate permissions file:
 
     python config_generator_cli.py ./tenantConfig.json permissions
 
+### Service
+
+Set the `INPUT_CONFIG_PATH` environment variable to the base dir for reading generator config files (default: `config-in/`).
+Set the `OUTPUT_CONFIG_PATH` environment variable to the base dir for writing service configs and permissions (default: `/tmp/`).
+
+*NOTE:* Requires write permissions for config-generator docker user (`www-data`) in `OUTPUT_CONFIG_PATH` for writing service configs and permissions.
+
+Base URL:
+
+    http://localhost:5010/
+
+Generate both service configs and permissions for `default` tenant:
+
+    curl -X POST "http://localhost:5010/generate_configs?tenant=default"
+
 
 Development
 -----------
@@ -276,7 +293,7 @@ Activate virtual environment:
 
     source .venv/bin/activate
 
-Install requirements:
+Install requirements (*NOTE:* additionally requires modules from `python-qgis`):
 
     pip install -r requirements.txt
 
