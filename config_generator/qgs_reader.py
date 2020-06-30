@@ -35,6 +35,12 @@ class QGSReader:
                              QGIS server data dir
         """
         qgs_file = "%s.qgs" % qgs_path
+        if self.qgs_resources_path is None:
+            self.logger.error("QGS projects output path"
+                              "(qgis_projects_output_dir)"
+                              " is not defined in the config")
+            return False
+
         qgs_path = os.path.join(self.qgs_resources_path, qgs_file)
         if not os.path.exists(qgs_path):
             self.logger.warn("Could not find QGS file '%s'" % qgs_path)
