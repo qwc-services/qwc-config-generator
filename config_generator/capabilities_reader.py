@@ -219,6 +219,22 @@ class CapabilitiesReader():
             capabilities['name'] = service_name
             capabilities['wms_url'] = full_url
 
+            # get service abstract
+            service_abstract = root.find('%sService/%sAbstract' % (np, np), ns)
+            if service_abstract is not None:
+                capabilities['abstract'] = service_abstract.text
+
+            # collect service keywords
+            keyword_list = root.find('%sService/%sKeywordList' % (np, np), ns)
+            if keyword_list is not None:
+                keywords = [
+                    keyword.text for keyword
+                    in keyword_list.findall('%sKeyword' % np, ns)
+                    if keyword.text != 'infoMapAccessService'
+                ]
+                if keywords:
+                    capabilities['keywords'] = ', '.join(keywords)
+
             # collect internal print layers
             internal_print_layers = [
                 bg_layer.get('printLayer') for bg_layer

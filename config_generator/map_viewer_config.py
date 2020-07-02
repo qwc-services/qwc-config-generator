@@ -294,6 +294,11 @@ class MapViewerConfig(ServiceConfig):
         attribution['OnlineResource'] = cfg_item.get('attributionUrl')
         item['attribution'] = attribution
 
+        if 'abstract' in cap:
+            item['abstract'] = cap.get('abstract')
+        if 'keywords' in cap:
+            item['keywords'] = cap.get('keywords')
+
         item['mapCrs'] = cfg_item.get('mapCrs', 'EPSG:3857')
         self.set_optional_config(cfg_item, 'additionalMouseCrs', item)
 
@@ -460,7 +465,6 @@ class MapViewerConfig(ServiceConfig):
             item_layer['opacity'] = layer['opacity']
             if 'bbox' in layer:
                 item_layer['bbox'] = layer.get('bbox')
-            # TODO: metadata
 
             # min/max scale
             minScale = layer.get("minScale")
