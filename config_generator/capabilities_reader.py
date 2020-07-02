@@ -370,8 +370,6 @@ class CapabilitiesReader():
 
         if layer.find('%sAbstract' % np, ns) is not None:
             wms_layer["abstract"] = layer.find('%sAbstract' % np, ns).text
-        else:
-            wms_layer["abstract"] = ""
 
         if layer.find('%sKeywordList' % np, ns):
             keywords = []
@@ -379,11 +377,11 @@ class CapabilitiesReader():
                     '%sKeyword' % np, ns):
                 keywords.append(keyword.text)
             wms_layer["keywords"] = ", ".join(keywords)
-        else:
-            wms_layer["keywords"] = ""
 
         if layer.get('transparency'):
-            wms_layer['opacity'] = 255 - int(float(layer.get('transparency')) / 100 * 255)
+            wms_layer['opacity'] = 255 - int(float(
+                layer.get('transparency')) / 100 * 255
+            )
         elif layer.get('opacity'):
             wms_layer['opacity'] = int(float(layer.get('opacity')))
         else:

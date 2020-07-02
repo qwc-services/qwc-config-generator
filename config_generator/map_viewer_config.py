@@ -474,10 +474,13 @@ class MapViewerConfig(ServiceConfig):
             if maxScale:
                 item_layer["maxScale"] = int(float(maxScale))
 
-            # get abstract
-            item_layer["abstract"] = layer.get("abstract")
-            # get keywords
-            item_layer["keywords"] = layer.get("keywords")
+            # abstract
+            if 'abstract' in layer:
+                item_layer['abstract'] = layer.get('abstract')
+            # keywords
+            if 'keywords' in layer:
+                item_layer['keywords'] = layer.get('keywords')
+
             # TODO: featureReport
 
         return item_layer
