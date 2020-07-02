@@ -457,8 +457,7 @@ class MapViewerConfig(ServiceConfig):
             item_layer['queryable'] = layer['queryable']
             if 'display_field' in layer:
                 item_layer['displayField'] = layer.get('display_field')
-            # TODO: opacity
-            item_layer['opacity'] = 255
+            item_layer['opacity'] = layer['opacity']
             if 'bbox' in layer:
                 item_layer['bbox'] = layer.get('bbox')
             # TODO: metadata

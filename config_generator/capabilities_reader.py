@@ -366,6 +366,13 @@ class CapabilitiesReader():
         else:
             wms_layer["keywords"] = ""
 
+        if layer.get('transparency'):
+            wms_layer['opacity'] = 255 - int(float(layer.get('transparency')) / 100 * 255)
+        elif layer.get('opacity'):
+            wms_layer['opacity'] = int(float(layer.get('opacity')))
+        else:
+            wms_layer['opacity'] = 255
+
         minScale = layer.find('%sMinScaleDenominator' % np, ns)
         maxScale = layer.find('%sMaxScaleDenominator' % np, ns)
         if minScale is not None:
