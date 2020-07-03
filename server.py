@@ -62,6 +62,7 @@ def generate_configs():
         generator = config_generator()
         generator.write_configs()
         generator.write_permissions()
+        generator.cleanup_temp_dir()
         logger = generator.get_logger()
 
         for entry in logger.log_entries():

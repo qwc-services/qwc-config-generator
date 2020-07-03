@@ -2,7 +2,7 @@ from collections import OrderedDict
 from datetime import datetime
 import json
 import os
-from shutil import copyfile
+from shutil import copyfile, rmtree
 import tempfile
 
 import jsonschema
@@ -138,9 +138,12 @@ class ConfigGenerator():
             os.environ.get(
                'OUTPUT_CONFIG_PATH', '/tmp/'
                ))
+        self.tenant_path = os.path.join(self.config_path, self.tenant)
 
-        self.config_path_tmp = tempfile.mkdtemp()
-        tenant_path = os.path.join(self.config_path_tmp, self.tenant)
+        self.temp_config_path = tempfile.mkdtemp(prefix='qwc_')
+        self.temp_tenant_path = os.path.join(
+            self.temp_config_path, self.tenant
+        )
 
         try:
             # load ORM models for ConfigDB
@@ -178,7 +181,7 @@ class ConfigGenerator():
                 self.service_config('ogc'), self.logger
             ),
             'mapViewer': MapViewerConfig(
-                tenant_path,
+                self.temp_tenant_path,
                 generator_config, capabilities_reader, self.config_models,
                 self.service_config('mapViewer'), self.logger
             ),
@@ -227,13 +230,20 @@ class ConfigGenerator():
         }
 
         try:
-            # check tenant dir
-            if not os.path.isdir(tenant_path):
+            # check tenant dirs
+            if not os.path.isdir(self.temp_tenant_path):
+                # create temp tenant dir
+                self.logger.info(
+                    "Creating temp tenant dir %s" % self.temp_tenant_path
+                )
+                os.mkdir(self.temp_tenant_path)
+
+            if not os.path.isdir(self.tenant_path):
                 # create tenant dir
                 self.logger.info(
-                    "Creating tenant dir %s" % tenant_path
+                    "Creating tenant dir %s" % self.tenant_path
                 )
-                os.mkdir(tenant_path)
+                os.mkdir(self.tenant_path)
         except Exception as e:
             self.logger.error("Could not create tenant dir:\n%s" % e)
 
@@ -256,17 +266,12 @@ class ConfigGenerator():
             if log["level"] == self.logger.LEVEL_CRITICAL:
                 return False
 
-        for file_name in os.listdir(
-                os.path.join(self.config_path_tmp, self.tenant)):
-            file_path = os.path.join(
-                    self.config_path_tmp, self.tenant, file_name)
-
+        for file_name in os.listdir(os.path.join(self.temp_tenant_path)):
+            file_path = os.path.join(self.temp_tenant_path, file_name)
             if os.path.isfile(file_path):
-
                 copyfile(
-                    file_path,
-                    os.path.join(
-                        self.config_path, self.tenant, file_name))
+                    file_path, os.path.join(self.tenant_path, file_name)
+                )
         return True
 
     def write_service_config(self, service):
@@ -336,8 +341,9 @@ class ConfigGenerator():
                 return False
 
         copyfile(
-            os.path.join(self.config_path_tmp, self.tenant, 'permissions.json'),
-            os.path.join(self.config_path, self.tenant, 'permissions.json'))
+            os.path.join(self.temp_tenant_path, 'permissions.json'),
+            os.path.join(self.tenant_path, 'permissions.json')
+        )
         return True
 
     def write_json_file(self, config, filename):
@@ -346,7 +352,7 @@ class ConfigGenerator():
         :param OrderedDict config: Config data
         """
         try:
-            path = os.path.join(self.config_path_tmp, self.tenant, filename)
+            path = os.path.join(self.temp_tenant_path, filename)
             with open(path, 'w') as f:
                 # NOTE: keep order of keys
                 f.write(json.dumps(
@@ -356,6 +362,17 @@ class ConfigGenerator():
             self.logger.error(
                 "Could not write '%s' config file:\n%s" % (filename, e)
             )
+
+    def cleanup_temp_dir(self):
+        """Remove temporary config dir."""
+        try:
+            if os.path.isdir(self.temp_config_path):
+                self.logger.info(
+                    "Removing temp config dir %s" % self.temp_config_path
+                )
+                rmtree(self.temp_config_path)
+        except Exception as e:
+            self.logger.error("Could not remove temp config dir:\n%s" % e)
 
     def validate_schema(self, config, schema_url):
         """Validate config against its JSON schema.

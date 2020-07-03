@@ -75,3 +75,4 @@ elif args.command == 'service_configs':
     generator.write_configs()
 elif args.command == 'permissions':
     generator.write_permissions()
+generator.cleanup_temp_dir()
