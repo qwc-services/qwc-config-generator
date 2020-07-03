@@ -83,6 +83,8 @@ class OGCServiceConfig(ServiceConfig):
 
         return permissions
 
+    # service config
+
     def wms_services(self):
         """Collect WMS service resources from capabilities."""
         wms_services = []
@@ -97,6 +99,9 @@ class OGCServiceConfig(ServiceConfig):
             # NOTE: use ordered keys
             wms_service = OrderedDict()
             wms_service['name'] = cap['name']
+
+            if not cap['wms_url'].startswith(self.default_qgis_server_url):
+                wms_service['wms_url'] = cap['wms_url']
 
             # set any online resources
             if 'online_resources' in cfg_wms_services:
@@ -154,6 +159,8 @@ class OGCServiceConfig(ServiceConfig):
                 wms_layer['queryable'] = True
 
         return wms_layer
+
+    # permissions
 
     def wms_permissions(self, role, session):
         """Collect WMS Service permissions from capabilities and ConfigDB.
@@ -437,8 +444,7 @@ class OGCServiceConfig(ServiceConfig):
     def permitted_print_templates(self, service_name, cap, is_public_role,
                                   role_permissions, public_permissions,
                                   public_restrictions):
-        """Return permitted print templates from
-        capabilities and permissions.
+        """Return permitted print templates from capabilities and permissions.
 
         :param str service_name: Name of parent WMS service
         :param obj cap: Capabilities
