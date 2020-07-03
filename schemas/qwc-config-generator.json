@@ -1,0 +1,220 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/qwc-services/qwc-config-generator/raw/master/schemas/qwc-config-generator.json",
+  "title": "QWC Config generator",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "title": "JSON Schema",
+      "description": "Reference to JSON schema of this config",
+      "type": "string",
+      "format": "uri",
+      "default": "https://github.com/qwc-services/qwc-config-generator/raw/master/schemas/qwc-config-generator.json"
+    },
+    "service": {
+      "title": "Service name",
+      "type": "string",
+      "const": "config-generator"
+    },
+    "themesConfig": {
+      "title": "QWC2 themes configuration",
+      "description": "Corresponds to contents of standalone QWC2 themesConfig.json",
+      "type": "object",
+      "properties": {
+        "themes": {
+          "type": "object"
+        }
+      },
+      "required": [
+        "themes"
+      ]
+    },
+    "config": {
+      "title": "Config options for Config generator",
+      "type": "object",
+      "properties": {
+        "tenant": {
+          "description": "Tenant name. Example: default",
+          "type": "string"
+        },
+        "default_qgis_server_url": {
+          "description": "Default QGIS Server URL for OGC requests. Example: http://qwc-qgis-server/ows/",
+          "type": "string",
+          "format": "uri"
+        },
+        "config_db_url": {
+          "description": "Connection URL for configuration database. Example: postgresql:///?service=qwc_configdb",
+          "type": "string",
+          "format": "uri"
+        },
+        "qgis_projects_output_dir": {
+          "description": "Target path for QGIS projects. Example: /data",
+          "type": "string"
+        },
+        "permissions_default_allow": {
+          "description": "Set whether resources are permitted or restricted by default. Example: true",
+          "type": "boolean"
+        },
+        "config_path": {
+          "description": "Target path for generated service configs and permissions, if not set by $OUTPUT_CONFIG_PATH. Example: /config-out",
+          "type": "string"
+        }
+      },
+      "required": [
+        "tenant",
+        "default_qgis_server_url",
+        "config_db_url",
+        "qgis_projects_output_dir"
+      ]
+    },
+    "services": {
+      "title": "Service configs",
+      "description": "Service specific config options for generating their service configs",
+      "type": "array",
+      "items": {
+        "description": "Generator config for a service",
+        "oneOf": [
+          {"$ref": "#/definitions/common_service"},
+          {"$ref": "#/definitions/mapViewer"},
+          {"$ref": "#/definitions/ogc"}
+        ]
+      }
+    }
+  },
+  "required": [
+    "service",
+    "themesConfig",
+    "config",
+    "services"
+  ],
+  "definitions": {
+    "common_service": {
+      "description": "Generator config for a QWC service",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Service name",
+          "type": "string",
+          "enum": [
+            "adminGui",
+            "data",
+            "dbAuth",
+            "elevation",
+            "featureInfo",
+            "mapinfo",
+            "permalink",
+            "print",
+            "search"
+          ]
+        },
+        "config": {
+          "description": "QWC service config options (cf. its JSON schema). This is copied unmodified to the service config.",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "config"
+      ]
+    },
+    "mapViewer": {
+      "description": "Generator config for Map Viewer",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Service name",
+          "type": "string",
+          "const": "mapViewer"
+        },
+        "generator_config": {
+          "description": "Additional config for generating MapViewer resources",
+          "type": "object",
+          "properties": {
+            "qwc2_config": {
+              "description": "Additional config for QWC2 application configuration",
+              "type": "object",
+              "properties": {
+                "qwc2_config_file": {
+                  "description": "Path to QWC2 config.json file. Example: /qwc2/config.json",
+                  "type": "string"
+                },
+                "qwc2_index_file": {
+                  "description": "Path to QWC2 index.html file. Example: /qwc2/index.html",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "qwc2_config_file",
+                "qwc2_index_file"
+              ]
+            }
+          },
+          "required": [
+            "qwc2_config"
+          ]
+        },
+        "config": {
+          "description": "Map Viewer config options (cf. JSON schema qwc-map-viewer.json). This is copied unmodified to the service config.",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "generator_config",
+        "config"
+      ]
+    },
+    "ogc": {
+      "description": "Generator config for OGC service",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "Service name",
+          "type": "string",
+          "const": "ogc"
+        },
+        "generator_config": {
+          "description": "Additional config for generating OGC service resources",
+          "type": "object",
+          "properties": {
+            "wms_services": {
+              "description": "Additional config for WMS services",
+              "type": "object",
+              "properties": {
+                "online_resources": {
+                  "description": "Custom OnlineResources shown in GetCapabilities",
+                  "type": "object",
+                  "properties": {
+                    "service": {
+                      "description": "Default public base URL for OnlineResources",
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "feature_info": {
+                      "description": "Public base URL for FeatureInfo OnlineResources",
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "legend": {
+                      "description": "Public base URL for Legend OnlineResources",
+                      "type": "string",
+                      "format": "uri"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "config": {
+          "description": "OGC service config options (cf. JSON schema qwc-ogc-service.json). This is copied unmodified to the service config.",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "config"
+      ]
+    }
+  }
+}

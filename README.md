@@ -19,6 +19,7 @@ Configuration
 Example `tenantConfig.json`:
 ```json
 {
+  "$schema": "https://github.com/qwc-services/qwc-config-generator/raw/master/schemas/qwc-config-generator.json",
   "service": "config-generator",
   "config": {
     "tenant": "default",
@@ -166,7 +167,7 @@ Example `tenantConfig.json`:
 }
 ```
 
-For a full example see [tenantConfig-example.json](tenantConfig-example.json).
+For a full example see [tenantConfig-example.json](tenantConfig-example.json) ([JSON schema](schemas/qwc-config-generator.json)).
 
 *NOTE:* the QWC2 themes config is defined under `themesConfig` in the ConfigGenerator config and not in a separate file. There are also three new required fields used by the ConfigGenerator that need to be defined in the `themesConfig`.
 
