@@ -383,7 +383,7 @@ class CapabilitiesReader():
                 layer.get('transparency')) / 100 * 255
             )
         elif layer.get('opacity'):
-            wms_layer['opacity'] = int(float(layer.get('opacity')))
+            wms_layer['opacity'] = int(float(layer.get("opacity")) * 255)
         else:
             wms_layer['opacity'] = 255
 
