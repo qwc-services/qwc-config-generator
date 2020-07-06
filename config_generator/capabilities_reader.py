@@ -340,11 +340,11 @@ class CapabilitiesReader():
                 # skip internal print layers
                 continue
 
-            group_layers.append(
-                self.collect_wms_layers(
-                    sub_layer, internal_print_layers, ns, np
-                )
+            sub_wms_layer = self.collect_wms_layers(
+                sub_layer, internal_print_layers, ns, np
             )
+            if sub_wms_layer is not None:
+                group_layers.append(sub_wms_layer)
 
         if group_layers:
             # group layer
@@ -355,6 +355,12 @@ class CapabilitiesReader():
             wms_layer['layers'] = group_layers
         else:
             # layer
+            if (
+                layer.get('geometryType') == 'WKBNoGeometry'
+                or layer.get('geometryType') == 'NoGeometry'
+            ):
+                # skip layer without geometry
+                return None
 
             # collect attributes
             attributes = []
@@ -394,13 +400,7 @@ class CapabilitiesReader():
         if maxScale is not None:
             wms_layer["maxScale"] = maxScale.text
 
-        if layer.get("geometryType") is None or \
-            layer.get("geometryType") == "WKBNoGeometry" or \
-                layer.get("geometryType") == "NoGeometry":
-
-            wms_layer['visible'] = False
-        else:
-            wms_layer['visible'] = layer.get('visible') == '1'
+        wms_layer['visible'] = layer.get('visible') == '1'
 
         wms_layer['queryable'] = layer.get('queryable') == '1'
         if wms_layer['queryable'] and layer.get('displayField'):
