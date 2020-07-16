@@ -197,6 +197,12 @@ class MapViewerConfig(ServiceConfig):
         themes['backgroundLayers'] = themes_config_themes.get(
             'backgroundLayers', []
         )
+        for backgroundLayer in themes['backgroundLayers']:
+            backgroundLayer["attribution"] = {
+                "Title": backgroundLayer["attribution"] if "attribution" in backgroundLayer else None,
+                "OnlineResource": backgroundLayer["attributionUrl"] if "attributionUrl" in backgroundLayer else None
+            }
+            backgroundLayer.pop("attributionUrl", None)
 
         themes['pluginData'] = themes_config_themes.get('pluginData', [])
         themes['themeInfoLinks'] = themes_config_themes.get(
