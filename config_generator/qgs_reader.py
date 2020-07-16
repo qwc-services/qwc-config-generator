@@ -137,7 +137,7 @@ class QGSReader:
             if m is not None:
                 dbname = m.group(1)
 
-            m = re.search(r"host=([\w\.]+)", datasource)
+            m = re.search(r"host=(\S+)", datasource)
             if m is not None:
                 host = m.group(1)
 
