@@ -1,5 +1,6 @@
 from collections import OrderedDict
 import os
+import traceback
 
 from flask import Flask, json, request
 
@@ -71,7 +72,7 @@ def generate_configs():
 
         return (log_output, 200)
     except Exception as e:
-        return (log_output + "\n\nPython Exception: " + str(e), 500)
+        return (log_output + "\n\nPython Exception: " + str(e) + "\n" + traceback.format_exc(), 500)
 
     finally:
         config_file = os.environ.get(
