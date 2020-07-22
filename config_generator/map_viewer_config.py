@@ -561,9 +561,9 @@ class MapViewerConfig(ServiceConfig):
                     continue
 
                 # check geometry type
-                if meta['geometry_type'] not in self.EDIT_GEOM_TYPES:
+                if not 'geometry_type' in meta or meta['geometry_type'] not in self.EDIT_GEOM_TYPES:
                     table = (
-                        "%s.%s" % meta.get('schema'), meta.get('table_name')
+                        "%s.%s" % (meta.get('schema'), meta.get('table_name'))
                     )
                     self.logger.warning(
                         "Unsupported geometry type '%s' for edit dataset '%s' "
