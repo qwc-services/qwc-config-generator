@@ -365,7 +365,7 @@ class MapViewerConfig(ServiceConfig):
         item['searchProviders'] = cfg_item.get('searchProviders', [])
 
         # edit config
-        item['editConfig'] = self.edit_config(name)
+        item['editConfig'] = self.edit_config(name, cfg_item)
 
         self.set_optional_config(cfg_item, 'watermark', item)
         self.set_optional_config(cfg_item, 'config', item)
@@ -491,7 +491,7 @@ class MapViewerConfig(ServiceConfig):
 
         return item_layer
 
-    def edit_config(self, map_name):
+    def edit_config(self, map_name, cfg_item):
         """Collect edit config for a map from ConfigDB.
 
         :param str map_name: Map name (matches WMS and QGIS project)
@@ -606,6 +606,11 @@ class MapViewerConfig(ServiceConfig):
                 )
 
                 edit_config[layer_name] = dataset
+
+        # Preserve manually specified edit configs
+        if 'editConfig' in cfg_item:
+            for layer_name in cfg_item['editConfig']:
+                edit_config[layer_name] = cfg_item['editConfig'][layer_name]
 
         return edit_config
 
