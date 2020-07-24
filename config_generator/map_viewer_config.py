@@ -71,6 +71,9 @@ class MapViewerConfig(ServiceConfig):
         # keep track of theme IDs for uniqueness
         self.theme_ids = []
 
+        # group counter
+        self.groupCounter = 0
+
         self.default_theme = None
 
     def config(self):
@@ -168,9 +171,10 @@ class MapViewerConfig(ServiceConfig):
         themes_config = self.capabilities_reader.themes_config
         themes_config_themes = themes_config.get('themes', {})
 
-        # reset theme IDs and default theme
+        # reset theme IDs,  default theme and group counter
         self.theme_ids = []
         self.default_theme = None
+        self.groupCounter = 0
 
         # collect resources from capabilities
         themes = OrderedDict()
@@ -230,6 +234,8 @@ class MapViewerConfig(ServiceConfig):
         """
         # NOTE: use ordered keys
         group = OrderedDict()
+        self.groupCounter += 1
+        group['id'] = "g%d" % self.groupCounter
         group['title'] = cfg_group.get('title')
 
         # collect sub theme items
