@@ -247,6 +247,12 @@ class CapabilitiesReader():
             capabilities['root_layer'] = self.collect_wms_layers(
                 root_layer, internal_print_layers, ns, np, default_root_name
             )
+            if capabilities['root_layer'] is None:
+                self.logger.warning(
+                    "No (non geometryless) layers found for %s: %s" %
+                    (full_url, response.content)
+                )
+                return
 
             # get drawing order
             drawing_order = root.find(
