@@ -364,7 +364,6 @@ class CapabilitiesReader():
             if (
                 layer.get('geometryType') == 'WKBNoGeometry'
                 or layer.get('geometryType') == 'NoGeometry'
-                or not layer.get('geometryType')
             ):
                 # skip layer without geometry
                 return None
