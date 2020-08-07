@@ -325,10 +325,21 @@ class MapViewerConfig(ServiceConfig):
         else:
             item['initialBbox'] = item['bbox']
 
+        # get search layers from searchProviders
+        search_providers = cfg_item.get('searchProviders', [])
+        search_layers = {}
+        for search_provider in search_providers:
+            if (
+                'provider' in search_provider
+                and search_provider.get('provider') == 'solr'
+            ):
+                search_layers = search_provider.get('layers', {})
+                break
+
         # collect layers
         layers = []
         for layer in root_layer.get('layers', []):
-            layers.append(self.collect_layers(layer))
+            layers.append(self.collect_layers(layer, search_layers))
         item['sublayers'] = layers
         item['expanded'] = True
         item['drawingOrder'] = cap.get('drawing_order', [])
@@ -440,10 +451,11 @@ class MapViewerConfig(ServiceConfig):
         if field in cfg_item:
             item[field] = cfg_item.get(field)
 
-    def collect_layers(self, layer):
+    def collect_layers(self, layer, search_layers):
         """Recursively collect layer tree from capabilities.
 
         :param obj layer: Layer or group layer
+        :param obj search_layers: Lookup for search layers
         """
         # NOTE: use ordered keys
         item_layer = OrderedDict()
@@ -457,7 +469,7 @@ class MapViewerConfig(ServiceConfig):
             sublayers = []
             for sublayer in layer['layers']:
                 # recursively collect sub layer
-                sublayers.append(self.collect_layers(sublayer))
+                sublayers.append(self.collect_layers(sublayer, search_layers))
 
             item_layer['sublayers'] = sublayers
 
@@ -490,6 +502,10 @@ class MapViewerConfig(ServiceConfig):
             # keywords
             if 'keywords' in layer:
                 item_layer['keywords'] = layer.get('keywords')
+
+            # search
+            if layer['name'] in search_layers:
+                item_layer['searchterms'] = [search_layers.get(layer['name'])]
 
             # TODO: featureReport
 
