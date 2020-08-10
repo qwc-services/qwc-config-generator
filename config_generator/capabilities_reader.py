@@ -31,7 +31,7 @@ class CapabilitiesReader():
 
         if self.themes_config is None:
             self.logger.critical(
-                "Error loading QWC2 themes config file:\n%s" % e)
+                "Error loading QWC2 themes config file")
 
         # get default QGIS server URL from ConfigGenerator config
         self.default_qgis_server_url = generator_config.get(
