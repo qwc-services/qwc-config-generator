@@ -66,7 +66,10 @@ class CapabilitiesReader():
 
         qgs_projects_dir = os.path.join(
             config_in_path, tenant, "qgis_projects")
-        if os.path.exists(qgs_projects_dir) is False:
+        if os.path.exists(qgs_projects_dir):
+            self.logger.info(
+                "Searching for projects files in " + qgs_projects_dir)
+        else:
             self.logger.warning(
                 "The qgis_projects sub directory does not exist: " + qgs_projects_dir)
             return
@@ -78,6 +81,7 @@ class CapabilitiesReader():
 
             file_extension = os.path.splitext(file_name)[1]
             if file_extension in [".qgs", ".qgz"]:
+                self.logger.info("Processing " + absolute_file_path)
                 categorized_qgs_project_path = convert_layers(
                     [], absolute_file_path)
 
@@ -111,21 +115,21 @@ class CapabilitiesReader():
                                 os.path.basename(
                                     categorized_qgs_project_path)))
 
-                    item = OrderedDict()
+                item = OrderedDict()
 
-                    item["url"] = urljoin(
-                        self.default_qgis_server_url,
-                        project_basename)
-                    item["backgroundLayers"] = self.themes_config.get(
-                        "defaultbackgroundLayers")
-                    item["searchProviders"] = self.themes_config.get(
-                        "defaultsearchProviders")
-                    item["mapCrs"] = self.themes_config.get(
-                        "defaultmapCrs")
+                item["url"] = urljoin(
+                    self.default_qgis_server_url,
+                    project_basename)
+                item["backgroundLayers"] = self.themes_config.get(
+                    "defaultbackgroundLayers", [])
+                item["searchProviders"] = self.themes_config.get(
+                    "defaultsearchProviders", [])
+                item["mapCrs"] = self.themes_config.get(
+                    "defaultmapCrs")
 
-                    themes = self.themes_config.get("themes")
-                    if themes and "items" in themes.keys():
-                        themes.get("items").append(item)
+                themes = self.themes_config.get("themes")
+                if themes and "items" in themes.keys():
+                    themes.get("items").append(item)
 
     def load_all_project_settings(self):
         """Load and parse GetProjectSettings for all theme items from
