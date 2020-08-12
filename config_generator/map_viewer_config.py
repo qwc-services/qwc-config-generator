@@ -2,6 +2,7 @@ from collections import OrderedDict
 import json
 import os
 
+from .permissions_query import PermissionsQuery
 from .qgs_reader import QGSReader
 from .service_config import ServiceConfig
 
@@ -63,6 +64,7 @@ class MapViewerConfig(ServiceConfig):
         self.tenant_path = tenant_path
         self.capabilities_reader = capabilities_reader
         self.config_models = config_models
+        self.permissions_query = PermissionsQuery(config_models, logger)
 
         self.qgis_projects_output_dir = generator_config.get(
             'qgis_projects_output_dir', '/tmp/'
@@ -103,7 +105,8 @@ class MapViewerConfig(ServiceConfig):
         # NOTE: use ordered keys
         permissions = OrderedDict()
 
-        # TODO: collect permissions from ConfigDB
+        # collect permissions from ConfigDB
+        session = self.config_models.session()
 
         # NOTE: WMS service permissions collected by OGC service config
         permissions['wms_services'] = []
@@ -112,6 +115,11 @@ class MapViewerConfig(ServiceConfig):
         )
         # NOTE: Data permissions collected by Data service config
         permissions['data_datasets'] = []
+        permissions['viewer_tasks'] = self.permitted_viewer_tasks(
+            role, session
+        )
+
+        session.close()
 
         return permissions
 
@@ -680,3 +688,19 @@ class MapViewerConfig(ServiceConfig):
             background_layers.append(bg_layer.get('name'))
 
         return background_layers
+
+    def permitted_viewer_tasks(self, role, session):
+        """Return permitted viewer tasks from ConfigDB.
+
+        :param str role: Role name
+        :param Session session: DB session
+        """
+        viewer_tasks = []
+
+        # helper method alias
+        permitted_resources = self.permissions_query.permitted_resources
+
+        # collect role permissions from ConfigDB
+        viewer_tasks = permitted_resources('viewer_task', role, session).keys()
+
+        return viewer_tasks

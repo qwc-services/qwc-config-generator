@@ -101,6 +101,7 @@ class PermissionsConfig():
             permissions['wfs_services'] = []
             permissions['background_layers'] = []
             permissions['data_datasets'] = []
+            permissions['viewer_tasks'] = []
             permissions['dataproducts'] = []
             permissions['document_templates'] = []
             permissions['print_templates'] = []
