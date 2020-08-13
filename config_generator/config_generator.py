@@ -196,7 +196,7 @@ class ConfigGenerator():
                 self.service_config('print'), self.logger
             ),
             'search': SearchServiceConfig(
-                self.service_config('search'), self.logger
+                self.config_models, self.service_config('search'), self.logger
             ),
             'data': DataServiceConfig(
                 self.service_config('data'), generator_config,

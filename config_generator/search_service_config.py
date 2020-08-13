@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import json
 
+from .permissions_query import PermissionsQuery
 from .service_config import ServiceConfig
 
 
@@ -10,9 +11,10 @@ class SearchServiceConfig(ServiceConfig):
     Generate Search service config and permissions.
     """
 
-    def __init__(self, service_config, logger):
+    def __init__(self, config_models, service_config, logger):
         """Constructor
 
+        :param ConfigModels config_models: Helper for ORM models
         :param obj service_config: Additional service config
         :param Logger logger: Logger
         """
@@ -22,6 +24,9 @@ class SearchServiceConfig(ServiceConfig):
             service_config,
             logger
         )
+
+        self.config_models = config_models
+        self.permissions_query = PermissionsQuery(config_models, logger)
 
     def config(self):
         """Return service config."""
@@ -46,14 +51,41 @@ class SearchServiceConfig(ServiceConfig):
         # NOTE: use ordered keys
         permissions = OrderedDict()
 
-        # additional service config
-        cfg_permissions = self.service_config.get('permissions', [])
+        if 'permissions' not in self.service_config:
+            # collect permissions from ConfigDB
+            session = self.config_models.session()
 
-        for role_permissions in cfg_permissions:
-            # find role in permissions
-            if role_permissions.get('role') == role:
-                # get permissions for role directly from service config
-                permissions = role_permissions.get('permissions', {})
-                break
+            # helper method alias
+            permitted_resources = self.permissions_query.permitted_resources
+
+            # collect role permissions from ConfigDB
+            solr_facets = permitted_resources(
+                'solr_facet', role, session
+            ).keys()
+            permissions['solr_facets'] = sorted(list(solr_facets))
+
+            session.close()
+        else:
+            # use permissions from additional service config if present
+            self.logger.debug("Reading permissions from tenantConfig")
+
+            # additional service config
+            cfg_permissions = self.service_config.get('permissions', [])
+
+            for role_permissions in cfg_permissions:
+                # find role in permissions
+                if role_permissions.get('role') == role:
+                    # get permissions for role directly from service config
+                    search_permissions = role_permissions.get(
+                        'permissions', {}
+                    )
+                    if 'dataproducts' in search_permissions:
+                        permissions['dataproducts'] = \
+                            search_permissions['dataproducts']
+                    if 'solr_facets' in search_permissions:
+                        permissions['solr_facets'] = \
+                            search_permissions['solr_facets']
+
+                    break
 
         return permissions

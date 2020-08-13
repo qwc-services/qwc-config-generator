@@ -178,7 +178,7 @@ For adding these projects, the following settings need to be defined in `themesC
 - `defaultSearchProviders`
 - `defaultMapCrs`
 
-*NOTE:* the Search service config takes its resources and permissions directly from the ConfigGenerator config
+*NOTE:* The Search service config takes its resources directly from the ConfigGenerator config. Its Permissions are collected from the ConfigDB, unless they are defined in the ConfigGenerator config.
 
 *NOTE:* the FeatureInfo service config may take additional WMS service resources and permissions directly from the ConfigGenerator config, e.g. for external info layers:
 
