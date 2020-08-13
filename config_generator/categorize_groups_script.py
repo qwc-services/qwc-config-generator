@@ -21,13 +21,24 @@ def convert_layers(layers, project_path, override_project=False):
         project will be overriden.
     """
 
+    if override_project is True:
+        dest_path = project_path
+    else:
+        file_name, extension = os.path.splitext(src_path)
+        dest_path = file_name + "_categorized" + extension
+
+    return categorize_layers(layers, project_path, dest_path)
+
+
+def categorize_layers(layers, src_path, dest_path):
+
     layer_order = []
     project_instance = QgsProject.instance()
     layer_tree_root = project_instance.layerTreeRoot()
 
-    if project_instance.read(project_path) is False:
+    if project_instance.read(src_path) is False:
         print("There was a problem with reading the project file.")
-        return
+        return None
 
     for _layer in layer_tree_root.children():
         layer_order.append(_layer.name())
@@ -43,7 +54,7 @@ def convert_layers(layers, project_path, override_project=False):
                 layers.append(layer.name())
 
     if not layers:
-        return project_path
+        return src_path
 
     for layer_name in layers:
         # Search for layer by name
@@ -74,17 +85,9 @@ def convert_layers(layers, project_path, override_project=False):
             project_instance, group)
         project_instance.removeMapLayer(base_layer)
 
-    if override_project is True:
-        save_project(project_instance)
-        project_path = project_instance.absoluteFilePath()
-    else:
-        file_name, extension = os.path.splitext(
-            project_instance.absoluteFilePath())
-        project_path = file_name + "_categorized" + extension
+    save_project(project_instance, dest_path)
 
-        save_project(project_instance, project_path)
-
-    return project_path
+    return dest_path
 
 
 def save_custom_property(layers, project_instance):

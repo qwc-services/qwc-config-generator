@@ -66,8 +66,8 @@ class MapViewerConfig(ServiceConfig):
         self.config_models = config_models
         self.permissions_query = PermissionsQuery(config_models, logger)
 
-        self.qgis_projects_output_dir = generator_config.get(
-            'qgis_projects_output_dir', '/tmp/'
+        self.qgis_projects_base_dir = generator_config.get(
+            'qgis_projects_base_dir', '/tmp/'
         )
 
         # keep track of theme IDs for uniqueness
@@ -566,7 +566,7 @@ class MapViewerConfig(ServiceConfig):
             # no edit datasets for this map
             return edit_config
 
-        qgs_reader = QGSReader(self.logger, self.qgis_projects_output_dir)
+        qgs_reader = QGSReader(self.logger, self.qgis_projects_base_dir)
         self.logger.info("Reading '%s.qgs'" % map_name)
         if qgs_reader.read(map_name):
             # collect edit datasets

@@ -4,7 +4,7 @@
 QWC Config Generator
 ====================
 
-Generate JSON files for service configs and permissions from a `themesConfig.json`, WMS GetCapabilities and QWC ConfigDB.
+Generate JSON files for service configs and permissions from WMS GetCapabilities, QGS projects and QWC ConfigDB.
 
 
 Setup
@@ -23,18 +23,18 @@ Example `tenantConfig.json`:
   "service": "config-generator",
   "config": {
     "tenant": "default",
-    "default_qgis_server_url": "http://localhost:8001/ows/",
     "config_db_url": "postgresql:///?service=qwc_configdb",
-    "permissions_default_allow": true,
-    "qgis_projects_output_dir": "/data"
+    "default_qgis_server_url": "http://localhost:8001/ows/",
+    "qgis_projects_base_dir": "/data",
+    "permissions_default_allow": true
   },
   "themesConfig": {
       "defaultScales": [100000000, 50000000, 25000000, 10000000, 4000000, 2000000, 1000000, 400000, 200000, 80000, 40000, 20000, 10000, 8000, 6000, 4000, 2000, 1000, 500, 250, 100],
       "defaultPrintGrid": [{"s": 10000000, "x": 1000000, "y": 1000000}, {"s": 1000000, "x": 100000, "y": 100000}, {"s": 100000, "x": 10000, "y": 10000}, {"s": 10000, "x": 1000, "y": 1000}, {"s": 1000, "x": 100, "y": 100}, {"s": 100, "x": 10, "y": 10}],
       "defaultWMSVersion":"1.3.0",
-      "defaultbackgroundLayers": [],
-      "defaultsearchProviders": ["coordinates"],
-      "defaultmapCrs": "EPSG:3857",
+      "defaultBackgroundLayers": [],
+      "defaultSearchProviders": ["coordinates"],
+      "defaultMapCrs": "EPSG:3857",
       "themes": {
         "items": [
           {
@@ -169,11 +169,14 @@ Example `tenantConfig.json`:
 
 For a full example see [tenantConfig-example.json](tenantConfig-example.json) ([JSON schema](schemas/qwc-config-generator.json)).
 
-*NOTE:* the QWC2 themes config is defined under `themesConfig` in the ConfigGenerator config and not in a separate file. There are also three new required fields used by the ConfigGenerator that need to be defined in the `themesConfig`.
+*NOTE:* the QWC2 themes config is defined under `themesConfig` in the ConfigGenerator config and not in a separate file.
 
-- `defaultbackgroundLayers`
-- `defaultsearchProviders`
-- `defaultmapCrs`
+QGIS projects can be automatically detected when `qgis_projects_scan_base_dir` is defined.
+For adding these projects, the following settings need to be defined in `themesConfig`.
+
+- `defaultBackgroundLayers`
+- `defaultSearchProviders`
+- `defaultMapCrs`
 
 *NOTE:* the Search service config takes its resources and permissions directly from the ConfigGenerator config
 

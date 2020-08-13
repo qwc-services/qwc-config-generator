@@ -32,8 +32,8 @@ class DataServiceConfig(ServiceConfig):
 
         self.generator_config = generator_config
 
-        self.qgis_projects_output_dir = generator_config.get(
-            'qgis_projects_output_dir', '/tmp/'
+        self.qgis_projects_base_dir = generator_config.get(
+            'qgis_projects_base_dir', '/tmp/'
         )
 
     def config(self):
@@ -107,7 +107,7 @@ class DataServiceConfig(ServiceConfig):
         datasets = []
 
         for qgs_name, map_datasets in self.available_datasets(session).items():
-            qgs_reader = QGSReader(self.logger, self.qgis_projects_output_dir)
+            qgs_reader = QGSReader(self.logger, self.qgis_projects_base_dir)
             self.logger.info("Reading '%s.qgs'" % qgs_name)
             if qgs_reader.read(qgs_name):
                 for layer_name in qgs_reader.pg_layers():
@@ -268,7 +268,7 @@ class DataServiceConfig(ServiceConfig):
                 # map not permitted
                 continue
 
-            qgs_reader = QGSReader(self.logger, self.qgis_projects_output_dir)
+            qgs_reader = QGSReader(self.logger, self.qgis_projects_base_dir)
             if qgs_reader.read(map_name):
                 for layer_name in qgs_reader.pg_layers():
                     if layer_name not in datasets:

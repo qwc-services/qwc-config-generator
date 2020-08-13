@@ -164,8 +164,10 @@ class ConfigGenerator():
         capabilities_reader = CapabilitiesReader(
             generator_config, config.get("themesConfig"), self.logger
         )
-        capabilities_reader.add_qgs_projects_to_themes_config(
+        capabilities_reader.preprocess_qgs_projects(
             generator_config, self.tenant)
+        capabilities_reader.search_qgs_projects(
+            generator_config)
         capabilities_reader.load_all_project_settings()
 
         # lookup for additional service configs by name
@@ -367,7 +369,7 @@ class ConfigGenerator():
         """Remove temporary config dir."""
         try:
             if os.path.isdir(self.temp_config_path):
-                self.logger.info(
+                self.logger.debug(
                     "Removing temp config dir %s" % self.temp_config_path
                 )
                 rmtree(self.temp_config_path)
@@ -399,8 +401,8 @@ class ConfigGenerator():
         # FIXME: remove external schema refs from MapViewer schema for now
         #        until QWC2 JSON schemas are available
         if config.get('service') == 'map-viewer':
-            self.logger.warning(
-                "Removing external QWC2 schema refs from MapViewer JSON schema"
+            self.logger.info(
+                "Skipping JSON schema check for MapViewer"
             )
             resources = schema['properties']['resources']['properties']
             # QWC2 application configuration as simple dict

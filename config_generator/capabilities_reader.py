@@ -5,9 +5,10 @@ from xml.etree import ElementTree
 
 import requests
 import os
+from pathlib import Path
 from shutil import move, copyfile
 
-from .categorize_groups_script import convert_layers
+from .categorize_groups_script import categorize_layers
 
 
 class CapabilitiesReader():
@@ -21,8 +22,8 @@ class CapabilitiesReader():
         """Constructor
 
         :param obj generator_config: ConfigGenerator config
-        :param Logger logger: Logger
         :param dict themes_config: themes config
+        :param Logger logger: Logger
         """
         self.logger = logger
 
@@ -44,17 +45,7 @@ class CapabilitiesReader():
         # lookup for services names by URL: {<url>: <service_name>}
         self.service_name_lookup = {}
 
-    def add_qgs_projects_to_themes_config(self, generator_config, tenant):
-        """Copy all QGS/QGZ files from the
-         input directory (INPUT_CONFIG_PATH/tenant) to
-         the output directory (`qgis_projects_output_dir`).
-
-
-        :param obj generator_config: ConfigGenerator config
-        """
-        if self.themes_config is None:
-            return
-
+    def preprocess_qgs_projects(self, generator_config, tenant):
         config_in_path = os.environ.get(
             'INPUT_CONFIG_PATH', 'config-in/'
         )
@@ -70,66 +61,101 @@ class CapabilitiesReader():
             self.logger.info(
                 "Searching for projects files in " + qgs_projects_dir)
         else:
-            self.logger.warning(
-                "The qgis_projects sub directory does not exist: " + qgs_projects_dir)
+            self.logger.debug(
+                "The qgis_projects sub directory does not exist: " +
+                qgs_projects_dir)
             return
 
-        qgs_projects_list = os.listdir(qgs_projects_dir)
-        for file_name in qgs_projects_list:
-            absolute_file_path = os.path.join(
-                qgs_projects_dir, file_name)
+        # Output directory for processed projects
+        qgis_projects_base_dir = generator_config.get(
+            'qgis_projects_base_dir')
 
-            file_extension = os.path.splitext(file_name)[1]
-            if file_extension in [".qgs", ".qgz"]:
-                self.logger.info("Processing " + absolute_file_path)
-                categorized_qgs_project_path = convert_layers(
-                    [], absolute_file_path)
+        for dirpath, dirs, files in os.walk(qgs_projects_dir,
+                                            followlinks=True):
+            for filename in files:
+                if Path(filename).suffix in [".qgs", ".qgz"]:
+                    fname = os.path.join(dirpath, filename)
+                    relpath = os.path.relpath(fname, qgs_projects_dir)
+                    self.logger.info("Processing " + fname)
 
-                if os.path.exists(categorized_qgs_project_path) is False:
-                    self.logger.warning(
-                        "The project: " + categorized_qgs_project_path +
-                        " could not be generated.\n"
-                        "Please check if needed permissions to create the"
-                        " file are granted.")
-                    continue
+                    # convert project
+                    dest_path = os.path.join(
+                        qgis_projects_base_dir, relpath)
+                    categorized_qgs_project_path = categorize_layers(
+                        [], fname, dest_path)
+                    if not os.path.exists(dest_path):
+                        self.logger.warning(
+                            "The project: " + dest_path +
+                            " could not be generated.\n"
+                            "Please check if needed permissions to create the"
+                            " file are granted.")
+                        continue
+                    self.logger.info("Written to " + dest_path)
 
-                project_basename = os.path.splitext(
-                    os.path.basename(
-                        categorized_qgs_project_path))[0]
+    def search_qgs_projects(self, generator_config):
+        if self.themes_config is None:
+            return
 
-                qgis_projects_output_dir = generator_config.get(
-                    'qgis_projects_output_dir')
-                if qgis_projects_output_dir:
-                    if "categorize" in categorized_qgs_project_path:
-                        move(
-                            categorized_qgs_project_path,
-                            os.path.join(
-                                qgis_projects_output_dir,
-                                os.path.basename(
-                                    categorized_qgs_project_path)))
+        qgis_projects_scan_base_dir = generator_config.get(
+            'qgis_projects_scan_base_dir')
+        if not qgis_projects_scan_base_dir:
+            self.logger.info(
+                "Skipping scanning for projects" +
+                " (qgis_projects_scan_base_dir not set")
+            return
+
+        if os.path.exists(qgis_projects_scan_base_dir):
+            self.logger.info(
+                "Searching for projects files in " + qgis_projects_scan_base_dir)
+        else:
+            self.logger.error(
+                "The qgis_projects_scan_base_dir sub directory" +
+                " does not exist: " + qgis_projects_scan_base_dir)
+            return
+
+        scanned_projects_path_prefix = generator_config.get(
+            'scanned_projects_path_prefix', '')
+        base_url = urljoin(self.default_qgis_server_url,
+                           scanned_projects_path_prefix)
+
+        # collect existing item urls
+        items = self.themes_config.get("themes", {}).get(
+            "items", {})
+        wms_urls = []
+        has_default = False
+        for item in items:
+            if item.get("url"):
+                wms_urls.append(item["url"])
+            if item.get("default", False):
+                has_default = True
+
+        for dirpath, dirs, files in os.walk(qgis_projects_scan_base_dir,
+                                            followlinks=True):
+            for filename in files:
+                if Path(filename).suffix in [".qgs", ".qgz"]:
+                    fname = os.path.join(dirpath, filename)
+                    relpath = os.path.relpath(dirpath,
+                                              qgis_projects_scan_base_dir)
+                    wmspath = os.path.join(relpath, Path(filename).stem)
+
+                    # Add to themes items
+                    item = OrderedDict()
+                    item["url"] = urljoin(base_url, wmspath)
+                    item["backgroundLayers"] = self.themes_config.get(
+                        "defaultBackgroundLayers", [])
+                    item["searchProviders"] = self.themes_config.get(
+                        "defaultSearchProviders", [])
+                    item["mapCrs"] = self.themes_config.get(
+                        "defaultMapCrs")
+
+                    if item["url"] not in wms_urls:
+                        self.logger.info("Adding project " + fname)
+                        if not has_default:
+                            item["default"] = True
+                            has_default = True
+                        items.append(item)
                     else:
-                        copyfile(
-                            categorized_qgs_project_path,
-                            os.path.join(
-                                qgis_projects_output_dir,
-                                os.path.basename(
-                                    categorized_qgs_project_path)))
-
-                item = OrderedDict()
-
-                item["url"] = urljoin(
-                    self.default_qgis_server_url,
-                    project_basename)
-                item["backgroundLayers"] = self.themes_config.get(
-                    "defaultbackgroundLayers", [])
-                item["searchProviders"] = self.themes_config.get(
-                    "defaultsearchProviders", [])
-                item["mapCrs"] = self.themes_config.get(
-                    "defaultmapCrs")
-
-                themes = self.themes_config.get("themes")
-                if themes and "items" in themes.keys():
-                    themes.get("items").append(item)
+                        self.logger.info("Skipping project " + fname)
 
     def load_all_project_settings(self):
         """Load and parse GetProjectSettings for all theme items from

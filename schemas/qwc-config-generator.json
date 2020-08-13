@@ -37,18 +37,26 @@
           "description": "Tenant name. Example: default",
           "type": "string"
         },
-        "default_qgis_server_url": {
-          "description": "Default QGIS Server URL for OGC requests. Example: http://qwc-qgis-server/ows/",
-          "type": "string",
-          "format": "uri"
-        },
         "config_db_url": {
           "description": "Connection URL for configuration database. Example: postgresql:///?service=qwc_configdb",
           "type": "string",
           "format": "uri"
         },
-        "qgis_projects_output_dir": {
-          "description": "Target path for QGIS projects. Example: /data",
+        "default_qgis_server_url": {
+          "description": "Default QGIS Server URL for OGC requests. Example: http://qwc-qgis-server/ows/",
+          "type": "string",
+          "format": "uri"
+        },
+        "qgis_projects_base_dir": {
+          "description": "Base path for QGIS projects. Example: /data",
+          "type": "string"
+        },
+        "qgis_projects_scan_base_dir": {
+          "description": "Path for QGIS projects, which should be automatically detected. Example: /data/auto",
+          "type": "string"
+        },
+        "scanned_projects_path_prefix": {
+          "description": "Optional path prefix for automatically detected projects. Example: auto/",
           "type": "string"
         },
         "permissions_default_allow": {
@@ -64,7 +72,7 @@
         "tenant",
         "default_qgis_server_url",
         "config_db_url",
-        "qgis_projects_output_dir"
+        "qgis_projects_base_dir"
       ]
     },
     "services": {
