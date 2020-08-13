@@ -103,6 +103,7 @@ class PermissionsConfig():
             permissions['data_datasets'] = []
             permissions['viewer_tasks'] = []
             permissions['theme_info_links'] = []
+            permissions['plugin_data'] = []
             permissions['dataproducts'] = []
             permissions['document_templates'] = []
             permissions['print_templates'] = []

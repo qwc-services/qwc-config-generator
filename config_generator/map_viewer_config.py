@@ -124,6 +124,9 @@ class MapViewerConfig(ServiceConfig):
         permissions['theme_info_links'] = self.permitted_theme_info_links(
             role, session
         )
+        permissions['plugin_data'] = self.permitted_plugin_data_resources(
+            role, session
+        )
 
         session.close()
 
@@ -720,3 +723,30 @@ class MapViewerConfig(ServiceConfig):
         ).keys()
 
         return sorted(list(theme_info_links))
+
+    def permitted_plugin_data_resources(self, role, session):
+        """Return permitted plugin data resources from ConfigDB.
+
+        NOTE: 'plugin_data' require explicit permissions,
+              permissions for 'plugin' are disregarded
+
+        :param str role: Role name
+        :param Session session: DB session
+        """
+        plugin_permissions = []
+
+        # collect role permissions from ConfigDB
+        for plugin, plugin_data in self.permitted_resources(
+            'plugin_data', role, session
+        ).items():
+            # add permitted plugin data resources grouped by plugin
+            # NOTE: use ordered keys
+            plugin_permission = OrderedDict()
+            plugin_permission['name'] = plugin
+            plugin_permission['resources'] = sorted(list(plugin_data.keys()))
+            plugin_permissions.append(plugin_permission)
+
+        # order by plugin name
+        return sorted(
+            plugin_permissions, key=lambda plugin: plugin.get('name')
+        )
