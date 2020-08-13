@@ -64,7 +64,10 @@ class MapViewerConfig(ServiceConfig):
         self.tenant_path = tenant_path
         self.capabilities_reader = capabilities_reader
         self.config_models = config_models
+
         self.permissions_query = PermissionsQuery(config_models, logger)
+        # helper method alias
+        self.permitted_resources = self.permissions_query.permitted_resources
 
         self.qgis_projects_base_dir = generator_config.get(
             'qgis_projects_base_dir', '/tmp/'
@@ -116,6 +119,9 @@ class MapViewerConfig(ServiceConfig):
         # NOTE: Data permissions collected by Data service config
         permissions['data_datasets'] = []
         permissions['viewer_tasks'] = self.permitted_viewer_tasks(
+            role, session
+        )
+        permissions['theme_info_links'] = self.permitted_theme_info_links(
             role, session
         )
 
@@ -695,12 +701,22 @@ class MapViewerConfig(ServiceConfig):
         :param str role: Role name
         :param Session session: DB session
         """
-        viewer_tasks = []
-
-        # helper method alias
-        permitted_resources = self.permissions_query.permitted_resources
-
         # collect role permissions from ConfigDB
-        viewer_tasks = permitted_resources('viewer_task', role, session).keys()
+        viewer_tasks = self.permitted_resources(
+            'viewer_task', role, session
+        ).keys()
 
-        return viewer_tasks
+        return sorted(list(viewer_tasks))
+
+    def permitted_theme_info_links(self, role, session):
+        """Return permitted theme info links from ConfigDB.
+
+        :param str role: Role name
+        :param Session session: DB session
+        """
+        # collect role permissions from ConfigDB
+        theme_info_links = self.permitted_resources(
+            'theme_info_link', role, session
+        ).keys()
+
+        return sorted(list(theme_info_links))
