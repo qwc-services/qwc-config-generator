@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from .permissions_query import PermissionsQuery
 from .service_config import ServiceConfig
 
 
@@ -9,12 +10,13 @@ class FeatureInfoServiceConfig(ServiceConfig):
     Generate FeatureInfo service config and permissions.
     """
 
-    def __init__(self, generator_config, capabilities_reader, service_config,
-                 logger):
+    def __init__(self, generator_config, capabilities_reader, config_models,
+                 service_config, logger):
         """Constructor
 
         :param obj generator_config: ConfigGenerator config
         :param CapabilitiesReader capabilities_reader: CapabilitiesReader
+        :param ConfigModels config_models: Helper for ORM models
         :param obj service_config: Additional service config
         :param Logger logger: Logger
         """
@@ -24,6 +26,9 @@ class FeatureInfoServiceConfig(ServiceConfig):
             service_config,
             logger
         )
+
+        self.config_models = config_models
+        self.permissions_query = PermissionsQuery(config_models, logger)
 
         # get default QGIS server URL from ConfigGenerator config
         self.default_qgis_server_url = generator_config.get(
@@ -78,10 +83,6 @@ class FeatureInfoServiceConfig(ServiceConfig):
     def wms_services(self):
         """Collect WMS service resources from capabilities."""
         wms_services = []
-
-        # additional service config
-        cfg_generator_config = self.service_config.get('generator_config', {})
-        cfg_wms_services = cfg_generator_config.get('wms_services', [])
 
         for service_name in self.capabilities_reader.wms_service_names():
             cap = self.capabilities_reader.wms_capabilities.get(service_name)
@@ -160,27 +161,157 @@ class FeatureInfoServiceConfig(ServiceConfig):
 
     # permissions
 
-    def additional_wms_permissions(self, role):
-        """Collect additional WMS Service permissions from service config.
+    def available_info_layers(self, session):
+        """Collect all available info layers from ConfigDB, grouped by
+        info service name.
 
-        These are permissions e.g. for external info layers, which cannot be
-        collected from capabilities or ConfigDB.
+        :param Session session: DB session
+        """
+        # NOTE: use ordered keys
+        available_info_layers = OrderedDict()
+
+        Resource = self.config_models.model('resources')
+
+        query = session.query(Resource) \
+            .filter(Resource.type == 'feature_info_service') \
+            .order_by(Resource.name)
+        for info_service in query.all():
+            # collect unique info layers for each info service resource
+            info_layers_query = session.query(Resource) \
+                .filter(Resource.parent_id == info_service.id) \
+                .filter(Resource.type == 'feature_info_layer') \
+                .distinct(Resource.name) \
+                .order_by(Resource.name)
+            available_info_layers[info_service.name] = [
+                resource.name for resource in info_layers_query.all()
+            ]
+
+        return available_info_layers
+
+    def additional_wms_permissions(self, role):
+        """Collect additional WMS Service permissions from ConfigDB
+        or service config.
+
+        These are permissions, e.g. for external info layers, which cannot be
+        collected from capabilities.
 
         :param str role: Role name
         """
-        # NOTE: use ordered keys
-        permissions = OrderedDict()
+        wms_services = []
 
-        # additional service config
-        cfg_permissions = self.service_config.get('permissions', [])
+        if 'permissions' not in self.service_config:
+            # collect permissions from ConfigDB
+            session = self.config_models.session()
 
-        for role_permissions in cfg_permissions:
-            # find role in permissions
-            if role_permissions.get('role') == role:
-                # get WMS service permissions for role directly
-                #   from service config
-                permissions = role_permissions.get('permissions', {}). \
-                    get('wms_services', [])
-                break
+            # helper method alias
+            permitted_resources = self.permissions_query.permitted_resources
 
-        return permissions
+            # collect role permissions from ConfigDB
+            role_permissions = {
+                'info_services': permitted_resources(
+                    'feature_info_service', role, session
+                ),
+                'info_layers': permitted_resources(
+                    'feature_info_layer', role, session
+                ),
+                'attributes': permitted_resources(
+                    'info_attribute', role, session
+                )
+            }
+
+            # collect public permissions from ConfigDB
+            public_role = self.permissions_query.public_role()
+            public_permissions = {
+                'info_services': permitted_resources(
+                    'feature_info_service', public_role, session
+                ),
+                'info_layers': permitted_resources(
+                    'feature_info_layer', public_role, session
+                ),
+                'attributes': permitted_resources(
+                    'info_attribute', public_role, session
+                )
+            }
+
+            is_public_role = (role == self.permissions_query.public_role())
+
+            # collect info layer permissions for each info service
+            available_info_layers = self.available_info_layers(session)
+            for info_service, info_layers in available_info_layers.items():
+                # lookup permissions (info service restricted by default)
+                info_service_restricted_for_public = info_service not in \
+                    public_permissions['info_services']
+                info_service_permitted_for_role = info_service in \
+                    role_permissions['info_services']
+                if (
+                    info_service_restricted_for_public
+                    and not info_service_permitted_for_role
+                ):
+                    # info service not permitted
+                    continue
+
+                # NOTE: use ordered keys
+                wms_service = OrderedDict()
+                wms_service['name'] = info_service
+
+                # collect info layers
+                layers = []
+                for info_layer in info_layers:
+                    # lookup permissions (info layer restricted by default)
+                    info_layer_restricted_for_public = info_layer not in \
+                        public_permissions['info_layers'].get(info_service, {})
+                    info_layer_permitted_for_role = info_layer in \
+                        role_permissions['info_layers'].get(info_service, {})
+                    if (
+                        info_layer_restricted_for_public
+                        and not info_layer_permitted_for_role
+                    ):
+                        # info layer not permitted
+                        continue
+
+                    # NOTE: use ordered keys
+                    wms_layer = OrderedDict()
+                    wms_layer['name'] = info_layer
+
+                    # collect info attribute names (restricted by default)
+                    attributes = role_permissions['attributes'] \
+                        .get(info_service, {}).get(info_layer, {}).keys()
+                    if attributes:
+                        wms_layer['attributes'] = sorted(list(attributes))
+
+                    # info template always permitted
+                    wms_layer['info_template'] = True
+
+                    if is_public_role:
+                        # add public dataset
+                        layers.append(wms_layer)
+                    elif info_layer_restricted_for_public:
+                        # add dataset permitted for role
+                        layers.append(wms_layer)
+                    elif attributes:
+                        # only add additional permissions
+                        layers.append(wms_layer)
+
+                wms_service['layers'] = layers
+
+                if layers:
+                    wms_services.append(wms_service)
+
+            session.close()
+        else:
+            # use permissions from additional service config if present
+            self.logger.debug("Reading permissions from tenantConfig")
+
+            # additional service config
+            cfg_permissions = self.service_config.get('permissions', [])
+
+            for role_permissions in cfg_permissions:
+                # find role in permissions
+                if role_permissions.get('role') == role:
+                    # get WMS service permissions for role directly
+                    #   from service config
+                    wms_services = role_permissions.get('permissions', {}). \
+                        get('wms_services', [])
+                    break
+
+        return wms_services

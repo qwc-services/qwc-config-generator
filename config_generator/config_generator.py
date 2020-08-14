@@ -188,7 +188,7 @@ class ConfigGenerator():
                 self.service_config('mapViewer'), self.logger
             ),
             'featureInfo': FeatureInfoServiceConfig(
-                generator_config, capabilities_reader,
+                generator_config, capabilities_reader, self.config_models,
                 self.service_config('featureInfo'), self.logger
             ),
             'print': PrintServiceConfig(

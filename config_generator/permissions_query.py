@@ -123,8 +123,9 @@ class PermissionsQuery:
         """Collect hierarchy of resources permitted for a role
         for a resource type.
 
-        NOTE: use 'attribute' resource type for layer attributes and
-              'data_attribute' for data attributes
+        NOTE: use 'attribute' resource type for layer attributes,
+              'data_attribute' for data attributes and
+              'info_attribute' for FeatureInfo layer attributes
 
         :param str resource_type: QWC resource type
         :param Session session: DB session
@@ -137,6 +138,10 @@ class PermissionsQuery:
             # only data attributes
             resource_type = 'attribute'
             parent_filter = 'data'
+        elif resource_type == 'info_attribute':
+            # only info layer attributes
+            resource_type = 'attribute'
+            parent_filter = 'feature_info_layer'
 
         # query resource permissions
         query = self.resource_permissions_query(
@@ -156,8 +161,9 @@ class PermissionsQuery:
         """Collect hierarchy of resources restricted for public role
         for a resource type.
 
-        NOTE: use 'attribute' resource type for layer attributes and
-              'data_attribute' for data attributes
+        NOTE: use 'attribute' resource type for layer attributes,
+              'data_attribute' for data attributes and
+              'info_attribute' for FeatureInfo layer attributes
 
         :param str resource_type: QWC resource type
         :param Session session: DB session
@@ -170,6 +176,10 @@ class PermissionsQuery:
             # only data attributes
             resource_type = 'attribute'
             parent_filter = 'data'
+        elif resource_type == 'info_attribute':
+            # only info layer attributes
+            resource_type = 'attribute'
+            parent_filter = 'feature_info_layer'
 
         # query public resource restrictions
         query = self.resource_restrictions_query(
