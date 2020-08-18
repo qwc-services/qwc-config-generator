@@ -64,7 +64,6 @@ class MapViewerConfig(ServiceConfig):
         self.tenant_path = tenant_path
         self.capabilities_reader = capabilities_reader
         self.config_models = config_models
-
         self.permissions_query = PermissionsQuery(config_models, logger)
         # helper method alias
         self.permitted_resources = self.permissions_query.permitted_resources
@@ -143,6 +142,9 @@ class MapViewerConfig(ServiceConfig):
         cfg_generator_config = self.service_config.get('generator_config', {})
         cfg_qwc2_config = cfg_generator_config.get('qwc2_config', {})
 
+        # collect restricted menu items from ConfigDB
+        qwc2_config['restricted_viewer_tasks'] = self.restricted_viewer_tasks()
+
         # read QWC2 config.json
         config = OrderedDict()
         try:
@@ -173,6 +175,16 @@ class MapViewerConfig(ServiceConfig):
         qwc2_config['config'] = config
 
         return qwc2_config
+
+    def restricted_viewer_tasks(self):
+        """Collect restricted viewer tasks from ConfigDB."""
+        session = self.config_models.session()
+        viewer_tasks = self.permissions_query.non_public_resources(
+            'viewer_task', session
+        )
+        session.close()
+
+        return sorted(list(viewer_tasks))
 
     def qwc2_themes(self):
         """Collect QWC2 themes configuration from capabilities,
