@@ -236,6 +236,12 @@ class QGSReader:
             if constraints:
                 fields[field]['constraints'] = constraints
 
+            expressionfields_field = maplayer.find(
+                "expressionfields/field[@name='%s']" % field
+            )
+            if expressionfields_field is not None:
+                fields[field]['expression'] = expressionfields_field.get('expression').lstrip("'").rstrip("'")
+
         return {
             'attributes': attributes,
             'fields': fields
@@ -394,6 +400,7 @@ class QGSReader:
         :param obj meta: Table metadata
         """
         conn = None
+        upload_fields = []
         try:
             connection_string = meta.get('database')
             schema = meta.get('schema')
@@ -404,6 +411,11 @@ class QGSReader:
             conn = geo_db.connect()
 
             for attr in meta.get('attributes'):
+                # upload field
+                if attr.endswith("__upload"):
+                    upload_fields.append(attr)
+                    continue
+
                 # build query SQL
                 sql = sql_text("""
                     SELECT data_type, character_maximum_length,
@@ -475,6 +487,16 @@ class QGSReader:
 
             # close database connection
             conn.close()
+
+            attributes = meta.get('attributes')
+            for field in upload_fields:
+                target_field = field[0:len(field) - 8]
+                attributes.remove(field)
+                if target_field in meta['fields']:
+                    meta['fields'][target_field]['data_type'] = 'file'
+                    meta['fields'][target_field]['constraints'] = {"accept": meta['fields'][field].get('expression', "")}
+                if field in meta['fields']:
+                    del meta['fields'][field]
 
         except Exception as e:
             self.logger.error(

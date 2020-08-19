@@ -32,6 +32,7 @@ class MapViewerConfig(ServiceConfig):
         'character varying': 'text',
         'date': 'date',
         'double precision': 'text',
+        'file': 'file',
         'integer': 'number',
         'numeric': 'number',
         'real': 'text',
