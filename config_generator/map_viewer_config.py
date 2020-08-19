@@ -237,7 +237,7 @@ class MapViewerConfig(ServiceConfig):
             }
             backgroundLayer.pop("attributionUrl", None)
 
-        themes['pluginData'] = themes_config_themes.get('pluginData', [])
+        themes['pluginData'] = themes_config_themes.get('pluginData', {})
         themes['themeInfoLinks'] = themes_config_themes.get(
             'themeInfoLinks', []
         )
