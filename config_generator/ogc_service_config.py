@@ -279,8 +279,12 @@ class OGCServiceConfig(ServiceConfig):
         else:
             restricted_for_public = layer['name'] not in \
                 public_permissions['layers'].get(service_name, {})
-        permitted_for_role = layer['name'] in \
-            role_permissions['layers'].get(service_name, {})
+
+        layer_permissions = role_permissions[
+            'layers'].get(service_name, {})
+        all_layers_permitted = "*" in layer_permissions.keys()
+        permitted_for_role = all_layers_permitted or \
+            layer['name'] in layer_permissions
         layer_or_parent_restricted = restricted_for_public or parent_restricted
 
         if restricted_for_public and not permitted_for_role:
