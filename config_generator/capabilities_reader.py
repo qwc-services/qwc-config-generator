@@ -45,6 +45,9 @@ class CapabilitiesReader():
         # lookup for services names by URL: {<url>: <service_name>}
         self.service_name_lookup = {}
 
+        # get qwc2 directory from ConfigGenerator config
+        self.qwc_base_dir = generator_config.get("qwc2_base_dir")
+
     def preprocess_qgs_projects(self, generator_config, tenant):
         config_in_path = os.environ.get(
             'INPUT_CONFIG_PATH', 'config-in/'
@@ -129,6 +132,20 @@ class CapabilitiesReader():
             if item.get("default", False):
                 has_default = True
 
+        # This is needed because we don't want to
+        # print the error message "thumbmail dir not found"
+        # multiple times
+        thumbnail_dir_exists = True
+        thumbnail_directory = ""
+        if self.qwc_base_dir is None:
+            thumbnail_dir_exists = False
+            self.logger.info(
+                            "Skipping automatic thumbnail search "
+                            "(qwc2_base_dir was not set)")
+        else:
+            thumbnail_directory = os.path.join(
+                self.qwc_base_dir, "assets/img/mapthumbs")
+
         for dirpath, dirs, files in os.walk(qgis_projects_scan_base_dir,
                                             followlinks=True):
             for filename in files:
@@ -147,6 +164,31 @@ class CapabilitiesReader():
                         "defaultSearchProviders", [])
                     item["mapCrs"] = self.themes_config.get(
                         "defaultMapCrs")
+
+                    # Check if thumbnail directory exists
+                    if thumbnail_dir_exists and not os.path.exists(
+                            thumbnail_directory):
+                        self.logger.info(
+                            "Thumbnail directory: %s does not exist" % (
+                                thumbnail_directory))
+                        thumbnail_dir_exists = False
+
+                    # Scanning for thumbnail
+                    if thumbnail_dir_exists:
+                        thumbnail_filename = "%s.png" % Path(filename).stem
+                        self.logger.info("Scanning for thumbnail(%s) under %s" % (
+                            thumbnail_filename, thumbnail_directory))
+                        thumbnail_path = os.path.join(
+                                thumbnail_directory, thumbnail_filename)
+
+                        if os.path.exists(thumbnail_path):
+                            self.logger.info("Thumbnail: %s was found" % (
+                                thumbnail_filename))
+                            item["thumbnail"] = thumbnail_filename
+                        else:
+                            self.logger.info(
+                                "Thumbnail: %s could not be found under %s" % (
+                                    thumbnail_filename, thumbnail_path))
 
                     if item["url"] not in wms_urls:
                         self.logger.info("Adding project " + fname)
