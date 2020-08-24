@@ -178,6 +178,12 @@ For adding these projects, the following settings need to be defined in `themesC
 - `defaultSearchProviders`
 - `defaultMapCrs`
 
+Additionally the config generator can also autodetect thumbnails when adding projects that meet the following criteria:
+
+- `qwc2_base_dir` is defined in the ConfigGenerator config
+- the thumbnail of the project is located in the QWC2 thumbnail directory (Example: `/qwc/assets/img/mapthumbs`)
+- the thumbnail image has the same filename as the QGIS project
+
 *NOTE:* The Search service config takes its resources directly from the ConfigGenerator config. Its Permissions are collected from the ConfigDB (`solr_facet` resources), unless they are defined in the ConfigGenerator config.
 
 *NOTE:* the FeatureInfo service config may take additional WMS service resources and permissions directly from the ConfigGenerator config, e.g. for external info layers. Its Permissions are collected from the ConfigDB (`feature_info_service`, `feature_info_layer` resources), unless they are defined in the ConfigGenerator config. Example:
