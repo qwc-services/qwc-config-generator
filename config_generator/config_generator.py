@@ -483,6 +483,41 @@ class ConfigGenerator():
     def get_logger(self):
         return self.logger
 
-    def get_maps(self):
+    def maps(self):
         """Return list of map names from QWC2 theme items."""
         return self.capabilities_reader.wms_service_names()
+
+    def map_details(self, map_name):
+        """Return details for a map from capabilities
+
+        :param str map_name: Map name
+        """
+        map_details = OrderedDict()
+        map_details['map'] = map_name
+        map_details['layers'] = []
+
+        # find map in capabilities
+        cap = self.capabilities_reader.wms_capabilities.get(map_name)
+        if cap is None:
+            map_details['error'] = "Map not found"
+        else:
+            # collect list of layer names
+            root_layer = cap.get('root_layer', {})
+            map_details['layers'] = self.collect_layers(root_layer)
+
+        return map_details
+
+    def collect_layers(self, layer):
+        """Recursively collect list of layer names from capabilities.
+
+        :param obj layer: Layer or group layer
+        """
+        layers = []
+
+        layers.append(layer['name'])
+        if 'layers' in layer:
+            # group layer
+            for sublayer in layer['layers']:
+                layers += self.collect_layers(sublayer)
+
+        return layers

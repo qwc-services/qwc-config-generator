@@ -80,10 +80,25 @@ def maps():
         # get maps from ConfigGenerator
         tenant = request.args.get('tenant')
         generator = config_generator(tenant)
-        maps = generator.get_maps()
+        maps = generator.maps()
         generator.cleanup_temp_dir()
 
         return jsonify(maps)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route("/maps/<string:map_name>", methods=['GET'])
+def map_details(map_name):
+    """Return details for a map (e.g. its layers) from capabilities."""
+    try:
+        # get maps from ConfigGenerator
+        tenant = request.args.get('tenant')
+        generator = config_generator(tenant)
+        map_details = generator.map_details(map_name)
+        generator.cleanup_temp_dir()
+
+        return jsonify(map_details)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
