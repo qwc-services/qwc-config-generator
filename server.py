@@ -2,7 +2,7 @@ from collections import OrderedDict
 import os
 import traceback
 
-from flask import Flask, json, request
+from flask import Flask, json, jsonify, request
 
 from config_generator.config_generator import ConfigGenerator
 
@@ -71,6 +71,21 @@ def generate_configs():
         return (log_output, 200)
     except Exception as e:
         return (log_output + "\n\nPython Exception: " + str(e) + "\n" + traceback.format_exc(), 500)
+
+
+@app.route("/maps", methods=['GET'])
+def maps():
+    """Return list of map names from themesConfig."""
+    try:
+        # get maps from ConfigGenerator
+        tenant = request.args.get('tenant')
+        generator = config_generator(tenant)
+        maps = generator.get_maps()
+        generator.cleanup_temp_dir()
+
+        return jsonify(maps)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # local webserver

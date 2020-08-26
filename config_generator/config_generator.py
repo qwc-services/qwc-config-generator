@@ -161,14 +161,14 @@ class ConfigGenerator():
             raise Exception(msg)
 
         # load capabilites for all QWC2 theme items
-        capabilities_reader = CapabilitiesReader(
+        self.capabilities_reader = CapabilitiesReader(
             generator_config, config.get("themesConfig"), self.logger
         )
-        capabilities_reader.preprocess_qgs_projects(
+        self.capabilities_reader.preprocess_qgs_projects(
             generator_config, self.tenant)
-        capabilities_reader.search_qgs_projects(
+        self.capabilities_reader.search_qgs_projects(
             generator_config)
-        capabilities_reader.load_all_project_settings()
+        self.capabilities_reader.load_all_project_settings()
 
         # lookup for additional service configs by name
         self.service_configs = {}
@@ -179,20 +179,20 @@ class ConfigGenerator():
         self.config_handler = {
             # services with resources
             'ogc': OGCServiceConfig(
-                generator_config, capabilities_reader, self.config_models,
+                generator_config, self.capabilities_reader, self.config_models,
                 self.service_config('ogc'), self.logger
             ),
             'mapViewer': MapViewerConfig(
                 self.temp_tenant_path,
-                generator_config, capabilities_reader, self.config_models,
+                generator_config, self.capabilities_reader, self.config_models,
                 self.service_config('mapViewer'), self.logger
             ),
             'featureInfo': FeatureInfoServiceConfig(
-                generator_config, capabilities_reader, self.config_models,
+                generator_config, self.capabilities_reader, self.config_models,
                 self.service_config('featureInfo'), self.logger
             ),
             'print': PrintServiceConfig(
-                capabilities_reader,
+                self.capabilities_reader,
                 self.service_config('print'), self.logger
             ),
             'search': SearchServiceConfig(
@@ -482,3 +482,7 @@ class ConfigGenerator():
 
     def get_logger(self):
         return self.logger
+
+    def get_maps(self):
+        """Return list of map names from QWC2 theme items."""
+        return self.capabilities_reader.wms_service_names()
