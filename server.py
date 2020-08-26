@@ -11,14 +11,9 @@ from qgis.core import QgsApplication
 # Flask application
 app = Flask(__name__)
 
-# get path to ConfigGenerator config file
-config_file = os.environ.get(
-    'CONFIG_GENERATOR_CONFIG', 'tenantConfig.json'
-)
-
 config_in_path = os.environ.get(
     'INPUT_CONFIG_PATH', 'config-in/'
-)
+).rstrip('/') + '/'
 
 # Load QGIS providers (will be needed for the categozize groups script)
 # https://gis.stackexchange.com/questions/263852/using-initqgis-on-headless-installation-of-qgis-3
@@ -28,10 +23,21 @@ qgsApp = QgsApplication([], False)
 qgsApp.initQgis()
 
 
-def config_generator():
-    """Create a ConfigGenerator instance."""
+def config_generator(tenant):
+    """Create a ConfigGenerator instance.
+
+    :param str tenant: Tenant ID
+    """
+    if tenant is None:
+        msg = "No tenant selected"
+        app.logger.error(msg)
+        raise Exception(msg)
+
     # read ConfigGenerator config file
     try:
+        config_file = os.path.join(
+            config_in_path, tenant, 'tenantConfig.json'
+        )
         with open(config_file) as f:
             # parse config JSON with original order of keys
             config = json.load(f, object_pairs_hook=OrderedDict)
@@ -48,19 +54,11 @@ def config_generator():
 @app.route("/generate_configs", methods=['POST'])
 def generate_configs():
     """Generate service configs and permissions."""
-    tenant_name = request.args.get("tenant")
-
-    if tenant_name:
-        global config_file
-        config_file = os.path.join(
-            config_in_path,
-            tenant_name,
-            "tenantConfig.json")
-
     log_output = ""
     try:
         # create ConfigGenerator
-        generator = config_generator()
+        tenant = request.args.get("tenant")
+        generator = config_generator(tenant)
         generator.write_configs()
         generator.write_permissions()
         generator.cleanup_temp_dir()
@@ -73,10 +71,6 @@ def generate_configs():
         return (log_output, 200)
     except Exception as e:
         return (log_output + "\n\nPython Exception: " + str(e) + "\n" + traceback.format_exc(), 500)
-
-    finally:
-        config_file = os.environ.get(
-            'CONFIG_GENERATOR_CONFIG', 'tenantConfig.json')
 
 
 # local webserver
