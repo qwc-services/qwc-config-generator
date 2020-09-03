@@ -508,6 +508,9 @@ class MapViewerConfig(ServiceConfig):
 
             # mutuallyExclusive
             item_layer["mutuallyExclusive"] = layer.get("mutuallyExclusive")
+
+            # visible
+            item_layer['visibility'] = layer['visible']
         else:
             # layer
             item_layer['visibility'] = layer['visible']
