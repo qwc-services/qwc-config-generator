@@ -439,7 +439,7 @@ class CapabilitiesReader():
         if group_layers:
             # group layer
             wms_layer["expanded"] = layer.get(
-                'expanded') == '1'
+                'expanded', '1') == '1'
             wms_layer["mutuallyExclusive"] = layer.get(
                 'mutuallyExclusive') == '1'
             wms_layer['layers'] = group_layers
