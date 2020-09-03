@@ -48,6 +48,9 @@ class CapabilitiesReader():
         # get qwc2 directory from ConfigGenerator config
         self.qwc_base_dir = generator_config.get("qwc2_base_dir")
 
+        # make mutual exclusive group subitems visible
+        self.make_mutex_subitems_visible = generator_config.get('make_mutex_subitems_visible', False)
+
     def preprocess_qgs_projects(self, generator_config, tenant):
         config_in_path = os.environ.get(
             'INPUT_CONFIG_PATH', 'config-in/'
@@ -382,6 +385,15 @@ class CapabilitiesReader():
 
         return service_name
 
+    def make_sublayers_visible(self, layer):
+        """Recursibely set sublayers of the specified layer visible
+
+        :param obj layer: The layer object
+        """
+        for sublayer in layer.get('layers', []):
+            sublayer['visible'] = True
+            self.make_sublayers_visible(sublayer)
+
     def collect_wms_layers(self, layer, internal_print_layers, ns, np,
                            fallback_name=""):
         """Recursively collect layer info for layer subtree from
@@ -431,6 +443,9 @@ class CapabilitiesReader():
             wms_layer["mutuallyExclusive"] = layer.get(
                 'mutuallyExclusive') == '1'
             wms_layer['layers'] = group_layers
+            if wms_layer["mutuallyExclusive"] and self.make_mutex_subitems_visible:
+                for sublayer in group_layers:
+                    self.make_sublayers_visible(sublayer)
         else:
             # layer
             if (
