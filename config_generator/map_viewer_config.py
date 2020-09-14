@@ -1,6 +1,10 @@
 from collections import OrderedDict
 import json
 import os
+import socket
+from urllib import request
+from urllib.parse import quote, urljoin
+from xml.dom.minidom import parseString
 
 from .permissions_query import PermissionsQuery
 from .qgs_reader import QGSReader
@@ -72,6 +76,11 @@ class MapViewerConfig(ServiceConfig):
         self.qgis_projects_base_dir = generator_config.get(
             'qgis_projects_base_dir', '/tmp/'
         )
+
+        # get qwc2 directory from ConfigGenerator config
+        self.qwc_base_dir = generator_config.get('qwc2_base_dir')
+
+        self.base_url = "http://" + socket.gethostname()
 
         # keep track of theme IDs for uniqueness
         self.theme_ids = []
@@ -420,9 +429,7 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'themeInfoLinks', item)
 
         # TODO: generate thumbnail
-        item['thumbnail'] = "img/mapthumbs/%s" % cfg_item.get(
-            'thumbnail', 'default.jpg'
-        )
+        item['thumbnail'] = self.get_thumbnail(cfg_item)
 
         self.set_optional_config(cfg_item, 'version', item)
         self.set_optional_config(cfg_item, 'format', item)
@@ -451,6 +458,132 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'printGrid', item)
 
         return item
+
+    def getElementValue(self, element):
+        return element.firstChild.nodeValue if element and element.firstChild else ""
+
+    def getChildElement(self, parent, path):
+        for part in path.split("/"):
+            for node in parent.childNodes:
+                if node.nodeName.split(':')[-1] == part:
+                    parent = node
+                    break
+            else:
+                return None
+        return parent
+
+    def getChildElementValue(self, parent, path):
+        return self.getElementValue(self.getChildElement(parent, path))
+
+    def getDirectChildElements(self, parent, tagname):
+        return [node for node in parent.childNodes if node.nodeName.split(':')[-1] == tagname]
+
+    def get_theme_capabilities(self, cfg_item):
+        # Get capabilities for theme
+        url = urljoin(self.base_url, cfg_item["url"]) + "?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetProjectSettings"
+        print("WMS GetProjectSettings : ", url)
+
+        try:
+            opener = request.urlopen
+            reply = opener(url).read()
+            capabilities = parseString(reply)
+            capabilities = capabilities.getElementsByTagName("WMS_Capabilities")[0]
+            print("Parsing WMS GetProjectSettings of " + cfg_item["url"])
+
+            return capabilities
+
+        except Exception as e:
+            print("ERROR reading WMS GetProjectSettings of " + cfg_item["url"] + ":\n" + str(e))
+            print("Could not read GetProjectSettings")
+
+    # recursively get layer tree
+    def get_layer_tree(self, layer, visibleLayers):
+        name = self.getChildElementValue(layer, "Name")
+        title = self.getChildElementValue(layer, "Title")
+        layers = self.getDirectChildElements(layer, "Layer")
+        treeName = self.getChildElementValue(layer, "TreeName")
+
+        if not layers:
+            if layer.getAttribute("geometryType") == "WKBNoGeometry" or layer.getAttribute("geometryType") == "NoGeometry":
+                # skip layers without geometry
+                return
+
+            # layer
+            if layer.getAttribute("visible") == "1":
+                # collect visible layers
+                visibleLayers.append(name)
+        else:
+            # group
+            for sublayer in layers:
+                self.get_layer_tree(sublayer, visibleLayers)
+
+    def get_thumbnail(self, cfg_item):
+        thumbnail_directory = os.path.join(self.qwc_base_dir, 'assets/img/mapthumbs')
+        if 'thumbnail' in cfg_item:
+            if os.path.exists(thumbnail_directory + cfg_item['thumbnail']):
+                return 'img/mapthumbs/' + cfg_item['thumbnail']
+
+        print("Using WMS GetMap to generate thumbnail for " + cfg_item["url"])
+
+        capabilities = self.get_theme_capabilities(cfg_item)
+
+        topLayer = self.getChildElement(self.getChildElement(capabilities, "Capability"), "Layer")
+
+        for item in topLayer.getElementsByTagName("CRS"):
+            crs = self.getElementValue(item)
+            if crs != "CRS:84":
+                break
+
+        extent = None
+        for bbox in topLayer.getElementsByTagName("BoundingBox"):
+            if bbox.getAttribute("CRS") == crs:
+                extent = [
+                    float(bbox.getAttribute("minx")),
+                    float(bbox.getAttribute("miny")),
+                    float(bbox.getAttribute("maxx")),
+                    float(bbox.getAttribute("maxy"))
+                ]
+                break
+
+        layers = []
+        self.get_layer_tree(topLayer, layers)
+
+        # WMS GetMap request
+        url = urljoin(self.base_url, cfg_item["url"]) + "?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&STYLES=&WIDTH=200&HEIGHT=100&CRS=" + crs
+
+        bboxw = extent[2] - extent[0]
+        bboxh = extent[3] - extent[1]
+        bboxcx = 0.5 * (extent[0] + extent[2])
+        bboxcy = 0.5 * (extent[1] + extent[3])
+        imgratio = 200. / 100.
+        if bboxw > bboxh:
+            bboxratio = bboxw / bboxh
+            if bboxratio > imgratio:
+                bboxh = bboxw / imgratio
+            else:
+                bboxw = bboxh * imgratio
+        else:
+            bboxw = bboxh * imgratio
+        adjustedExtent = [bboxcx - 0.5 * bboxw, bboxcy - 0.5 * bboxh,
+                          bboxcx + 0.5 * bboxw, bboxcy + 0.5 * bboxh]
+        url += "&BBOX=" + (",".join(map(str, adjustedExtent)))
+        url += "&LAYERS=" + quote(",".join(layers).encode('utf-8'))
+
+        try:
+            opener = request.urlopen
+            reply = opener(url).read()
+            basename = cfg_item["url"].rsplit("/")[-1].rstrip("?") + ".png"
+            try:
+                os.makedirs(self.qwc_base_dir + "/assets/img/genmapthumbs/")
+            except Exception as e:
+                if not isinstance(e, FileExistsError): raise e
+            thumbnail = self.qwc_base_dir + "/assets/img/genmapthumbs/" + basename
+            with open(thumbnail, "wb") as fh:
+                fh.write(reply)
+            return 'img/genmapthumbs/' + basename
+        except Exception as e:
+            print("ERROR generating thumbnail for WMS " + cfg_item["url"] + ":\n" + str(e))
+            return 'img/mapthumbs/default.jpg'
 
     def unique_theme_id(self, name):
         """Return unique theme id for item name.
