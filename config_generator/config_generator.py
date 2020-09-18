@@ -266,6 +266,11 @@ class ConfigGenerator():
 
         for log in self.logger.log_entries():
             if log["level"] == self.logger.LEVEL_CRITICAL:
+                self.logger.critical(
+                    "The generation of the configuration"
+                    " files resulted in a failure")
+                self.logger.critical(
+                    "The configuration files were not updated!")
                 return False
 
         for file_name in os.listdir(os.path.join(self.temp_tenant_path)):
@@ -274,6 +279,10 @@ class ConfigGenerator():
                 copyfile(
                     file_path, os.path.join(self.tenant_path, file_name)
                 )
+
+        self.logger.info(
+            "The generation of the configuration files was successful")
+        self.logger.info("Configuration files were updated!")
         return True
 
     def write_service_config(self, service):
@@ -340,12 +349,20 @@ class ConfigGenerator():
 
         for log in self.logger.log_entries():
             if log["level"] == self.logger.LEVEL_CRITICAL:
+                self.logger.critical(
+                    "The generation of the permission"
+                    " files resulted in a failure.")
+                self.logger.critical(
+                    "The permission files were not updated!")
                 return False
 
         copyfile(
             os.path.join(self.temp_tenant_path, 'permissions.json'),
             os.path.join(self.tenant_path, 'permissions.json')
         )
+        self.logger.info(
+            "The generation of the permission files was successful")
+        self.logger.info("permission files were updated!")
         return True
 
     def write_json_file(self, config, filename):

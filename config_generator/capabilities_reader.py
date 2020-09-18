@@ -242,6 +242,11 @@ class CapabilitiesReader():
             self.logger.info(
                 "Downloading GetProjectSettings from %s" % full_url
             )
+
+            if len(full_url) > 2000:
+                self.logger.warning(
+                    "WMS URL is longer than 2000 characters!")
+
             response = requests.get(
                 full_url,
                 params={
