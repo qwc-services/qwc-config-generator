@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 from shutil import move, copyfile
 
-from .categorize_groups_script import categorize_layers
+# from .categorize_groups_script import categorize_layers
 
 
 class CapabilitiesReader():
@@ -87,8 +87,8 @@ class CapabilitiesReader():
                     # convert project
                     dest_path = os.path.join(
                         qgis_projects_base_dir, relpath)
-                    categorized_qgs_project_path = categorize_layers(
-                        [], fname, dest_path)
+                    #categorized_qgs_project_path = categorize_layers(
+                    #    [], fname, dest_path)
                     if not os.path.exists(dest_path):
                         self.logger.warning(
                             "The project: " + dest_path +

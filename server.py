@@ -6,7 +6,7 @@ from flask import Flask, json, jsonify, request
 
 from config_generator.config_generator import ConfigGenerator
 
-from qgis.core import QgsApplication
+# from qgis.core import QgsApplication
 
 # Flask application
 app = Flask(__name__)
@@ -17,10 +17,10 @@ config_in_path = os.environ.get(
 
 # Load QGIS providers (will be needed for the categozize groups script)
 # https://gis.stackexchange.com/questions/263852/using-initqgis-on-headless-installation-of-qgis-3
-os.environ["QT_QPA_PLATFORM"] = "offscreen"
-QgsApplication.setPrefixPath("/usr", True)
-qgsApp = QgsApplication([], False)
-qgsApp.initQgis()
+# os.environ["QT_QPA_PLATFORM"] = "offscreen"
+# QgsApplication.setPrefixPath("/usr", True)
+# qgsApp = QgsApplication([], False)
+# qgsApp.initQgis()
 
 
 def config_generator(tenant):
