@@ -482,6 +482,24 @@ class CapabilitiesReader():
                 keywords.append(keyword.text)
             wms_layer["keywords"] = ", ".join(keywords)
 
+
+        try:
+            wms_layer["attribution"] = layer.find('%sAttribution' % np, ns).find('%sTitle' % np, ns).text
+            wms_layer["attributionUrl"] = layer.find('%sAttribution' % np, ns).find('%sOnlineResource' % np, ns).get('{http://www.w3.org/1999/xlink}href')
+        except:
+            pass
+
+        try:
+            wms_layer["dataUrl"] = layer.find('%sDataURL' % np, ns).find('%sOnlineResource' % np, ns).get('{http://www.w3.org/1999/xlink}href')
+        except:
+            pass
+
+        try:
+            wms_layer["metadataUrl"] = layer.find('%sMetadataURL' % np, ns).find('%sOnlineResource' % np, ns).get('{http://www.w3.org/1999/xlink}href')
+        except:
+            pass
+
+
         if layer.get('transparency'):
             wms_layer['opacity'] = 255 - int(float(
                 layer.get('transparency')) / 100 * 255

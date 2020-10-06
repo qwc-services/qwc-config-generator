@@ -535,6 +535,17 @@ class MapViewerConfig(ServiceConfig):
             # keywords
             if 'keywords' in layer:
                 item_layer['keywords'] = layer.get('keywords')
+            # attribution
+            attribution = OrderedDict()
+            attribution['Title'] = layer.get('attribution')
+            attribution['OnlineResource'] = layer.get('attributionUrl')
+            item_layer['attribution'] = attribution
+            # dataUrl
+            if 'dataUrl' in layer:
+                item_layer['dataUrl'] = layer.get('dataUrl', '')
+            # metadataUrl
+            if 'metadataUrl' in layer:
+                item_layer['metadataUrl'] = layer.get('metadataUrl', '')
 
             # search
             if layer['name'] in search_layers:
