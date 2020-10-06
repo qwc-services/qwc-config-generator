@@ -338,6 +338,9 @@ class MapViewerConfig(ServiceConfig):
 
         item['abstract'] = cap.get('abstract', '')
         item['keywords'] = cap.get('keywords', '')
+        item['onlineResource'] = cap.get('onlineResource', '')
+        item['contact'] = cap.get('contact', {})
+
 
         item['mapCrs'] = cfg_item.get('mapCrs', 'EPSG:3857')
         self.set_optional_config(cfg_item, 'additionalMouseCrs', item)

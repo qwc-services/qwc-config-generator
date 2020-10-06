@@ -315,6 +315,27 @@ class CapabilitiesReader():
                 if keywords:
                     capabilities['keywords'] = ', '.join(keywords)
 
+            # service online resouce
+            online_resource = root.find('%sService/%sOnlineResource' % (np, np), ns)
+            if online_resource is not None:
+                capabilities['online_resource'] = online_resource.get('{http://www.w3.org/1999/xlink}href')
+
+            # service contact
+            contact_person = root.find("%sService/%sContactInformation/%sContactPersonPrimary/%sContactPerson" % (np, np, np, np), ns)
+            contact_organization = root.find("%sService/%sContactInformation/%sContactPersonPrimary/%sContactOrganization" % (np, np, np, np), ns)
+            contact_position = root.find("%sService/%sContactInformation/%sContactPosition" % (np, np, np), ns)
+            contact_phone = root.find("%sService/%sContactInformation/%sContactVoiceTelephone" % (np, np, np), ns)
+            contact_email = root.find("%sService/%sContactInformation/%sContactElectronicMailAddress" % (np, np, np), ns)
+
+
+            capabilities["contact"] = {
+                "person": contact_person.text if contact_person else None,
+                "organization": contact_organization.text if contact_organization else None,
+                "position": contact_position.text if contact_position else None,
+                "phone": contact_phone.text if contact_phone else None,
+                "email": contact_email.text if contact_email else None
+            }
+
             # collect internal print layers
             internal_print_layers = [
                 bg_layer.get('printLayer') for bg_layer
