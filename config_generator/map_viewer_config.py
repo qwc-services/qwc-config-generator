@@ -4,7 +4,6 @@ import os
 import socket
 from urllib import request
 from urllib.parse import quote, urljoin
-from xml.dom.minidom import parseString
 
 from .permissions_query import PermissionsQuery
 from .qgs_reader import QGSReader
