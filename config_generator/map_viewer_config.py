@@ -459,94 +459,32 @@ class MapViewerConfig(ServiceConfig):
 
         return item
 
-    def getElementValue(self, element):
-        return element.firstChild.nodeValue if element and element.firstChild else ""
-
-    def getChildElement(self, parent, path):
-        for part in path.split("/"):
-            for node in parent.childNodes:
-                if node.nodeName.split(':')[-1] == part:
-                    parent = node
-                    break
-            else:
-                return None
-        return parent
-
-    def getChildElementValue(self, parent, path):
-        return self.getElementValue(self.getChildElement(parent, path))
-
-    def getDirectChildElements(self, parent, tagname):
-        return [node for node in parent.childNodes if node.nodeName.split(':')[-1] == tagname]
-
-    def get_theme_capabilities(self, cfg_item):
-        # Get capabilities for theme
-        url = urljoin(self.base_url, cfg_item["url"]) + "?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetProjectSettings"
-        print("WMS GetProjectSettings : ", url)
-
-        try:
-            opener = request.urlopen
-            reply = opener(url).read()
-            capabilities = parseString(reply)
-            capabilities = capabilities.getElementsByTagName("WMS_Capabilities")[0]
-            print("Parsing WMS GetProjectSettings of " + cfg_item["url"])
-
-            return capabilities
-
-        except Exception as e:
-            print("ERROR reading WMS GetProjectSettings of " + cfg_item["url"] + ":\n" + str(e))
-            print("Could not read GetProjectSettings")
-
-    # recursively get layer tree
-    def get_layer_tree(self, layer, visibleLayers):
-        name = self.getChildElementValue(layer, "Name")
-        title = self.getChildElementValue(layer, "Title")
-        layers = self.getDirectChildElements(layer, "Layer")
-        treeName = self.getChildElementValue(layer, "TreeName")
-
-        if not layers:
-            if layer.getAttribute("geometryType") == "WKBNoGeometry" or layer.getAttribute("geometryType") == "NoGeometry":
-                # skip layers without geometry
-                return
-
-            # layer
-            if layer.getAttribute("visible") == "1":
-                # collect visible layers
-                visibleLayers.append(name)
-        else:
-            # group
-            for sublayer in layers:
-                self.get_layer_tree(sublayer, visibleLayers)
-
     def get_thumbnail(self, cfg_item):
         thumbnail_directory = os.path.join(self.qwc_base_dir, 'assets/img/mapthumbs')
         if 'thumbnail' in cfg_item:
             if os.path.exists(thumbnail_directory + cfg_item['thumbnail']):
                 return 'img/mapthumbs/' + cfg_item['thumbnail']
 
-        print("Using WMS GetMap to generate thumbnail for " + cfg_item["url"])
+        self.logger.info("Using WMS GetMap to generate thumbnail for " + cfg_item["url"])
 
-        capabilities = self.get_theme_capabilities(cfg_item)
+        item = self.capabilities_reader.service_name(cfg_item['url'])
 
-        topLayer = self.getChildElement(self.getChildElement(capabilities, "Capability"), "Layer")
+        capabilities = self.capabilities_reader.wms_capabilities[item]['root_layer']
 
-        for item in topLayer.getElementsByTagName("CRS"):
-            crs = self.getElementValue(item)
-            if crs != "CRS:84":
-                break
+        crs = capabilities['crs']
 
         extent = None
-        for bbox in topLayer.getElementsByTagName("BoundingBox"):
-            if bbox.getAttribute("CRS") == crs:
-                extent = [
-                    float(bbox.getAttribute("minx")),
-                    float(bbox.getAttribute("miny")),
-                    float(bbox.getAttribute("maxx")),
-                    float(bbox.getAttribute("maxy"))
-                ]
-                break
+        bbox = capabilities['bbox']
+        extent = [
+            float(bbox[0]), # minx
+            float(bbox[1]), # miny
+            float(bbox[2]), # maxx
+            float(bbox[3]) # maxy
+        ]
 
         layers = []
-        self.get_layer_tree(topLayer, layers)
+        for layer in capabilities['layers']:
+            layers.append(layer['name'])
 
         # WMS GetMap request
         url = urljoin(self.base_url, cfg_item["url"]) + "?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&FORMAT=image/png&STYLES=&WIDTH=200&HEIGHT=100&CRS=" + crs
@@ -576,13 +514,14 @@ class MapViewerConfig(ServiceConfig):
             try:
                 os.makedirs(self.qwc_base_dir + "/assets/img/genmapthumbs/")
             except Exception as e:
-                if not isinstance(e, FileExistsError): raise e
+                if not isinstance(e, FileExistsError):
+                    self.logger.error("The directory for auto generated thumbnails could not be created\n %s" % (str(e)))
             thumbnail = self.qwc_base_dir + "/assets/img/genmapthumbs/" + basename
             with open(thumbnail, "wb") as fh:
                 fh.write(reply)
             return 'img/genmapthumbs/' + basename
         except Exception as e:
-            print("ERROR generating thumbnail for WMS " + cfg_item["url"] + ":\n" + str(e))
+            self.logger.error("ERROR generating thumbnail for WMS " + cfg_item["url"] + ":\n" + str(e))
             return 'img/mapthumbs/default.jpg'
 
     def unique_theme_id(self, name):

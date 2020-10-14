@@ -499,6 +499,9 @@ class CapabilitiesReader():
         if wms_layer['queryable'] and layer.get('displayField'):
             wms_layer['display_field'] = layer.get('displayField')
 
+        # get default CRS (first CRS)
+        wms_layer['crs'] = layer.find('%sCRS' %np, ns).text
+
         # NOTE: get geographic bounding box, as default CRS may have
         #       inverted axis order with WMS 1.3.0
         bbox = layer.find('%sEX_GeographicBoundingBox' % np, ns)
