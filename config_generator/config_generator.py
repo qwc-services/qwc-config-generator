@@ -372,11 +372,11 @@ class ConfigGenerator():
         """
         try:
             path = os.path.join(self.temp_tenant_path, filename)
-            with open(path, 'w') as f:
+            with open(path, 'wb') as f:
                 # NOTE: keep order of keys
                 f.write(json.dumps(
                     config, sort_keys=False, ensure_ascii=False, indent=2
-                ))
+                ).encode('utf8'))
         except Exception as e:
             self.logger.error(
                 "Could not write '%s' config file:\n%s" % (filename, e)
