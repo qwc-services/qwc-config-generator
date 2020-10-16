@@ -38,7 +38,7 @@ def config_generator(tenant):
         config_file = os.path.join(
             config_in_path, tenant, 'tenantConfig.json'
         )
-        with open(config_file) as f:
+        with open(config_file, encoding='utf-8') as f:
             # parse config JSON with original order of keys
             config = json.load(f, object_pairs_hook=OrderedDict)
     except Exception as e:
