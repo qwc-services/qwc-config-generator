@@ -522,7 +522,10 @@ class MapViewerConfig(ServiceConfig):
                 item_layer['displayField'] = layer.get('display_field')
             item_layer['opacity'] = layer['opacity']
             if 'bbox' in layer:
-                item_layer['bbox'] = layer.get('bbox')
+                item_layer['bbox'] = {
+                    'crs': 'EPSG:4326',
+                    'bounds': layer.get('bbox')
+                }
 
             # min/max scale
             minScale = layer.get("minScale")
