@@ -299,6 +299,11 @@ class CapabilitiesReader():
             capabilities['name'] = service_name
             capabilities['wms_url'] = full_url
 
+            # get service title
+            service_title = root.find('%sService/%sTitle' % (np, np), ns)
+            if service_title is not None:
+                capabilities['title'] = service_title.text
+
             # get service abstract
             service_abstract = root.find('%sService/%sAbstract' % (np, np), ns)
             if service_abstract is not None:
