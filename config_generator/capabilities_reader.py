@@ -329,11 +329,11 @@ class CapabilitiesReader():
 
 
             capabilities["contact"] = {
-                "person": contact_person.text if contact_person else None,
-                "organization": contact_organization.text if contact_organization else None,
-                "position": contact_position.text if contact_position else None,
-                "phone": contact_phone.text if contact_phone else None,
-                "email": contact_email.text if contact_email else None
+                "person": contact_person.text if contact_person is not None else None,
+                "organization": contact_organization.text if contact_organization is not None else None,
+                "position": contact_position.text if contact_position is not None else None,
+                "phone": contact_phone.text if contact_phone is not None else None,
+                "email": contact_email.text if contact_email is not None else None
             }
 
             # collect internal print layers
