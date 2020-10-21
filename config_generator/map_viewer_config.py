@@ -1,6 +1,8 @@
 from collections import OrderedDict
 import json
 import os
+import requests
+from urllib.parse import urljoin
 
 from .permissions_query import PermissionsQuery
 from .qgs_reader import QGSReader
@@ -72,6 +74,14 @@ class MapViewerConfig(ServiceConfig):
         self.qgis_projects_base_dir = generator_config.get(
             'qgis_projects_base_dir', '/tmp/'
         )
+
+        # get qwc2 directory from ConfigGenerator config
+        self.qwc_base_dir = generator_config.get('qwc2_base_dir')
+
+        # get default QGIS server URL from ConfigGenerator config
+        self.default_qgis_server_url = generator_config.get(
+            'default_qgis_server_url', 'http://localhost:8001/ows/'
+        ).rstrip('/') + '/'
 
         # keep track of theme IDs for uniqueness
         self.theme_ids = []
@@ -423,9 +433,7 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'themeInfoLinks', item)
 
         # TODO: generate thumbnail
-        item['thumbnail'] = "img/mapthumbs/%s" % cfg_item.get(
-            'thumbnail', 'default.jpg'
-        )
+        item['thumbnail'] = self.get_thumbnail(cfg_item, service_name, cap)
 
         self.set_optional_config(cfg_item, 'version', item)
         self.set_optional_config(cfg_item, 'format', item)
@@ -454,6 +462,97 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'printGrid', item)
 
         return item
+
+    def get_thumbnail(self, cfg_item, service_name, capabilities):
+        """Return thumbnail for item config if present in QWC2 default directory.
+        Else new thumbnail is created with GetMap request.
+
+        :param obj cfg_item: Themes config item
+        :param str service_name: Service name as relative path to default QGIS server URL
+        :param obj capabilities: Capabilities for theme item
+        """
+        thumbnail_directory = os.path.join(self.qwc_base_dir, 'assets/img/mapthumbs')
+        if 'thumbnail' in cfg_item:
+            if os.path.exists(thumbnail_directory + cfg_item['thumbnail']):
+                return 'img/mapthumbs/' + cfg_item['thumbnail']
+
+        self.logger.info("Using WMS GetMap to generate thumbnail for " + service_name)
+
+        root_layer = capabilities.get('root_layer', {})
+
+        crs = root_layer['crs']
+
+        extent = None
+        bbox = root_layer['bbox']
+        extent = [
+            float(bbox[0]), # minx
+            float(bbox[1]), # miny
+            float(bbox[2]), # maxx
+            float(bbox[3]) # maxy
+        ]
+
+        layers = []
+        for layer in root_layer['layers']:
+            layers.append(layer['name'])
+
+        # WMS GetMap request
+        url = urljoin(self.default_qgis_server_url, service_name)
+
+        bboxw = extent[2] - extent[0]
+        bboxh = extent[3] - extent[1]
+        bboxcx = 0.5 * (extent[0] + extent[2])
+        bboxcy = 0.5 * (extent[1] + extent[3])
+        imgratio = 200. / 100.
+        if bboxw > bboxh:
+            bboxratio = bboxw / bboxh
+            if bboxratio > imgratio:
+                bboxh = bboxw / imgratio
+            else:
+                bboxw = bboxh * imgratio
+        else:
+            bboxw = bboxh * imgratio
+        adjustedExtent = [bboxcx - 0.5 * bboxw, bboxcy - 0.5 * bboxh,
+                          bboxcx + 0.5 * bboxw, bboxcy + 0.5 * bboxh]
+
+        try:
+            response = requests.get(
+                url,
+                params={
+                    'SERVICE': 'WMS',
+                    'VERSION': '1.3.0',
+                    'REQUEST': 'GetMap',
+                    'FORMAT': 'image/png',
+                    'WIDTH': '200',
+                    'HEIGHT': '100',
+                    'CRS': crs,
+                    'BBOX': (",".join(map(str, adjustedExtent))),
+                    'LAYERS': (",".join(layers).encode('utf-8'))
+                },
+                timeout=60
+            )
+
+            if response.status_code != requests.codes.ok:
+                self.logger.critical(
+                    "Could not get GetMap from %s:\n%s" %
+                    (url, response.content)
+                )
+                return
+
+            document = response.content
+
+            basename = cfg_item["url"].rsplit("/")[-1].rstrip("?") + ".png"
+            try:
+                os.makedirs(self.qwc_base_dir + "/assets/img/genmapthumbs/")
+            except Exception as e:
+                if not isinstance(e, FileExistsError):
+                    self.logger.error("The directory for auto generated thumbnails could not be created\n %s" % (str(e)))
+            thumbnail = self.qwc_base_dir + "/assets/img/genmapthumbs/" + basename
+            with open(thumbnail, "wb") as fh:
+                fh.write(document)
+            return 'img/genmapthumbs/' + basename
+        except Exception as e:
+            self.logger.error("ERROR generating thumbnail for WMS " + service_name + ":\n" + str(e))
+            return 'img/mapthumbs/default.jpg'
 
     def unique_theme_id(self, name):
         """Return unique theme id for item name.
