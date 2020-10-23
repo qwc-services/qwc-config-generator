@@ -381,8 +381,12 @@ class MapViewerConfig(ServiceConfig):
 
         # collect layers
         layers = []
+        collapseLayerGroupsBelowLevel = cfg_item.get(
+            'collapseLayerGroupsBelowLevel', -1)
+
         for layer in root_layer.get('layers', []):
-            layers.append(self.collect_layers(layer, search_layers))
+            layers.append(self.collect_layers(
+                layer, search_layers, 1, collapseLayerGroupsBelowLevel))
         item['sublayers'] = layers
         item['expanded'] = True
         item['drawingOrder'] = cap.get('drawing_order', [])
@@ -583,7 +587,7 @@ class MapViewerConfig(ServiceConfig):
         if field in cfg_item:
             item[field] = cfg_item.get(field)
 
-    def collect_layers(self, layer, search_layers):
+    def collect_layers(self, layer, search_layers, level, collapseBelowLevel):
         """Recursively collect layer tree from capabilities.
 
         :param obj layer: Layer or group layer
@@ -601,12 +605,17 @@ class MapViewerConfig(ServiceConfig):
             sublayers = []
             for sublayer in layer['layers']:
                 # recursively collect sub layer
-                sublayers.append(self.collect_layers(sublayer, search_layers))
+                sublayers.append(self.collect_layers(
+                    sublayer, search_layers, level + 1, collapseBelowLevel))
 
             item_layer['sublayers'] = sublayers
 
             # expanded
-            item_layer['expanded'] = layer.get("expanded")
+            if layer.get("expanded") is True:
+                item_layer['expanded'] = False if collapseBelowLevel >= 0 and \
+                    level >= collapseBelowLevel else True
+            else:
+                item_layer['expanded'] = False
 
             # mutuallyExclusive
             item_layer["mutuallyExclusive"] = layer.get("mutuallyExclusive")
