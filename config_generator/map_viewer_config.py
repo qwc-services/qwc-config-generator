@@ -76,7 +76,7 @@ class MapViewerConfig(ServiceConfig):
         )
 
         # get qwc2 directory from ConfigGenerator config
-        self.qwc_base_dir = generator_config.get('qwc2_base_dir')
+        self.qwc_base_dir = service_config.get('config').get('qwc2_path')
 
         # get default QGIS server URL from ConfigGenerator config
         self.default_qgis_server_url = generator_config.get(
@@ -477,8 +477,8 @@ class MapViewerConfig(ServiceConfig):
         """
         thumbnail_directory = os.path.join(self.qwc_base_dir, 'assets/img/mapthumbs')
         if 'thumbnail' in cfg_item:
-            if os.path.exists(thumbnail_directory + cfg_item['thumbnail']):
-                return 'img/mapthumbs/' + cfg_item['thumbnail']
+            if os.path.exists(os.path.join(thumbnail_directory, cfg_item['thumbnail'])):
+                return os.path.join('img/mapthumbs', cfg_item['thumbnail'])
 
         self.logger.info("Using WMS GetMap to generate thumbnail for " + service_name)
 
