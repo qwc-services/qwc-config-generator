@@ -184,6 +184,12 @@ Additionally the config generator can also autodetect thumbnails when adding pro
 - the thumbnail of the project is located in the QWC2 thumbnail directory (Example: `/qwc/assets/img/mapthumbs`)
 - the thumbnail image has the same filename as the QGIS project
 
+The config generator also has the ability to split a layer, that has been [classified](https://docs.qgis.org/3.16/en/docs/training_manual/vector_classification/classification.html) with QGIS, into multiple layers and move them into a new group (The group name will be the original layer name). The following steps need to be done, to activate this functionality:
+
+1. Set ConfigGenerator config: `"activate_categorize_groups": true`
+
+2. Define the environment variable `QGIS_APPLICATION_PREFIX_PATH` (default: `/usr`). The prefix path is the location where QGIS is installed on your system. This is needed by the split function, because it uses the `qgis.core` library.
+
 *NOTE:* The Search service config takes its resources directly from the ConfigGenerator config. Its Permissions are collected from the ConfigDB (`solr_facet` resources), unless they are defined in the ConfigGenerator config.
 
 *NOTE:* the FeatureInfo service config may take additional WMS service resources and permissions directly from the ConfigGenerator config, e.g. for external info layers. Its Permissions are collected from the ConfigDB (`feature_info_service`, `feature_info_layer` resources), unless they are defined in the ConfigGenerator config. Example:
