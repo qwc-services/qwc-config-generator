@@ -248,6 +248,13 @@ class MapViewerConfig(ServiceConfig):
             }
             backgroundLayer.pop("attributionUrl", None)
 
+            imgPath = backgroundLayer.get("thumbnail", "")
+            if not os.path.isfile(self.qwc_base_dir + "/assets/" + imgPath):
+                imgPath = "img/mapthumbs/" + backgroundLayer.get("thumbnail", "default.jpg")
+                if not os.path.isfile(self.qwc_base_dir + "/assets/" + imgPath):
+                    imgPath = "img/mapthumbs/default.jpg"
+            backgroundLayer["thumbnail"] = imgPath
+
         themes['pluginData'] = themes_config_themes.get('pluginData', {})
         themes['themeInfoLinks'] = themes_config_themes.get(
             'themeInfoLinks', []
