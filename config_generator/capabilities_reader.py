@@ -353,7 +353,6 @@ class CapabilitiesReader():
             capabilities['root_layer'] = self.collect_wms_layers(
                 root_layer, internal_print_layers, ns, np, default_root_name
             )
-            print(capabilities['root_layer'])
             if capabilities['root_layer'] is None:
                 self.logger.warning(
                     "No (non geometryless) layers found for %s: %s" %
