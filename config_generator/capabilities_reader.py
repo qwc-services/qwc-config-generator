@@ -476,7 +476,7 @@ class CapabilitiesReader():
             if sub_layer_name in internal_print_layers:
                 # skip internal print layers
                 if self.skip_print_layer_groups:
-                    return OrderedDict()
+                    return None
                 else:
                     continue
 
@@ -553,7 +553,8 @@ class CapabilitiesReader():
             wms_layer['opacity'] = int(float(layer.get("opacity")) * 255)
         else:
             # custom layer opacities (default: 255)
-            opacity = self.layer_opacities.get(name, 255)
+            # name = getChildElementValue(layer, [np['ns'] + "Name"], ns)
+            opacity = self.layer_opacities.get(layer_name, 255)
             wms_layer['opacity'] = opacity
 
         minScale = layer.find('%sMinScaleDenominator' % np, ns)
