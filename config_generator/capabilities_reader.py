@@ -55,6 +55,10 @@ class CapabilitiesReader():
         # layer opacity values for QGIS <= 3.10 from ConfigGenerator config
         self.layer_opacities = generator_config.get("layer_opacities", {})
 
+        # Skip group layers containing print layers
+        self.skip_print_layer_groups = generator_config.get(
+            'skip_print_layer_groups', False)
+
     def preprocess_qgs_projects(self, generator_config, tenant):
         config_in_path = os.environ.get(
             'INPUT_CONFIG_PATH', 'config-in/'
@@ -471,7 +475,10 @@ class CapabilitiesReader():
 
             if sub_layer_name in internal_print_layers:
                 # skip internal print layers
-                continue
+                if self.skip_print_layer_groups:
+                    return OrderedDict()
+                else:
+                    continue
 
             sub_wms_layer = self.collect_wms_layers(
                 sub_layer, internal_print_layers, ns, np
