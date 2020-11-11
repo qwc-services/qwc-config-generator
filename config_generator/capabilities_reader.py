@@ -49,7 +49,11 @@ class CapabilitiesReader():
         self.qwc_base_dir = generator_config.get("qwc2_base_dir")
 
         # make mutual exclusive group subitems visible
-        self.make_mutex_subitems_visible = generator_config.get('make_mutex_subitems_visible', False)
+        self.make_mutex_subitems_visible = generator_config.get(
+            'make_mutex_subitems_visible', False)
+
+        # layer opacity values for QGIS <= 3.10 from ConfigGenerator config
+        self.layer_opacities = generator_config.get("layer_opacities", {})
 
     def preprocess_qgs_projects(self, generator_config, tenant):
         config_in_path = os.environ.get(
@@ -541,7 +545,9 @@ class CapabilitiesReader():
         elif layer.get('opacity'):
             wms_layer['opacity'] = int(float(layer.get("opacity")) * 255)
         else:
-            wms_layer['opacity'] = 255
+            # custom layer opacities (default: 255)
+            opacity = self.layer_opacities.get(name, 255)
+            wms_layer['opacity'] = opacity
 
         minScale = layer.find('%sMinScaleDenominator' % np, ns)
         maxScale = layer.find('%sMaxScaleDenominator' % np, ns)
