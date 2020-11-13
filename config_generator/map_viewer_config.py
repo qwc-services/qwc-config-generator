@@ -411,7 +411,7 @@ class MapViewerConfig(ServiceConfig):
                 for print_template in print_templates:
                     # filter print labels
                     labels = [
-                        label for label in print_template['labels']
+                        label for label in print_template.get('labels', [])
                         if label not in cfg_item['printLabelBlacklist']
                     ]
                     print_template['labels'] = labels
