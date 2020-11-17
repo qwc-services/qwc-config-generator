@@ -228,13 +228,13 @@ class OGCServiceConfig(ServiceConfig):
             layers = self.collect_wms_layer_permissions(
                 service_name, cap['root_layer'], is_public_role,
                 role_permissions, public_permissions, public_restrictions,
-                restricted_for_public,
+                restricted_for_public
             )
 
             # add internal print layers
             layers += self.permitted_print_layers(
                 service_name, cap, is_public_role, role_permissions,
-                public_permissions, public_restrictions
+                public_permissions, public_restrictions, restricted_for_public
             )
             wms_permissions['layers'] = layers
 
@@ -379,7 +379,7 @@ class OGCServiceConfig(ServiceConfig):
 
     def permitted_print_layers(self, service_name, cap, is_public_role,
                                role_permissions, public_permissions,
-                               public_restrictions):
+                               public_restrictions, map_restricted):
         """Return permitted internal print layers for background layers from
         capabilities and permissions.
 
@@ -389,6 +389,8 @@ class OGCServiceConfig(ServiceConfig):
         :param obj role_permissions: Lookup for role permissions
         :param obj public_permissions: Lookup for public permissions
         :param obj public_restrictions: Lookup for public restrictions
+        :param bool map_restricted: Whether parent map is restricted
+                                    for public
         """
         print_layers = []
 
@@ -419,11 +421,21 @@ class OGCServiceConfig(ServiceConfig):
         else:
             # collect additional print layers
             if self.permissions_default_allow:
-                # collect print layers permitted for role
-                #   and restricted for public
-                permitted_layers = (
-                    role_permitted_layers & public_restricted_layers
-                )
+                if map_restricted:
+                    # collect print layers permitted for role
+                    #   including print layers permitted for public
+                    public_print_layers = (
+                        set(internal_print_layers) - public_restricted_layers
+                    )
+                    permitted_layers = (
+                        role_permitted_layers | public_print_layers
+                    )
+                else:
+                    # collect print layers permitted for role
+                    #   and restricted for public
+                    permitted_layers = (
+                        role_permitted_layers & public_restricted_layers
+                    )
             else:
                 # collect print layers permitted for role
                 #   and not permitted for public
