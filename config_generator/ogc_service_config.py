@@ -241,7 +241,7 @@ class OGCServiceConfig(ServiceConfig):
             # print templates
             print_templates = self.permitted_print_templates(
                 service_name, cap, is_public_role, role_permissions,
-                public_permissions, public_restrictions
+                public_permissions, public_restrictions, restricted_for_public
             )
             if print_templates:
                 wms_permissions['print_templates'] = [
@@ -459,7 +459,7 @@ class OGCServiceConfig(ServiceConfig):
 
     def permitted_print_templates(self, service_name, cap, is_public_role,
                                   role_permissions, public_permissions,
-                                  public_restrictions):
+                                  public_restrictions, map_restricted):
         """Return permitted print templates from capabilities and permissions.
 
         :param str service_name: Name of parent WMS service
@@ -468,6 +468,8 @@ class OGCServiceConfig(ServiceConfig):
         :param obj role_permissions: Lookup for role permissions
         :param obj public_permissions: Lookup for public permissions
         :param obj public_restrictions: Lookup for public restrictions
+        :param bool map_restricted: Whether parent map is restricted
+                                    for public
         """
         # collect print template permissions and restrictions
         role_permitted_templates = set(
@@ -496,11 +498,22 @@ class OGCServiceConfig(ServiceConfig):
         else:
             # collect additional print templates
             if self.permissions_default_allow:
-                # collect print templates permitted for role
-                #   and restricted for public
-                permitted_templates = (
-                    role_permitted_templates & public_restricted_templates
-                )
+                if map_restricted:
+                    # collect print templates permitted for role
+                    #   including print templates permitted for public
+                    public_templates = set(
+                        template['name'] for template in print_templates
+                        if template['name'] not in public_restricted_templates
+                    )
+                    permitted_templates = (
+                        role_permitted_templates | public_templates
+                    )
+                else:
+                    # collect print templates permitted for role
+                    #   and restricted for public
+                    permitted_templates = (
+                        role_permitted_templates & public_restricted_templates
+                    )
             else:
                 # collect print templates permitted for role
                 #   and not permitted for public
