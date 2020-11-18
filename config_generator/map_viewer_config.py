@@ -222,8 +222,9 @@ class MapViewerConfig(ServiceConfig):
 
         # collect theme items
         items = []
+        autogenExternalLayers = []
         for item in themes_config_themes.get('items', []):
-            theme_item = self.theme_item(item)
+            theme_item = self.theme_item(item, autogenExternalLayers)
             if theme_item is not None:
                 items.append(theme_item)
         themes['items'] = items
@@ -231,7 +232,7 @@ class MapViewerConfig(ServiceConfig):
         # collect theme groups
         groups = []
         for group in themes_config_themes.get('groups', []):
-            groups.append(self.theme_group(group))
+            groups.append(self.theme_group(group, autogenExternalLayers))
         themes['subdirs'] = groups
 
         themes['defaultTheme'] = self.default_theme
@@ -255,6 +256,19 @@ class MapViewerConfig(ServiceConfig):
                     imgPath = "img/mapthumbs/default.jpg"
             backgroundLayer["thumbnail"] = imgPath
 
+        for entry in autogenExternalLayers:
+            pos = entry.rfind('#')
+            type = entry[0:3]
+            url = entry[4:pos]
+            layername = entry[pos+1:]
+            themes["externalLayers"].append({
+                "name": entry,
+                "type": type,
+                "url": url,
+                "params": {"LAYERS": layername},
+                "infoFormats": ["text/plain"]
+            })
+
         themes['pluginData'] = themes_config_themes.get('pluginData', {})
         themes['themeInfoLinks'] = themes_config_themes.get(
             'themeInfoLinks', []
@@ -274,7 +288,7 @@ class MapViewerConfig(ServiceConfig):
 
         return qwc2_themes
 
-    def theme_group(self, cfg_group):
+    def theme_group(self, cfg_group, autogenExternalLayers):
         """Recursively collect theme item group.
 
         :param obj theme_group: Themes config group
@@ -288,7 +302,7 @@ class MapViewerConfig(ServiceConfig):
         # collect sub theme items
         items = []
         for item in cfg_group.get('items', []):
-            theme_item = self.theme_item(item)
+            theme_item = self.theme_item(item, autogenExternalLayers)
             if theme_item is not None:
                 items.append(theme_item)
         group['items'] = items
@@ -296,12 +310,12 @@ class MapViewerConfig(ServiceConfig):
         # recursively collect sub theme groups
         subgroups = []
         for subgroup in cfg_group.get('groups', []):
-            subgroups.append(self.theme_group(subgroup))
+            subgroups.append(self.theme_group(subgroup, autogenExternalLayers))
         group['subdirs'] = subgroups
 
         return group
 
-    def theme_item(self, cfg_item):
+    def theme_item(self, cfg_item, autogenExternalLayers):
         """Collect theme item from capabilities.
 
         :param obj cfg_item: Themes config item
@@ -391,14 +405,15 @@ class MapViewerConfig(ServiceConfig):
         collapseLayerGroupsBelowLevel = cfg_item.get(
             'collapseLayerGroupsBelowLevel', -1)
 
+        externalLayers = cfg_item.get("externalLayers") if "externalLayers" in cfg_item else []
         for layer in root_layer.get('layers', []):
             layers.append(self.collect_layers(
-                layer, search_layers, 1, collapseLayerGroupsBelowLevel))
+                layer, search_layers, 1, collapseLayerGroupsBelowLevel, externalLayers))
         item['sublayers'] = layers
         item['expanded'] = True
         item['drawingOrder'] = cap.get('drawing_order', [])
+        item['externalLayers'] = externalLayers
 
-        self.set_optional_config(cfg_item, 'externalLayers', item)
         self.set_optional_config(cfg_item, 'backgroundLayers', item)
 
         print_templates = cap.get('print_templates', [])
@@ -471,6 +486,8 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'printScales', item)
         self.set_optional_config(cfg_item, 'printResolutions', item)
         self.set_optional_config(cfg_item, 'printGrid', item)
+
+        autogenExternalLayers += list(map(lambda entry: entry["name"], externalLayers))
 
         return item
 
@@ -594,7 +611,7 @@ class MapViewerConfig(ServiceConfig):
         if field in cfg_item:
             item[field] = cfg_item.get(field)
 
-    def collect_layers(self, layer, search_layers, level, collapseBelowLevel):
+    def collect_layers(self, layer, search_layers, level, collapseBelowLevel, externalLayers):
         """Recursively collect layer tree from capabilities.
 
         :param obj layer: Layer or group layer
@@ -613,7 +630,7 @@ class MapViewerConfig(ServiceConfig):
             for sublayer in layer['layers']:
                 # recursively collect sub layer
                 sublayers.append(self.collect_layers(
-                    sublayer, search_layers, level + 1, collapseBelowLevel))
+                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers))
 
             item_layer['sublayers'] = sublayers
 
@@ -664,6 +681,10 @@ class MapViewerConfig(ServiceConfig):
             # dataUrl
             if 'dataUrl' in layer:
                 item_layer['dataUrl'] = layer.get('dataUrl', '')
+                if item_layer["dataUrl"].startswith("wms:"):
+                    externalLayers.append({"internalLayer": layer['name'], "name": item_layer["dataUrl"]})
+                    item_layer["dataUrl"] = ""
+
             # metadataUrl
             if 'metadataUrl' in layer:
                 item_layer['metadataUrl'] = layer.get('metadataUrl', '')
