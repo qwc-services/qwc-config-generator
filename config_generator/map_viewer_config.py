@@ -263,7 +263,7 @@ class MapViewerConfig(ServiceConfig):
             cpos = entry.find(':')
             hpos = entry.rfind('#')
             type = entry[0:cpos]
-            url = entry[cpos:hpos]
+            url = entry[cpos+1:hpos]
             layername = entry[hpos+1:]
             themes["externalLayers"].append({
                 "name": entry,
