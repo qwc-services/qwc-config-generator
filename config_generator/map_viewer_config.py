@@ -260,10 +260,11 @@ class MapViewerConfig(ServiceConfig):
             backgroundLayer["thumbnail"] = imgPath
 
         for entry in autogenExternalLayers:
-            pos = entry.rfind('#')
-            type = entry[0:3]
-            url = entry[4:pos]
-            layername = entry[pos+1:]
+            cpos = entry.find(':')
+            hpos = entry.rfind('#')
+            type = entry[0:cpos]
+            url = entry[cpos:hpos]
+            layername = entry[hpos+1:]
             themes["externalLayers"].append({
                 "name": entry,
                 "type": type,
