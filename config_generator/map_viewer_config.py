@@ -235,6 +235,9 @@ class MapViewerConfig(ServiceConfig):
             groups.append(self.theme_group(group, autogenExternalLayers))
         themes['subdirs'] = groups
 
+        if not self.default_theme and self.theme_ids:
+            self.default_theme = self.theme_ids[0]
+
         themes['defaultTheme'] = self.default_theme
         themes['externalLayers'] = themes_config_themes.get(
             'externalLayers', []
