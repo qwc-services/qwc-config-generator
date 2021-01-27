@@ -565,6 +565,7 @@ class CapabilitiesReader():
             wms_layer["maxScale"] = maxScale.text
 
         wms_layer['visible'] = layer.get('visible') == '1'
+        wms_layer['geometryType'] = layer.get('geometryType')
 
         wms_layer['queryable'] = layer.get('queryable') == '1'
         if wms_layer['queryable'] and layer.get('displayField'):

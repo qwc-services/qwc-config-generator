@@ -653,6 +653,7 @@ class MapViewerConfig(ServiceConfig):
         else:
             # layer
             item_layer['visibility'] = layer['visible']
+            item_layer['geometryType'] = layer['geometryType']
             item_layer['queryable'] = layer['queryable']
             if 'display_field' in layer:
                 item_layer['displayField'] = layer.get('display_field')
