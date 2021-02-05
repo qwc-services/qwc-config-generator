@@ -220,6 +220,13 @@
     {
       "name": "data",
       "config": {}
+    },
+    {
+      "name": "legend",
+      "config": {
+        "default_qgis_server_url": "http://qwc-qgis-server/ows/",
+        "legend_images_path": "/assets/legend"
+      }
     }
   ]
 }
