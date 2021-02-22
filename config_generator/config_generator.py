@@ -18,6 +18,7 @@ from .ogc_service_config import OGCServiceConfig
 from .permissions_config import PermissionsConfig
 from .print_service_config import PrintServiceConfig
 from .search_service_config import SearchServiceConfig
+from .legend_service_config import LegendServiceConfig
 from .service_config import ServiceConfig
 
 from logging import Logger as Log
@@ -197,6 +198,10 @@ class ConfigGenerator():
             ),
             'search': SearchServiceConfig(
                 self.config_models, self.service_config('search'), self.logger
+            ),
+            'legend': LegendServiceConfig(
+                generator_config, self.capabilities_reader, self.config_models,
+                self.service_config('legend'), self.logger
             ),
             'data': DataServiceConfig(
                 self.service_config('data'), generator_config,

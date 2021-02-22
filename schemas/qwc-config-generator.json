@@ -128,7 +128,8 @@
             "mapinfo",
             "permalink",
             "print",
-            "search"
+            "search",
+            "legend"
           ]
         },
         "config": {
