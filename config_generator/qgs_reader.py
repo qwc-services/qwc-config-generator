@@ -71,6 +71,10 @@ class QGSReader:
             return layers
 
         for maplayer in self.root.findall('.//maplayer'):
+            layerid = maplayer.find('id')
+            # Skip layers which are embedded projects
+            if layerid is None:
+                continue
             if maplayer.find('shortname') is not None:
                 maplayer_name = maplayer.find('shortname').text
             else:
