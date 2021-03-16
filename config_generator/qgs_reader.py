@@ -77,6 +77,9 @@ class QGSReader:
                 continue
             if maplayer.find('shortname') is not None:
                 maplayer_name = maplayer.find('shortname').text
+            elif maplayer.find('layername') is None:
+                self.logger.info("maplayer layername undefined - skipping")
+                continue
             else:
                 maplayer_name = maplayer.find('layername').text
             provider = maplayer.find('provider').text
