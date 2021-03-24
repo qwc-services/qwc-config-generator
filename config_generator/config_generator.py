@@ -12,6 +12,7 @@ from qwc_services_core.config_models import ConfigModels
 from qwc_services_core.database import DatabaseEngine
 from .capabilities_reader import CapabilitiesReader
 from .data_service_config import DataServiceConfig
+from .ext_service_config import ExtServiceConfig
 from .feature_info_service_config import FeatureInfoServiceConfig
 from .map_viewer_config import MapViewerConfig
 from .ogc_service_config import OGCServiceConfig
@@ -206,6 +207,9 @@ class ConfigGenerator():
             'data': DataServiceConfig(
                 self.service_config('data'), generator_config,
                 self.config_models, self.logger
+            ),
+            'ext': ExtServiceConfig(
+                self.config_models, self.service_config('ext'), self.logger
             ),
 
             # config-only services
