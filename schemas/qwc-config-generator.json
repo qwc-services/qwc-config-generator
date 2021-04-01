@@ -83,7 +83,7 @@
           "description": "Layer opacity values for QGIS <= 3.10",
           "type": "object"
         },
-        "activate_categorize_groups": {
+        "split_categorized_layers": {
           "description": "Set to true to activate the categorize groups funcitonality",
           "type": "boolean"
         }

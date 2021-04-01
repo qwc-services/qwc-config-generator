@@ -186,7 +186,7 @@ Additionally the config generator can also autodetect thumbnails when adding pro
 
 The config generator also has the ability to split a layer, that has been [classified](https://docs.qgis.org/3.16/en/docs/training_manual/vector_classification/classification.html) with QGIS, into multiple layers and move them into a new group (The group name will be the original layer name). The following steps need to be done, to activate this functionality:
 
-1. Set ConfigGenerator config: `"activate_categorize_groups": true`
+1. Set ConfigGenerator config: `"split_categorized_layers": true`
 
 2. Define the environment variable `QGIS_APPLICATION_PREFIX_PATH` (default: `/usr`). The prefix path is the location where QGIS is installed on your system. This is needed by the split function, because it uses the `qgis.core` library.
 

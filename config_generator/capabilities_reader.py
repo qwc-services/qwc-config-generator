@@ -46,9 +46,9 @@ class CapabilitiesReader():
         # get qwc2 directory from ConfigGenerator config
         self.qwc_base_dir = generator_config.get("qwc2_base_dir")
 
-        # get activate_categorize_groups parameter from ConfigGenerator config
-        self.activate_categorize_groups = generator_config.get(
-            'activate_categorize_groups', False)
+        # get split_categorized_layers parameter from ConfigGenerator config
+        self.split_categorized_layers = generator_config.get(
+            'split_categorized_layers', False)
 
         # make mutual exclusive group subitems visible
         self.make_mutex_subitems_visible = generator_config.get(
@@ -98,7 +98,7 @@ class CapabilitiesReader():
                     dest_path = os.path.join(
                         qgis_projects_base_dir, relpath)
 
-                    if self.activate_categorize_groups is True:
+                    if self.split_categorized_layers is True:
                         from .categorize_groups_script import categorize_layers
                         categorize_layers([], fname, dest_path)
                     else:
