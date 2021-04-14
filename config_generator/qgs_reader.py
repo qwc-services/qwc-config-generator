@@ -221,9 +221,19 @@ class QGSReader:
         # NOTE: use ordered keys
         fields = OrderedDict()
 
-        aliases = maplayer.find('aliases')
-        for alias in aliases.findall('alias'):
-            field = alias.get('field')
+        # Get fieldnames from attributeEditorForm if possible (to preserve order), otherwise from aliases
+        fieldnames = []
+
+        formfields = maplayer.find('attributeEditorForm')
+        if formfields:
+            for formfield in formfields.findall('attributeEditorField'):
+                fieldnames.append(formfield.get('name'))
+        else:
+            aliases = maplayer.find('aliases')
+            for alias in aliases.findall('alias'):
+                fieldnames.append(alias.get('field'))
+
+        for field in fieldnames:
 
             if self.field_hidden(maplayer, field):
                 # skip hidden fields
@@ -234,9 +244,9 @@ class QGSReader:
             fields[field] = OrderedDict()
 
             # get alias
-            name = alias.get('name')
-            if name:
-                fields[field]['alias'] = name
+            alias = maplayer.find("aliases/alias[@field='%s']" % field)
+            if alias and alias.get('name'):
+                fields[field]['alias'] = alias.get('name')
 
             # get any constraints from edit widgets
             constraints = self.edit_widget_constraints(maplayer, field)
