@@ -245,7 +245,7 @@ class QGSReader:
 
             # get alias
             alias = maplayer.find("aliases/alias[@field='%s']" % field)
-            if alias and alias.get('name'):
+            if alias is not None and alias.get('name'):
                 fields[field]['alias'] = alias.get('name')
 
             # get any constraints from edit widgets
