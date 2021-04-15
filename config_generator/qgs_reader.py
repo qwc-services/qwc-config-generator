@@ -2,6 +2,7 @@ from collections import OrderedDict
 import os
 import re
 from xml.etree import ElementTree
+import psycopg2
 
 from sqlalchemy.sql import text as sql_text
 
@@ -372,6 +373,29 @@ class QGSReader:
                 value['value'] = option.get('value')
                 values.append(value)
 
+            if values:
+                constraints['values'] = values
+        elif edit_widget.get('type') == 'ValueRelation':
+            key = edit_widget.find(
+                        "config/Option/Option[@name='Key']").get('value')
+            value = edit_widget.find(
+                        "config/Option/Option[@name='Value']").get('value')
+            source = edit_widget.find(
+                        "config/Option/Option[@name='LayerSource']").get('value')
+            source_params = dict(map(lambda x: x.split("="), source.split(" ")))
+            query = "SELECT %s, %s FROM %s" % (key, value, source_params["table"])
+            values = []
+            try:
+                conn = psycopg2.connect("service=%s" % source_params["service"])
+                cur = conn.cursor()
+                cur.execute(query)
+                for row in cur.fetchall():
+                    value = OrderedDict()
+                    value['value'] = row[0]
+                    value['label'] = row[1]
+                    values.append(value)
+            except Exception as e:
+                self.logger.warn("Failed to read value relations: %s" % str(e))
             if values:
                 constraints['values'] = values
 
