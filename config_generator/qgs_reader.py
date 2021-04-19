@@ -7,6 +7,7 @@ import psycopg2
 from sqlalchemy.sql import text as sql_text
 
 from qwc_services_core.database import DatabaseEngine
+from .dnd_form_generator import DnDFormGenerator
 
 
 class QGSReader:
@@ -546,3 +547,19 @@ class QGSReader:
             if conn:
                 conn.close()
             raise
+
+    def autogenerate_dnd_forms(self, qwc_base_dir):
+        """ Autogenerate UI form files for dnd attribute form configurations
+
+        :param str qwc_base_dir: The qwc base dir
+        """
+
+        gen = DnDFormGenerator(self.logger, qwc_base_dir)
+        result = {}
+        for maplayer in self.root.findall('.//maplayer'):
+            layername = maplayer.find('layername').text
+            uipath = gen.generate_form(maplayer, layername)
+            if uipath:
+                result[layername] = uipath
+
+        return result

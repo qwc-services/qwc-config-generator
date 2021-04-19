@@ -752,6 +752,10 @@ class MapViewerConfig(ServiceConfig):
         qgs_reader = QGSReader(self.logger, self.qgis_projects_base_dir)
         self.logger.info("Reading '%s.qgs'" % map_name)
         if qgs_reader.read(map_name):
+
+            # Autogenerate drag and drop forms
+            forms = qgs_reader.autogenerate_dnd_forms(self.qwc_base_dir)
+
             # collect edit datasets
             for layer_name in qgs_reader.pg_layers():
                 if layer_name not in edit_datasets:
@@ -787,34 +791,38 @@ class MapViewerConfig(ServiceConfig):
                 dataset = OrderedDict()
                 dataset['layerName'] = layer_name
                 dataset['editDataset'] = dataset_name
-
-                # collect fields
-                fields = []
-                for attr in meta.get('attributes'):
-                    field = meta['fields'].get(attr, {})
-                    alias = field.get('alias', attr)
-                    data_type = self.EDIT_FIELD_TYPES.get(
-                        field.get('data_type'), 'text'
-                    )
-
-                    # NOTE: use ordered keys
-                    edit_field = OrderedDict()
-                    edit_field['id'] = attr
-                    edit_field['name'] = alias
-                    edit_field['type'] = data_type
-
-                    if 'constraints' in field:
-                        # add any constraints
-                        edit_field['constraints'] = field['constraints']
-                        if 'values' in field['constraints']:
-                            edit_field['type'] = 'list'
-
-                    fields.append(edit_field)
-
-                dataset['fields'] = fields
                 dataset['geomType'] = self.EDIT_GEOM_TYPES.get(
                     meta['geometry_type']
                 )
+
+                if layer_name in forms:
+                    dataset['form'] = forms[layer_name]
+                else:
+                    # collect fields
+                    fields = []
+                    for attr in meta.get('attributes'):
+                        field = meta['fields'].get(attr, {})
+                        alias = field.get('alias', attr)
+                        data_type = self.EDIT_FIELD_TYPES.get(
+                            field.get('data_type'), 'text'
+                        )
+
+                        # NOTE: use ordered keys
+                        edit_field = OrderedDict()
+                        edit_field['id'] = attr
+                        edit_field['name'] = alias
+                        edit_field['type'] = data_type
+
+                        if 'constraints' in field:
+                            # add any constraints
+                            edit_field['constraints'] = field['constraints']
+                            if 'values' in field['constraints']:
+                                edit_field['type'] = 'list'
+
+                        fields.append(edit_field)
+
+                    dataset['fields'] = fields
+
 
                 edit_config[layer_name] = dataset
 
