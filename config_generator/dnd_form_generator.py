@@ -120,7 +120,7 @@ class DnDFormGenerator:
                     self.__add_widget_property(item, "text", None, None, row[1])
                     widget.append(item)
 
-            except:
+            except Exception as e:
                 self.logger.warning("Failed to read value relations: %s" % str(e))
                 return None
             return widget
