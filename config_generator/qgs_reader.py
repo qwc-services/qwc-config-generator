@@ -3,6 +3,7 @@ import os
 import re
 from xml.etree import ElementTree
 import psycopg2
+import shutil
 
 from sqlalchemy.sql import text as sql_text
 
@@ -37,16 +38,16 @@ class QGSReader:
                              QGIS server data dir
         """
         qgs_file = "%s.qgs" % qgs_path
-        qgs_path = os.path.join(self.qgs_resources_path, qgs_file)
-        if not os.path.exists(qgs_path):
-            self.logger.warn("Could not find QGS file '%s'" % qgs_path)
+        self.qgs_path = os.path.join(self.qgs_resources_path, qgs_file)
+        if not os.path.exists(self.qgs_path):
+            self.logger.warn("Could not find QGS file '%s'" % self.qgs_path)
             return False
 
         try:
-            tree = ElementTree.parse(qgs_path)
+            tree = ElementTree.parse(self.qgs_path)
             self.root = tree.getroot()
             if self.root.tag != 'qgis':
-                self.logger.warn("'%s' is not a QGS file" % qgs_path)
+                self.logger.warn("'%s' is not a QGS file" % self.qgs_path)
                 return False
 
             # extract QGIS version
@@ -548,17 +549,39 @@ class QGSReader:
                 conn.close()
             raise
 
-    def autogenerate_dnd_forms(self, qwc_base_dir):
-        """ Autogenerate UI form files for dnd attribute form configurations
+    def collect_ui_forms(self, qwc_base_dir):
+        """ Collect UI form files from project
 
         :param str qwc_base_dir: The qwc base dir
         """
-
         gen = DnDFormGenerator(self.logger, qwc_base_dir)
         result = {}
         for maplayer in self.root.findall('.//maplayer'):
             layername = maplayer.find('layername').text
-            uipath = gen.generate_form(maplayer, layername)
+            uipath = None
+            editorlayout = maplayer.find('editorlayout')
+            if editorlayout is None:
+                continue
+
+            if editorlayout.text == "uifilelayout":
+                editform = maplayer.find('editform')
+                if editform is not None:
+                    formpath = editform.text
+                    if not os.path.isabs(formpath):
+                        formpath = os.path.join(os.path.dirname(self.qgs_path), formpath)
+                    outputdir = os.path.join(qwc_base_dir, 'assets', 'forms', 'autogen')
+                    dest = os.path.join(outputdir, layername + ".ui")
+                    try:
+                        os.makedirs(outputdir, exist_ok=True)
+                        shutil.copy(formpath, dest)
+                        self.logger.info("Copied form for layer %s" % layername)
+                        uipath = ":/forms/autogen/%s.ui" % layername
+                    except Exception as e:
+                        self.logger.warning("Failed to copy form for layer %s: %s" % (layername, str(e)))
+
+            elif editorlayout.text == "tablayout":
+                uipath = gen.generate_form(maplayer, layername)
+
             if uipath:
                 result[layername] = uipath
 

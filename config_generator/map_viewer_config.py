@@ -753,8 +753,8 @@ class MapViewerConfig(ServiceConfig):
         self.logger.info("Reading '%s.qgs'" % map_name)
         if qgs_reader.read(map_name):
 
-            # Autogenerate drag and drop forms
-            forms = qgs_reader.autogenerate_dnd_forms(self.qwc_base_dir)
+            # Collect ui forms
+            forms = qgs_reader.collect_ui_forms(self.qwc_base_dir)
 
             # collect edit datasets
             for layer_name in qgs_reader.pg_layers():
