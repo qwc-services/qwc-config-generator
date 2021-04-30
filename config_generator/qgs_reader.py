@@ -4,6 +4,7 @@ import re
 from xml.etree import ElementTree
 import psycopg2
 import shutil
+import time
 
 from sqlalchemy.sql import text as sql_text
 
@@ -576,7 +577,7 @@ class QGSReader:
                         os.makedirs(outputdir, exist_ok=True)
                         shutil.copy(formpath, dest)
                         self.logger.info("Copied form for layer %s" % layername)
-                        uipath = ":/forms/autogen/%s.ui" % layername
+                        uipath = ":/forms/autogen/%s.ui?v=%d" % (layername, int(time.time()))
                     except Exception as e:
                         self.logger.warning("Failed to copy form for layer %s: %s" % (layername, str(e)))
 

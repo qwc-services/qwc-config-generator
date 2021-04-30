@@ -1,5 +1,6 @@
 import os
 import psycopg2
+import time
 from xml.etree import ElementTree
 
 
@@ -40,7 +41,7 @@ class DnDFormGenerator:
             self.logger.warning("Failed to write form for layer %s: %s" % (layername, str(e)))
             return None
 
-        return ":/forms/autogen/%s.ui" % layername
+        return ":/forms/autogen/%s.ui?v=%d" % (layername, int(time.time()))
 
     def __add_widget_property(self, widget, name, valueEl, key, defaultValue="", propClass="property", valueClass="string"):
         property = ElementTree.Element(propClass)
