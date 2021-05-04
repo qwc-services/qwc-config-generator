@@ -231,7 +231,7 @@ class QGSReader:
         editorlayout = maplayer.find('editorlayout')
         formfields = maplayer.find('attributeEditorForm')
         if editorlayout.text == "tablayout" and formfields is not None:
-            for formfield in formfields.findall('attributeEditorField'):
+            for formfield in formfields.findall('.//attributeEditorField'):
                 fieldnames.append(formfield.get('name'))
         else:
             aliases = maplayer.find('aliases')
