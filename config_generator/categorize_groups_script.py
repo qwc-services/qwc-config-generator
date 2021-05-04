@@ -98,7 +98,7 @@ def categorize_layers(layers, src_path, dest_path):
             project_instance, group)
         project_instance.removeMapLayer(base_layer)
 
-    save_project(project_instance, dest_path)
+    project_instance.write(dest_path)
 
     return dest_path
 
@@ -109,7 +109,7 @@ def save_custom_property(layers, project_instance):
             layer.setCustomProperty("convert_categorized_layer", "true")
         else:
             layer.removeCustomProperty("convert_categorized_layer")
-    save_project(project_instance)
+    project_instance.write()
 
 
 def create_categorized_layer(categories_list, base_layer,
@@ -133,12 +133,3 @@ def create_categorized_layer(categories_list, base_layer,
 
         project_instance.addMapLayer(category_layer, False)
         group.addLayer(category_layer)
-
-
-def save_project(project_instance, new_project_path=None):
-
-    if new_project_path is None:
-        project_instance.write()
-    else:
-        file_name, extension = os.path.splitext(new_project_path)
-        project_instance.write(file_name + "_categorized" + extension)
