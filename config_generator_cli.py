@@ -6,16 +6,6 @@ import os
 
 from config_generator.config_generator import ConfigGenerator
 
-from qgis.core import QgsApplication
-
-
-# Load QGIS providers (will be needed for the categozize groups script)
-# https://gis.stackexchange.com/questions/263852/using-initqgis-on-headless-installation-of-qgis-3
-os.environ["QT_QPA_PLATFORM"] = "offscreen"
-QgsApplication.setPrefixPath("/usr", True)
-qgsApp = QgsApplication([], False)
-qgsApp.initQgis()
-
 
 class Logger():
     """Simple logger class"""

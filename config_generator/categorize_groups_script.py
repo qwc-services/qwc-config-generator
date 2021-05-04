@@ -1,6 +1,19 @@
 import os
 
+import qgis.core
 from qgis.core import *
+
+
+def get_prefix_path():
+    return os.environ.get("QGIS_APPLICATION_PREFIX_PATH", "/usr")
+
+
+# Load QGIS providers (will be needed for the categozize groups script)
+# https://gis.stackexchange.com/questions/263852/using-initqgis-on-headless-installation-of-qgis-3
+os.environ["QT_QPA_PLATFORM"] = "offscreen"
+QgsApplication.setPrefixPath(get_prefix_path(), True)
+qgsApp = QgsApplication([], False)
+qgsApp.initQgis()
 
 
 def convert_layers(layers, project_path, override_project=False):
@@ -24,7 +37,7 @@ def convert_layers(layers, project_path, override_project=False):
     if override_project is True:
         dest_path = project_path
     else:
-        file_name, extension = os.path.splitext(src_path)
+        file_name, extension = os.path.splitext(project_path)
         dest_path = file_name + "_categorized" + extension
 
     return categorize_layers(layers, project_path, dest_path)
@@ -107,6 +120,7 @@ def create_categorized_layer(categories_list, base_layer,
         category_layer.setTitle(category.label())
         category_layer.setName(category.label())
         category_layer.setShortName(category.label())
+        category_layer.setCrs(base_layer.crs())
 
         new_renderer = QgsRuleBasedRenderer.convertFromRenderer(
             base_layer.renderer())
@@ -126,4 +140,5 @@ def save_project(project_instance, new_project_path=None):
     if new_project_path is None:
         project_instance.write()
     else:
-        project_instance.write(new_project_path)
+        file_name, extension = os.path.splitext(new_project_path)
+        project_instance.write(file_name + "_categorized" + extension)
