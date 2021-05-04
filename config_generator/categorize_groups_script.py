@@ -16,7 +16,7 @@ qgsApp = QgsApplication([], False)
 qgsApp.initQgis()
 
 
-def convert_layers(layers, project_path, override_project=False):
+def split_categorized_layers(src_path, dest_path, override_project=False):
     """
     This method iterates over the layers list and replaces all QGIS layers
     with a QGIS group that has the same name as the layer.
@@ -34,18 +34,17 @@ def convert_layers(layers, project_path, override_project=False):
         project will be overriden.
     """
 
-    if override_project is True:
-        dest_path = project_path
-    else:
-        file_name, extension = os.path.splitext(project_path)
+    if override_project is False:
+        file_name, extension = os.path.splitext(dest_path)
         dest_path = file_name + "_categorized" + extension
 
-    return categorize_layers(layers, project_path, dest_path)
+    return categorize_layers(project_path, dest_path)
 
 
-def categorize_layers(layers, src_path, dest_path):
+def categorize_layers(src_path, dest_path):
 
     layer_order = []
+    layers = []
     project_instance = QgsProject.instance()
     layer_tree_root = project_instance.layerTreeRoot()
 
@@ -56,15 +55,10 @@ def categorize_layers(layers, src_path, dest_path):
     for _layer in layer_tree_root.children():
         layer_order.append(_layer.name())
 
-    if layers:
-        save_custom_property(layers, project_instance)
-    else:
-        layers = []
-
-        for layer in project_instance.mapLayers().values():
-            if layer.customProperty(
-                    "convert_categorized_layer", "false").lower() == "true":
-                layers.append(layer.name())
+    for layer in project_instance.mapLayers().values():
+        if layer.customProperty(
+                "convert_categorized_layer", "false").lower() == "true":
+            layers.append(layer.name())
 
     if not layers:
         return src_path
