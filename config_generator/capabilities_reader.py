@@ -356,11 +356,15 @@ class CapabilitiesReader():
             }
 
             # collect internal print layers
-            internal_print_layers = [
-                bg_layer.get('printLayer') for bg_layer
-                in item.get('backgroundLayers', [])
-                if 'printLayer' in bg_layer
-            ]
+            internal_print_layers = []
+            for bg_layer in item.get('backgroundLayers', []):
+                printLayer = bg_layer.get('printLayer', None)
+                if printLayer:
+                    if isinstance(printLayer, str):
+                        internal_print_layers.append(printLayer)
+                    elif isinstance(printLayer, list):
+                        for entry in printLayer:
+                            internal_print_layers.append(entry.get('name'))
 
             # collect WMS layers
             default_root_name = urlparse(full_url).path.split('/')[-1]
