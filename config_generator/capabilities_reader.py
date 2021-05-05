@@ -100,7 +100,7 @@ class CapabilitiesReader():
 
                     if self.split_categorized_layers is True:
                         from .categorize_groups_script import split_categorized_layers
-                        split_categorized_layers(fname, dest_path, True)
+                        split_categorized_layers(fname, dest_path)
                     else:
                         copyfile(fname, dest_path)
                     if not os.path.exists(dest_path):

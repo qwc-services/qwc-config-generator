@@ -16,29 +16,22 @@ qgsApp = QgsApplication([], False)
 qgsApp.initQgis()
 
 
-def split_categorized_layers(src_path, dest_path, override_project=False):
+def split_categorized_layers(src_path, dest_path=None):
     """
-    This method iterates over the layers list and replaces all QGIS layers
+    This method replaces all QGIS layers
     with a QGIS group that has the same name as the layer.
     The new group contains all rules or categories, that were defined
     in the layer, as QGIS layers.
 
-    Per deufault, the modified project will be saved in a new file.
-    If you don't want to create a new file, then you have to set the parameter
-    `override_project` to true. This would override the original project.
-
-    :param list layer: This list should contain all layer names
-        (saved as strings)
-    :param string project_path: Absolute path to the project file(*.qgs file)
-    :param boolean override_project: If this is set to True, then the original
-        project will be overriden.
+    :param string src_path: Absolute path to the project file(*.qgs file)
+    :param string dest_path: Absolute path to the destination project
     """
 
-    if override_project is False:
-        file_name, extension = os.path.splitext(dest_path)
+    if dest_path is None:
+        file_name, extension = os.path.splitext(src_path)
         dest_path = file_name + "_categorized" + extension
 
-    return categorize_layers(project_path, dest_path)
+    return categorize_layers(src_path, dest_path)
 
 
 def categorize_layers(src_path, dest_path):
