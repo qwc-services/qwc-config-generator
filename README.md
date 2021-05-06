@@ -76,6 +76,7 @@ Example `tenantConfig.json`:
         ]
       }
   },
+  "custom_resource_types": [],
   "services": [
     {
       "name": "ogc",
@@ -259,6 +260,14 @@ Using the `permissions_default_allow` setting, some resources can be set to be p
 
 * i.e. `permissions_default_allow: true`: all maps, layers and attributes are permitted by default
 * i.e. `permissions_default_allow: false`: maps and layers are only available if their resources and permissions are explicitly configured; though attributes are still permitted by default
+
+### Custom resource types
+
+If you want to define custom resource types for a custom service, you can add a record for the resource type to the configdb
+
+    INSERT INTO qwc_config.resource_types(name, description, list_order) values ('<resource_name>', '<resource_description>', <list_order>);
+
+and then add it to the `custom_resource_types` setting.
 
 
 Usage

@@ -133,8 +133,10 @@ class PermissionsConfig():
         """
         for resource_key in service_permissions:
             # merge resource type from service permissions
+            if not resource_key in role_permissions:
+                role_permissions[resource_key] = []
             self.merge_list(
-                role_permissions[resource_key],
+                role_permissions.get(resource_key, []),
                 service_permissions[resource_key]
             )
 
