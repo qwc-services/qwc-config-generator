@@ -21,6 +21,7 @@ from .print_service_config import PrintServiceConfig
 from .search_service_config import SearchServiceConfig
 from .legend_service_config import LegendServiceConfig
 from .service_config import ServiceConfig
+from .permissions_query import PermissionsQuery
 
 from logging import Logger as Log
 
@@ -329,6 +330,7 @@ class ConfigGenerator():
         Return True if the service permissions could be generated.
         """
         permissions_config = PermissionsConfig(self.config_models, self.logger)
+        permissions_query = PermissionsQuery(self.config_models, self.logger)
         permissions = permissions_config.base_config()
 
         # collect service permissions
@@ -346,6 +348,22 @@ class ConfigGenerator():
                     )
             else:
                 self.logger.warning("Service '%s' not found" % service)
+
+        # write permissions for custom resources
+        custom_resource_types = self.config.get('custom_resource_types', [])
+        for resource_type in custom_resource_types:
+            for role in permissions['roles']:
+
+                res_permissions = OrderedDict()
+                session = self.config_models.session()
+                permitted_resources = permissions_query.permitted_resources
+                resources = permitted_resources(resource_type, role['role'], session).keys()
+                res_permissions[resource_type] = sorted(list(resources))
+                session.close()
+
+                permissions_config.merge_service_permissions(
+                    role['permissions'], res_permissions
+                )
 
         # validate JSON schema
         if self.validate_schema(permissions, permissions_config.schema):
