@@ -379,12 +379,14 @@ class CapabilitiesReader():
                 return
             # Check if a layer has the same name as the root layer - and if so, abort
             root_layer_name = capabilities['root_layer'].get('name')
-            for layer in capabilities['root_layer'].get('layers'):
-                if layer.get('name') == root_layer_name:
-                    self.logger.critical(
-                        "The service %s contains a layer with the same name as the service. Please rename the service or the layer."
-                        % root_layer_name
-                    )
+            layers = capabilities['root_layer'].get('layers')
+            if layers is not None:
+                for layer in layers:
+                    if layer.get('name') == root_layer_name:
+                        self.logger.critical(
+                            "The service %s contains a layer with the same name as the service. Please rename the service or the layer."
+                            % root_layer_name
+                        )
 
             # get drawing order
             drawing_order = root.find(
