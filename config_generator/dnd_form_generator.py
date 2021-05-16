@@ -125,6 +125,10 @@ class DnDFormGenerator:
                 self.logger.warning("Failed to read value relations: %s" % str(e))
                 return None
             return widget
+        elif editWidget.get("type") == "ExternalResource":
+            widget.set("class", "QLineEdit")
+            widget.set("name", "%s__upload" % field)
+            return widget
         else:
             self.logger.warning("Warning: unhandled widget type %s" % editWidget.get("type"))
             return None
@@ -175,7 +179,6 @@ class DnDFormGenerator:
                 editorWidget = self.__create_editor_widget(maplayer, child.get("name"))
                 if editorWidget is None:
                     continue
-                editorWidget.set("name", child.get("name"))
 
                 editorItem = ElementTree.Element("item")
                 editorItem.set("row", str(row))
