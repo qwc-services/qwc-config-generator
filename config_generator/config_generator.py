@@ -531,7 +531,7 @@ class ConfigGenerator():
         """Return list of map names from QWC2 theme items."""
         return self.capabilities_reader.wms_service_names()
 
-    def map_details(self, map_name):
+    def map_details(self, map_name, with_attributes=False):
         """Return details for a map from capabilities
 
         :param str map_name: Map name
@@ -547,11 +547,14 @@ class ConfigGenerator():
         else:
             # collect list of layer names
             root_layer = cap.get('root_layer', {})
-            map_details['layers'] = self.collect_layers(root_layer)
+            if with_attributes is False:
+                map_details['layers'] = self.collect_layer_names(root_layer)
+            else:
+                map_details['layers'] = self.collect_layers(root_layer)
 
         return map_details
 
-    def collect_layers(self, layer):
+    def collect_layer_names(self, layer):
         """Recursively collect list of layer names from capabilities.
 
         :param obj layer: Layer or group layer
@@ -560,6 +563,23 @@ class ConfigGenerator():
 
         layers.append(layer['name'])
         if 'layers' in layer:
+            # group layer
+            for sublayer in layer['layers']:
+                layers += self.collect_layer_names(sublayer)
+
+        return layers
+
+    def collect_layers(self, layer):
+        """Recursively collect list of layer names from capabilities.
+
+        :param obj layer: Layer or group layer
+        """
+        # dict containing all layers and atrributes of a map
+        layers = []
+
+        if 'attributes' in layer:
+            layers.append({layer['name']: layer['attributes']})
+        elif 'layers' in layer:
             # group layer
             for sublayer in layer['layers']:
                 layers += self.collect_layers(sublayer)

@@ -95,6 +95,27 @@ def map_details(map_name):
         return jsonify({'error': str(e)}), 500
 
 
+@app.route("/resources", methods=['GET'])
+def resources():
+    """Return details for all maps (e.g. their layers) from capabilities."""
+
+    maps_details = []
+
+    try:
+        # get maps from ConfigGenerator
+        tenant = request.args.get('tenant')
+        generator = config_generator(tenant)
+        maps = generator.maps()
+        for map_name in maps:
+            maps_details.append(generator.map_details(
+                map_name, with_attributes=True))
+        generator.cleanup_temp_dir()
+
+        return jsonify(maps_details)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 # local webserver
 if __name__ == '__main__':
     print("Starting ConfigGenerator service...")
