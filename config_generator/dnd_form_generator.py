@@ -9,7 +9,7 @@ class DnDFormGenerator:
         self.logger = logger
         self.qwc_base_dir = qwc_base_dir
 
-    def generate_form(self, maplayer, layername):
+    def generate_form(self, maplayer, projectname, layername):
         attributeEditorForm = maplayer.find('attributeEditorForm')
         if not attributeEditorForm:
             return None
@@ -33,15 +33,15 @@ class DnDFormGenerator:
         outputdir = os.path.join(self.qwc_base_dir, 'assets', 'forms', 'autogen')
         try:
             os.makedirs(outputdir, exist_ok=True)
-            outputfile = os.path.join(outputdir, layername + ".ui")
+            outputfile = os.path.join(outputdir, "%s_%s.ui" % (projectname, layername))
             with open(outputfile, "wb") as fh:
                 fh.write(text)
-                self.logger.info("Wrote %s.ui" % layername)
+                self.logger.info("Wrote %s_%s.ui" % (projectname, layername))
         except Exception as e:
             self.logger.warning("Failed to write form for layer %s: %s" % (layername, str(e)))
             return None
 
-        return ":/forms/autogen/%s.ui?v=%d" % (layername, int(time.time()))
+        return ":/forms/autogen/%s_%s.ui?v=%d" % (projectname, layername, int(time.time()))
 
     def __add_widget_property(self, widget, name, valueEl, key, defaultValue="", propClass="property", valueClass="string"):
         property = ElementTree.Element(propClass)

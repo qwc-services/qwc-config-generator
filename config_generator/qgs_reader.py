@@ -557,6 +557,7 @@ class QGSReader:
         :param str qwc_base_dir: The qwc base dir
         """
         gen = DnDFormGenerator(self.logger, qwc_base_dir)
+        projectname = os.path.splitext(os.path.basename(self.qgs_path))[0]
         result = {}
         for maplayer in self.root.findall('.//maplayer'):
             layername = maplayer.find('layername').text
@@ -576,13 +577,13 @@ class QGSReader:
                     try:
                         os.makedirs(outputdir, exist_ok=True)
                         shutil.copy(formpath, dest)
-                        self.logger.info("Copied form for layer %s" % layername)
-                        uipath = ":/forms/autogen/%s.ui?v=%d" % (layername, int(time.time()))
+                        self.logger.info("Copied form for layer %s_%s" % (projectname, layername))
+                        uipath = ":/forms/autogen/%s_%s.ui?v=%d" % (projectname, layername, int(time.time()))
                     except Exception as e:
                         self.logger.warning("Failed to copy form for layer %s: %s" % (layername, str(e)))
 
             elif editorlayout.text == "tablayout":
-                uipath = gen.generate_form(maplayer, layername)
+                uipath = gen.generate_form(maplayer, projectname, layername)
 
             if uipath:
                 result[layername] = uipath
