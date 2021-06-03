@@ -121,7 +121,7 @@ class CapabilitiesReader():
         if not qgis_projects_scan_base_dir:
             self.logger.info(
                 "Skipping scanning for projects" +
-                " (qgis_projects_scan_base_dir not set")
+                " (qgis_projects_scan_base_dir not set)")
             return
 
         if os.path.exists(qgis_projects_scan_base_dir):
@@ -171,10 +171,11 @@ class CapabilitiesReader():
                     relpath = os.path.relpath(dirpath,
                                               qgis_projects_scan_base_dir)
                     wmspath = os.path.join(relpath, Path(filename).stem)
+                    wmsurlpath = urlparse(urljoin(base_url, wmspath)).path
 
                     # Add to themes items
                     item = OrderedDict()
-                    item["url"] = urljoin(base_url, wmspath)
+                    item["url"] = wmsurlpath
                     item["backgroundLayers"] = self.themes_config.get(
                         "defaultBackgroundLayers", [])
                     item["searchProviders"] = self.themes_config.get(
