@@ -573,7 +573,7 @@ class QGSReader:
                     if not os.path.isabs(formpath):
                         formpath = os.path.join(os.path.dirname(self.qgs_path), formpath)
                     outputdir = os.path.join(qwc_base_dir, 'assets', 'forms', 'autogen')
-                    dest = os.path.join(outputdir, layername + ".ui")
+                    dest = os.path.join(outputdir, "%s_%s.ui" % (projectname, layername))
                     try:
                         os.makedirs(outputdir, exist_ok=True)
                         shutil.copy(formpath, dest)
