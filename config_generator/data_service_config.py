@@ -238,6 +238,8 @@ class DataServiceConfig(ServiceConfig):
         )
         for permission in data_permissions:
             # lookup map resource for dataset
+            if not permission.resource.parent_id:
+                continue
             map_obj = self.permissions_query.get_resource(
                 permission.resource.parent_id
             )
