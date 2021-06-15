@@ -128,6 +128,8 @@ class DnDFormGenerator:
         elif editWidget.get("type") == "ExternalResource":
             widget.set("class", "QLineEdit")
             widget.set("name", "%s__upload" % field)
+            filterOpt = editWidget.find("config/Option/Option[@name='FileWidgetFilter']")
+            self.__add_widget_property(widget, "text", filterOpt, "value")
             return widget
         else:
             self.logger.warning("Warning: unhandled widget type %s" % editWidget.get("type"))
