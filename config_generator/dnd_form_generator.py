@@ -48,9 +48,9 @@ class DnDFormGenerator:
         property.set("name", name)
         string = ElementTree.Element(valueClass)
         if valueEl is not None:
-            string.text = valueEl.get(key)
+            string.text = str(valueEl.get(key))
         else:
-            string.text = defaultValue
+            string.text = str(defaultValue)
         property.append(string)
         widget.append(property)
 
