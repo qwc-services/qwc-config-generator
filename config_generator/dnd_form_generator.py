@@ -3,6 +3,7 @@ import psycopg2
 import time
 from xml.etree import ElementTree
 
+GENERATE_STATIC_KVRELS = os.environ.get("GENERATE_STATIC_KVRELS", "False") in ["1", "True", "TRUE"]
 
 class DnDFormGenerator:
     def __init__(self, logger, qwc_base_dir):
@@ -104,26 +105,33 @@ class DnDFormGenerator:
                         widget.append(item)
             return widget
         elif editWidget.get("type") == "ValueRelation":
+            widget.set("class", "QComboBox")
             key = editWidget.find("config/Option/Option[@name='Key']").get('value')
             value = editWidget.find("config/Option/Option[@name='Value']").get('value')
             source = editWidget.find("config/Option/Option[@name='LayerSource']").get('value')
             source_params = dict(map(lambda x: x.split("="), source.split(" ")))
-            query = "SELECT %s, %s FROM %s" % (key, value, source_params["table"])
+            if not GENERATE_STATIC_KVRELS:
+                layer = editWidget.find("config/Option/Option[@name='LayerName']").get('value')
+                widget.set("name", "kvrel__{field}__{kvtable}__{keyfield}__{valuefield}".format(
+                    field=field, kvtable=layer, keyfield=key, valuefield=value
+                ))
+            else:
+                query = "SELECT %s, %s FROM %s" % (key, value, source_params["table"])
 
-            widget.set("class", "QComboBox")
-            try:
-                conn = psycopg2.connect("service=%s" % source_params["service"])
-                cur = conn.cursor()
-                cur.execute(query)
-                for row in cur.fetchall():
-                    item = ElementTree.Element("item")
-                    self.__add_widget_property(item, "value", None, None, row[0])
-                    self.__add_widget_property(item, "text", None, None, row[1])
-                    widget.append(item)
+                widget.set("class", "QComboBox")
+                try:
+                    conn = psycopg2.connect("service=%s" % source_params["service"])
+                    cur = conn.cursor()
+                    cur.execute(query)
+                    for row in cur.fetchall():
+                        item = ElementTree.Element("item")
+                        self.__add_widget_property(item, "value", None, None, row[0])
+                        self.__add_widget_property(item, "text", None, None, row[1])
+                        widget.append(item)
 
-            except Exception as e:
-                self.logger.warning("Failed to read value relations: %s" % str(e))
-                return None
+                except Exception as e:
+                    self.logger.warning("Failed to read value relations: %s" % str(e))
+                    return None
             return widget
         elif editWidget.get("type") == "ExternalResource":
             widget.set("class", "QLineEdit")
