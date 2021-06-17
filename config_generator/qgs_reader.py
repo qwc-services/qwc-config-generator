@@ -560,7 +560,12 @@ class QGSReader:
         projectname = os.path.splitext(os.path.basename(self.qgs_path))[0]
         result = {}
         for maplayer in self.root.findall('.//maplayer'):
-            layername = maplayer.find('layername').text
+
+            if maplayer.find('shortname') is not None:
+                layername = maplayer.find('shortname').text
+            else:
+                layername = maplayer.find('layername').text
+
             uipath = None
             editorlayout = maplayer.find('editorlayout')
             if editorlayout is None:
