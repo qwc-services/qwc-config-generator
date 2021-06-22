@@ -85,8 +85,15 @@ class DnDFormGenerator:
             self.__add_widget_property(widget, "singleStep", optStep, "value", "1")
             return widget
         elif editWidget.get("type") == "DateTime":
+            fieldFormatEl = editWidget.find("config/Option/Option[@name='field_format']")
+            fieldFormat = fieldFormatEl.get("value") if fieldFormatEl is not None else ""
             optFormat = editWidget.find("config/Option/Option[@name='display_format']")
-            widget.set("class", "QDateTimeEdit")
+            if fieldFormat == "HH:mm:ss":
+                widget.set("class", "QTimeEdit")
+            elif fieldFormat == "yyyy-MM-dd":
+                widget.set("class", "QDateEdit")
+            else:
+                widget.set("class", "QDateTimeEdit")
             self.__add_widget_property(widget, "displayFormat", optFormat, "value", "yyyy-MM-dd")
             return widget
         elif editWidget.get("type") == "CheckBox":
