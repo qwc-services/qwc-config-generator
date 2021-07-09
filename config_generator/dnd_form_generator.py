@@ -185,8 +185,11 @@ class DnDFormGenerator:
                     tabWidget = None
 
                     widget = ElementTree.Element("widget")
-                    widget.set("class", "QGroupBox")
-                    self.__add_widget_property(widget, "title", child, "name")
+                    if child.get('showLabel') == "1":
+                        widget.set("class", "QGroupBox")
+                        self.__add_widget_property(widget, "title", child, "name")
+                    else:
+                        widget.set("class", "QFrame")
                     item.append(widget)
 
                     self.__add_container_fields(maplayer, widget, child, aliases)
