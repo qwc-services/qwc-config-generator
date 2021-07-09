@@ -59,9 +59,15 @@ class DnDFormGenerator:
         editWidget = maplayer.find("fieldConfiguration/field[@name='%s']/editWidget" % field)
         if editWidget.get("type") == "Hidden":
             return None
+        editableField = maplayer.find("editable/field[@name='%s']" % field)
+        editable = editableField is None or editableField.get("editable") == "1"
+        constraintField = maplayer.find("constraints/constraint[@field='%s']" % field)
+        required = constraintField is not None and constraintField.get("notnull_strength") == "1"
 
         widget = ElementTree.Element("widget")
         widget.set("name", field)
+        self.__add_widget_property(widget, "readOnly", None, None, "false" if editable else "true", "property", "bool")
+        self.__add_widget_property(widget, "required", None, None, "true" if required else "false", "property", "bool")
 
         if editWidget.get("type") == "TextEdit":
             optMultiline = editWidget.find("config/Option/Option[@name='IsMultiline']")
