@@ -139,7 +139,7 @@ class DnDFormGenerator:
                     for row in cur.fetchall():
                         item = ElementTree.Element("item")
                         self.__add_widget_property(item, "value", None, None, row[0])
-                        self.__add_widget_property(item, "text", None, None, row[1])
+                        self.__add_widget_property(item, "text", None, None, str(row[1]) if row[1] is not None else "")
                         widget.append(item)
 
                 except Exception as e:

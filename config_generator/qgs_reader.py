@@ -396,7 +396,7 @@ class QGSReader:
                 for row in cur.fetchall():
                     value = OrderedDict()
                     value['value'] = row[0]
-                    value['label'] = row[1]
+                    value['label'] = str(row[1]) if row[1] is not None else ""
                     values.append(value)
             except Exception as e:
                 self.logger.warn("Failed to read value relations: %s" % str(e))
