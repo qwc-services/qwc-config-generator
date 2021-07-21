@@ -50,10 +50,6 @@ class CapabilitiesReader():
         self.split_categorized_layers = generator_config.get(
             'split_categorized_layers', False)
 
-        # make mutual exclusive group subitems visible
-        self.make_mutex_subitems_visible = generator_config.get(
-            'make_mutex_subitems_visible', False)
-
         # layer opacity values for QGIS <= 3.10 from ConfigGenerator config
         self.layer_opacities = generator_config.get("layer_opacities", {})
 
@@ -445,15 +441,6 @@ class CapabilitiesReader():
 
         return service_name
 
-    def make_sublayers_visible(self, layer):
-        """Recursibely set sublayers of the specified layer visible
-
-        :param obj layer: The layer object
-        """
-        for sublayer in layer.get('layers', []):
-            sublayer['visible'] = True
-            self.make_sublayers_visible(sublayer)
-
     def collect_wms_layers(self, layer, internal_print_layers, ns, np,
                            fallback_name=""):
         """Recursively collect layer info for layer subtree from
@@ -506,9 +493,6 @@ class CapabilitiesReader():
             wms_layer["mutuallyExclusive"] = layer.get(
                 'mutuallyExclusive') == '1'
             wms_layer['layers'] = group_layers
-            if wms_layer["mutuallyExclusive"] and self.make_mutex_subitems_visible:
-                for sublayer in group_layers:
-                    self.make_sublayers_visible(sublayer)
         else:
             # layer
             if (
@@ -577,7 +561,10 @@ class CapabilitiesReader():
         if maxScale is not None:
             wms_layer["maxScale"] = maxScale.text
 
-        wms_layer['visible'] = layer.get('visible') == '1'
+        if 'visibilityChecked' in layer.attrib:
+            wms_layer['visible'] = layer.get('visibilityChecked') == '1'
+        else:
+            wms_layer['visible'] = layer.get('visible') == '1'
         wms_layer['geometryType'] = layer.get('geometryType')
 
         wms_layer['queryable'] = layer.get('queryable') == '1'

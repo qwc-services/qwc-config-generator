@@ -71,10 +71,6 @@
           "description": "Path to the QWC2 directory, which will be used to autodetect thumbnails. If qgis_projects_scan_base_dir is not set, then this option will be ignored. Example /qwc2",
           "type": "string"
         },
-        "make_mutex_subitems_visible": {
-          "description": "Make mutual exclusive group subitems visible",
-          "type": "boolean"
-        },
         "skip_print_layer_groups": {
           "description": "Skip group layers containing print layers",
           "type": "boolean"
