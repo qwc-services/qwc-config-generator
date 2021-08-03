@@ -551,6 +551,8 @@ class ConfigGenerator():
                 map_details['layers'] = self.collect_layer_names(root_layer)
             else:
                 map_details['layers'] = self.collect_layers(root_layer)
+                for print_layer in cap.get('internal_print_layers', []):
+                    map_details['layers'].append({print_layer: []})
 
         return map_details
 
