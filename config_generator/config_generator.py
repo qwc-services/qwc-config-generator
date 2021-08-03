@@ -577,6 +577,10 @@ class ConfigGenerator():
         # dict containing all layers and atrributes of a map
         layers = []
 
+        # Add root layer to list
+        if layers == []:
+            layers.append({layer['name']: []})
+
         if 'attributes' in layer:
             layers.append({layer['name']: layer['attributes']})
         elif 'layers' in layer:
