@@ -554,6 +554,9 @@ class ConfigGenerator():
                 for print_layer in cap.get('internal_print_layers', []):
                     map_details['layers'].append({print_layer: []})
 
+                for geometryless_layer in cap.get('geometryless_layers', []):
+                    map_details['layers'].append({geometryless_layer: []})
+
         return map_details
 
     def collect_layer_names(self, layer):
