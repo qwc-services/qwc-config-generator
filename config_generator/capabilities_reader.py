@@ -595,7 +595,7 @@ class CapabilitiesReader():
         return wms_layer
 
     def collect_geometryless_layers(self, layer, internal_print_layers, ns, np,
-                           fallback_name="", geometryless_layer_names=[]):
+                           fallback_name="", geometryless_layer_names=set()):
         """Recursively collect layer names of geometryless layers from
         WMS GetProjectSettings.
 
@@ -605,6 +605,7 @@ class CapabilitiesReader():
         :param obj ns: Namespace dict
         :param str np: Namespace prefix
         :param str fallback_name: Layer name if empty in GetProjectSettings
+        :param set geometryless_layer_names: A set of geometryless layer names
         """
         # NOTE: use ordered keys
         layer_name_tag = layer.find('%sName' % np, ns)
@@ -614,7 +615,7 @@ class CapabilitiesReader():
             layer_name = fallback_name
 
         # collect sub layers if group layer
-        group_layers = []
+        group_layers = set()
         for sub_layer in layer.findall('%sLayer' % np, ns):
             sub_layer_name = sub_layer.find('%sName' % np, ns).text
 
@@ -624,12 +625,14 @@ class CapabilitiesReader():
             sub_wms_layer = self.collect_geometryless_layers(
                 sub_layer, internal_print_layers, ns, np
             )
-            if sub_wms_layer is not None:
-                group_layers.append(sub_wms_layer)
+            if sub_wms_layer is not None and isinstance(sub_wms_layer, list):
+                group_layers.update(sub_wms_layer)
+            elif sub_wms_layer is not None:
+                group_layers.add(sub_wms_layer)
 
         if group_layers:
             # group layer
-            geometryless_layer_names.extend(group_layers)
+            geometryless_layer_names.update(group_layers)
         else:
             # layer
             if (
@@ -641,7 +644,7 @@ class CapabilitiesReader():
             else:
                 return None
 
-        return geometryless_layer_names
+        return list(geometryless_layer_names)
 
     def print_templates(self, root, np, ns):
         """Collect print templates from WMS GetProjectSettings.
