@@ -551,6 +551,11 @@ class ConfigGenerator():
                 map_details['layers'] = self.collect_layer_names(root_layer)
             else:
                 map_details['layers'] = self.collect_layers(root_layer)
+                for print_layer in cap.get('internal_print_layers', []):
+                    map_details['layers'].append({print_layer: []})
+
+                for geometryless_layer in cap.get('geometryless_layers', []):
+                    map_details['layers'].append({geometryless_layer: []})
 
         return map_details
 
@@ -581,6 +586,7 @@ class ConfigGenerator():
             layers.append({layer['name']: layer['attributes']})
         elif 'layers' in layer:
             # group layer
+            layers.append({layer['name']: []})
             for sublayer in layer['layers']:
                 layers += self.collect_layers(sublayer)
 
