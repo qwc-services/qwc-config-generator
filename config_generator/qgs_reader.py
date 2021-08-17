@@ -563,6 +563,8 @@ class QGSReader:
 
             if maplayer.find('shortname') is not None:
                 layername = maplayer.find('shortname').text
+            elif maplayer.find('layername') is None:
+                continue
             else:
                 layername = maplayer.find('layername').text
 
