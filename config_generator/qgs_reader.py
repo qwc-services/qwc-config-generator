@@ -109,6 +109,8 @@ class QGSReader:
         for maplayer in self.root.findall('.//maplayer'):
             if maplayer.find('shortname') is not None:
                 maplayer_name = maplayer.find('shortname').text
+            elif maplayer.find('layername') is None:
+                continue
             else:
                 maplayer_name = maplayer.find('layername').text
             if maplayer_name == layer_name:
