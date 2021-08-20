@@ -129,7 +129,7 @@ class DnDFormGenerator:
                     field=field, kvtable=layer, keyfield=key, valuefield=value
                 ))
             else:
-                query = "SELECT %s, %s FROM %s" % (key, value, source_params["table"])
+                query = "SELECT %s, %s FROM %s ORDER BY %s" % (key, value, source_params["table"], value)
 
                 widget.set("class", "QComboBox")
                 try:

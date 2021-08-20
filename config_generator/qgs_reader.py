@@ -387,7 +387,7 @@ class QGSReader:
             source = edit_widget.find(
                         "config/Option/Option[@name='LayerSource']").get('value')
             source_params = dict(map(lambda x: (x.split("=") + [''])[0:2], source.split(" ")))
-            query = "SELECT %s, %s FROM %s" % (key, value, source_params["table"])
+            query = "SELECT %s, %s FROM %s ORDER BY %s" % (key, value, source_params["table"], value)
             values = []
             try:
                 conn = psycopg2.connect("service=%s" % source_params["service"])
