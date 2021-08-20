@@ -122,7 +122,7 @@ class DnDFormGenerator:
             key = editWidget.find("config/Option/Option[@name='Key']").get('value')
             value = editWidget.find("config/Option/Option[@name='Value']").get('value')
             source = editWidget.find("config/Option/Option[@name='LayerSource']").get('value')
-            source_params = dict(map(lambda x: x.split("="), source.split(" ")))
+            source_params = dict(map(lambda x: (x.split("=") + [''])[0:2], source.split(" ")))
             if not GENERATE_STATIC_KVRELS:
                 layer = editWidget.find("config/Option/Option[@name='LayerName']").get('value')
                 widget.set("name", "kvrel__{field}__{kvtable}__{keyfield}__{valuefield}".format(

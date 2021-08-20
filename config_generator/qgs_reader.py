@@ -386,7 +386,7 @@ class QGSReader:
                         "config/Option/Option[@name='Value']").get('value')
             source = edit_widget.find(
                         "config/Option/Option[@name='LayerSource']").get('value')
-            source_params = dict(map(lambda x: x.split("="), source.split(" ")))
+            source_params = dict(map(lambda x: (x.split("=") + [''])[0:2], source.split(" ")))
             query = "SELECT %s, %s FROM %s" % (key, value, source_params["table"])
             values = []
             try:
