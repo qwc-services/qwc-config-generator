@@ -225,7 +225,7 @@ class MapViewerConfig(ServiceConfig):
         autogenExternalLayers = []
         for item in themes_config_themes.get('items', []):
             theme_item = self.theme_item(item, autogenExternalLayers)
-            if theme_item is not None:
+            if theme_item is not None and not theme_item['wmsOnly']:
                 items.append(theme_item)
         themes['items'] = items
 
@@ -361,6 +361,8 @@ class MapViewerConfig(ServiceConfig):
         item['title'] = title
 
         item['description'] = cfg_item.get('description', '')
+
+        item['wmsOnly'] = cfg_item.get('wmsOnly', False)
 
         # URL relative to OGC service
         item['wms_name'] = name

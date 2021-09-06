@@ -131,7 +131,7 @@ class ConfigGenerator():
         self.config = config
         generator_config = config.get('config', {})
         self.tenant = generator_config.get('tenant', 'default')
-        self.logger.info("Using tenant '%s'" % self.tenant)
+        self.logger.debug("Using tenant '%s'" % self.tenant)
         # Set output config path for the generated configuration files.
         # If `config_path` is not set in the configGeneratorConfig.json,
         # then either use the `OUTPUT_CONFIG_PATH` ENV variable (if it is set)
@@ -142,6 +142,7 @@ class ConfigGenerator():
                'OUTPUT_CONFIG_PATH', '/tmp/'
                ))
         self.tenant_path = os.path.join(self.config_path, self.tenant)
+        self.logger.info("Config destination: '%s'" % self.tenant_path)
 
         self.temp_config_path = tempfile.mkdtemp(prefix='qwc_')
         self.temp_tenant_path = os.path.join(
@@ -245,7 +246,7 @@ class ConfigGenerator():
             # check tenant dirs
             if not os.path.isdir(self.temp_tenant_path):
                 # create temp tenant dir
-                self.logger.info(
+                self.logger.debug(
                     "Creating temp tenant dir %s" % self.temp_tenant_path
                 )
                 os.mkdir(self.temp_tenant_path)
