@@ -303,14 +303,14 @@ class ConfigGenerator():
         """
         config_handler = self.config_handler.get(service)
         if config_handler:
-            self.logger.info("Collecting '%s' service config" % service)
+            self.logger.debug("Collecting '%s' service config" % service)
 
             # generate service config
             config = config_handler.config()
 
             # validate JSON schema
             if self.validate_schema(config, config_handler.schema):
-                self.logger.info(
+                self.logger.debug(
                     "'%s' service config validates against schema" % service
                 )
             else:
@@ -368,7 +368,7 @@ class ConfigGenerator():
 
         # validate JSON schema
         if self.validate_schema(permissions, permissions_config.schema):
-            self.logger.info("Service permissions validate against schema")
+            self.logger.debug("Service permissions validate against schema")
         else:
             self.logger.error("Service permissions failed schema validation")
 
