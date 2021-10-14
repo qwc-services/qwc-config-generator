@@ -799,31 +799,31 @@ class MapViewerConfig(ServiceConfig):
 
                 if layer_name in forms:
                     dataset['form'] = forms[layer_name]
-                else:
-                    # collect fields
-                    fields = []
-                    for attr in meta.get('attributes'):
-                        field = meta['fields'].get(attr, {})
-                        alias = field.get('alias', attr)
-                        data_type = self.EDIT_FIELD_TYPES.get(
-                            field.get('data_type'), 'text'
-                        )
 
-                        # NOTE: use ordered keys
-                        edit_field = OrderedDict()
-                        edit_field['id'] = attr
-                        edit_field['name'] = alias
-                        edit_field['type'] = data_type
+                # collect fields
+                fields = []
+                for attr in meta.get('attributes'):
+                    field = meta['fields'].get(attr, {})
+                    alias = field.get('alias', attr)
+                    data_type = self.EDIT_FIELD_TYPES.get(
+                        field.get('data_type'), 'text'
+                    )
 
-                        if 'constraints' in field:
-                            # add any constraints
-                            edit_field['constraints'] = field['constraints']
-                            if 'values' in field['constraints']:
-                                edit_field['type'] = 'list'
+                    # NOTE: use ordered keys
+                    edit_field = OrderedDict()
+                    edit_field['id'] = attr
+                    edit_field['name'] = alias
+                    edit_field['type'] = data_type
 
-                        fields.append(edit_field)
+                    if 'constraints' in field:
+                        # add any constraints
+                        edit_field['constraints'] = field['constraints']
+                        if 'values' in field['constraints']:
+                            edit_field['type'] = 'list'
 
-                    dataset['fields'] = fields
+                    fields.append(edit_field)
+
+                dataset['fields'] = fields
 
 
                 edit_config[layer_name] = dataset
