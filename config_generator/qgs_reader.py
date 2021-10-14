@@ -294,9 +294,9 @@ class QGSReader:
         edittype = maplayer.find("edittypes/edittype[@name='%s']" % field)
         widget_config = edittype.find('widgetv2config')
         if widget_config.get('fieldEditable') == '0':
-            constraints['readonly'] = True
+            constraints['readOnly'] = True
 
-        if (not constraints.get('readonly', False) and
+        if (not constraints.get('readOnly', False) and
                 widget_config.get('notNull') == '1'):
             constraints['required'] = True
 
@@ -335,9 +335,9 @@ class QGSReader:
         editable_field = maplayer.find("editable/field[@name='%s']" % field)
         if (editable_field is not None and
                 editable_field.get('editable') == '0'):
-            constraints['readonly'] = True
+            constraints['readOnly'] = True
 
-        if not constraints.get('readonly', False):
+        if not constraints.get('readOnly', False):
             # ConstraintNotNull = 1
             constraints['required'] = int(
                 maplayer.find("constraints/constraint[@field='%s']" % field)
