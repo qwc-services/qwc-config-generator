@@ -456,11 +456,16 @@ class QGSReader:
             # connect to GeoDB
             geo_db = self.db_engine.db_engine(connection_string)
             conn = geo_db.connect()
+            fields = meta.get('fields')
 
             for attr in meta.get('attributes'):
                 # upload field
                 if attr.endswith("__upload"):
                     upload_fields.append(attr)
+                    continue
+
+                # expression field
+                if attr in fields and 'expression' in fields.get(attr):
                     continue
 
                 # build query SQL
@@ -510,7 +515,7 @@ class QGSReader:
                         constraints['min'] = -9223372036854775808
                         constraints['max'] = 9223372036854775807
 
-                if attr not in meta.get('fields'):
+                if attr not in fields:
                     meta['fields'][attr] = {}
 
                 if data_type:

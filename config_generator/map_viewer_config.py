@@ -804,6 +804,11 @@ class MapViewerConfig(ServiceConfig):
                 fields = []
                 for attr in meta.get('attributes'):
                     field = meta['fields'].get(attr, {})
+
+                    if field.get('expression'):
+                        # Skip expression field
+                        continue
+
                     alias = field.get('alias', attr)
                     data_type = self.EDIT_FIELD_TYPES.get(
                         field.get('data_type'), 'text'

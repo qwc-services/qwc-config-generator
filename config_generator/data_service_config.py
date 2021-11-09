@@ -136,6 +136,11 @@ class DataServiceConfig(ServiceConfig):
 
                     dataset['fields'] = []
                     for key, attr_meta in meta.get('fields', {}).items():
+
+                        if attr_meta.get('expression'):
+                            # Skip expression field
+                            continue
+
                         # NOTE: use ordered keys
                         field = OrderedDict()
                         field['name'] = key
