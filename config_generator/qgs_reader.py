@@ -121,7 +121,7 @@ class QGSReader:
 
                 datasource = maplayer.find('datasource').text
                 config['database'] = self.db_connection(datasource)
-                config.update(self.table_metadata(datasource))
+                config.update(self.table_metadata(maplayer, datasource))
                 config.update(self.attributes_metadata(maplayer))
 
                 break
@@ -181,7 +181,7 @@ class QGSReader:
 
         return connection_string
 
-    def table_metadata(self, datasource):
+    def table_metadata(self, maplayer, datasource):
         """Parse QGIS datasource URI and return table metadata.
 
         :param str datasource: QGIS datasource URI
@@ -215,6 +215,10 @@ class QGSReader:
         m = re.search(r"srid=([\d.]+)", datasource)
         if m is not None:
             metadata['srid'] = int(m.group(1))
+        else:
+            srid = maplayer.find('srs/spatialrefsys/srid')
+            if srid is not None:
+                metadata['srid'] = int(srid.text)
 
         return metadata
 
