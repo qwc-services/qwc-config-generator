@@ -307,7 +307,7 @@ class MapViewerConfig(ServiceConfig):
         items = []
         for item in cfg_group.get('items', []):
             theme_item = self.theme_item(item, autogenExternalLayers)
-            if theme_item is not None:
+            if theme_item is not None and not theme_item['wmsOnly']:
                 items.append(theme_item)
         group['items'] = items
 
