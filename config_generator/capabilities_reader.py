@@ -263,7 +263,8 @@ class CapabilitiesReader():
                 params={
                     'SERVICE': 'WMS',
                     'VERSION': '1.3.0',
-                    'REQUEST': 'GetProjectSettings'
+                    'REQUEST': 'GetProjectSettings',
+                    'CLEARCACHE': '1'
                 },
                 timeout=60
             )
