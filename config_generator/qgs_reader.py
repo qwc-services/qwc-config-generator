@@ -410,6 +410,10 @@ class QGSReader:
                 self.logger.warn("Failed to read value relations: %s" % str(e))
             if values:
                 constraints['values'] = values
+        elif edit_widget.get('type') == 'TextEdit':
+            multilineOpt = edit_widget.find(
+                        "config/Option/Option[@name='IsMultiline']")
+            constraints['multiline'] = multilineOpt is not None and multilineOpt.get('value') == "true"
 
         return constraints
 
