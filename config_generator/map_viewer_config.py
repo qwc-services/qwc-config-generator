@@ -18,6 +18,7 @@ class MapViewerConfig(ServiceConfig):
     # lookup for edit geometry types:
     #     PostGIS geometry type -> QWC2 edit geometry type
     EDIT_GEOM_TYPES = {
+        None: None,
         'POINT': 'Point',
         'MULTIPOINT': 'MultiPoint',
         'LINESTRING': 'LineString',

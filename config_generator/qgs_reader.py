@@ -211,6 +211,8 @@ class QGSReader:
         m = re.search(r"type=([\w.]+)", datasource)
         if m is not None:
             metadata['geometry_type'] = m.group(1).upper()
+        else:
+            metadata['geometry_type'] = None
 
         m = re.search(r"srid=([\d.]+)", datasource)
         if m is not None:
