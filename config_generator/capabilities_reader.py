@@ -79,8 +79,13 @@ class CapabilitiesReader():
             return
 
         # Output directory for processed projects
-        qgis_projects_base_dir = generator_config.get(
-            'qgis_projects_base_dir')
+        qgis_projects_gen_base_dir = generator_config.get(
+            'qgis_projects_gen_base_dir')
+        if not qgis_projects_gen_base_dir:
+            self.logger.warning("Skipping preprocessing qgis projects in " +
+                                qgs_projects_dir +
+                                ": qgis_projects_gen_base_dir is not set")
+            return
 
         for dirpath, dirs, files in os.walk(qgs_projects_dir,
                                             followlinks=True):
@@ -92,7 +97,7 @@ class CapabilitiesReader():
 
                     # convert project
                     dest_path = os.path.join(
-                        qgis_projects_base_dir, relpath)
+                        qgis_projects_gen_base_dir, relpath)
 
                     if self.split_categorized_layers is True:
                         from .categorize_groups_script import split_categorized_layers
@@ -112,6 +117,8 @@ class CapabilitiesReader():
         if self.themes_config is None:
             return
 
+        qgis_projects_base_dir = generator_config.get(
+            'qgis_projects_base_dir')
         qgis_projects_scan_base_dir = generator_config.get(
             'qgis_projects_scan_base_dir')
         if not qgis_projects_scan_base_dir:
@@ -128,11 +135,6 @@ class CapabilitiesReader():
                 "The qgis_projects_scan_base_dir sub directory" +
                 " does not exist: " + qgis_projects_scan_base_dir)
             return
-
-        scanned_projects_path_prefix = generator_config.get(
-            'scanned_projects_path_prefix', '')
-        base_url = urljoin(self.default_qgis_server_url,
-                           scanned_projects_path_prefix)
 
         # collect existing item urls
         items = self.themes_config.get("themes", {}).get(
@@ -165,9 +167,9 @@ class CapabilitiesReader():
                 if Path(filename).suffix in [".qgs", ".qgz"]:
                     fname = os.path.join(dirpath, filename)
                     relpath = os.path.relpath(dirpath,
-                                              qgis_projects_scan_base_dir)
+                                              qgis_projects_base_dir)
                     wmspath = os.path.join(relpath, Path(filename).stem)
-                    wmsurlpath = urlparse(urljoin(base_url, wmspath)).path
+                    wmsurlpath = urlparse(urljoin(self.default_qgis_server_url, wmspath)).path
 
                     # Add to themes items
                     item = OrderedDict()

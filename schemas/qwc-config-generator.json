@@ -52,11 +52,11 @@
           "type": "string"
         },
         "qgis_projects_scan_base_dir": {
-          "description": "Path for QGIS projects, which should be automatically detected. Example: /data/auto",
+          "description": "Path for QGIS projects, which should be automatically detected. Must be a subdir qgis_projects_base_dir. Example: /data/scan",
           "type": "string"
         },
-        "scanned_projects_path_prefix": {
-          "description": "Optional path prefix for automatically detected projects. Example: auto/",
+        "qgis_projects_gen_base_dir": {
+          "description": "Path for generated QGIS projects, result of preprocessing. Must be a subdir of qgis_projects_base_dir. Can be the same as qgis_projects_scan_base_dir, in which case the theme autodetection will apply to generated QGIS projects. Example: /data/gen",
           "type": "string"
         },
         "permissions_default_allow": {
