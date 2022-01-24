@@ -72,7 +72,7 @@ class DnDFormGenerator:
         if editWidget.get("type") == "TextEdit":
             optMultiline = editWidget.find("config/Option/Option[@name='IsMultiline']")
             className = "QLineEdit"
-            if optMultiline is not None and optMultiline.get("value") == True:
+            if optMultiline is not None and optMultiline.get("value") == "true":
                 className = "QTextEdit"
             widget.set("class", className)
             return widget
