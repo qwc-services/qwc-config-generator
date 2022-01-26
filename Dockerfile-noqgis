@@ -1,0 +1,9 @@
+FROM sourcepole/qwc-uwsgi-base:alpine-v2022.01.26
+
+# Required dependencies for psycopg2-binary
+RUN apk add --no-cache postgresql-dev gcc python3-dev musl-dev
+
+ADD . /srv/qwc_service
+
+# Install requirements.txt
+RUN python3 -m pip install --no-cache-dir -r /srv/qwc_service/requirements.txt

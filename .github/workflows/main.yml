@@ -26,3 +26,12 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
           tags: "${{ steps.get_tag.outputs.tag }}"
+
+      - name: Build and publish docker image without qgis
+        uses: elgohr/Publish-Docker-Github-Action@2.12
+        with:
+          name: sourcepole/${{ github.event.repository.name }}
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          dockerfile: Dockerfile-noqgis
+          tags: "${{ steps.get_tag.outputs.tag }}-noqgis"
