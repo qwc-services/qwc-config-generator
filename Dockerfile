@@ -1,4 +1,4 @@
-FROM sourcepole/qwc-uwsgi-base:ubuntu-v2022.01.08
+FROM sourcepole/qwc-uwsgi-base:ubuntu-v2022.01.26
 
 # Required dependencies for psycopg2-binary
 # RUN apk add --no-cache postgresql-libs
