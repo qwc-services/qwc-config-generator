@@ -38,6 +38,7 @@ class QGSReader:
         :param str qgs_path: QGS name with optional path relative to
                              QGIS server data dir
         """
+        self.map_prefix = qgs_path
         qgs_file = "%s.qgs" % qgs_path
         self.qgs_path = os.path.join(self.qgs_resources_path, qgs_file)
         if not os.path.exists(self.qgs_path):
@@ -392,24 +393,10 @@ class QGSReader:
                         "config/Option/Option[@name='Key']").get('value')
             value = edit_widget.find(
                         "config/Option/Option[@name='Value']").get('value')
-            source = edit_widget.find(
-                        "config/Option/Option[@name='LayerSource']").get('value')
-            source_params = dict(map(lambda x: (x.split("=") + [''])[0:2], source.split(" ")))
-            query = "SELECT %s, %s FROM %s ORDER BY %s" % (key, value, source_params["table"], value)
-            values = []
-            try:
-                conn = psycopg2.connect("service=%s" % source_params["service"])
-                cur = conn.cursor()
-                cur.execute(query)
-                for row in cur.fetchall():
-                    value = OrderedDict()
-                    value['value'] = str(row[0]) if row[0] is not None else ""
-                    value['label'] = str(row[1]) if row[1] is not None else ""
-                    values.append(value)
-            except Exception as e:
-                self.logger.warn("Failed to read value relations: %s" % str(e))
-            if values:
-                constraints['values'] = values
+            layerName = edit_widget.find(
+                        "config/Option/Option[@name='LayerName']").get('value')
+            constraints['keyvalrel'] = self.map_prefix + "." + layerName + ":" + key + ":" + value
+
         elif edit_widget.get('type') == 'TextEdit':
             multilineOpt = edit_widget.find(
                         "config/Option/Option[@name='IsMultiline']")
