@@ -63,6 +63,10 @@
           "description": "Set whether resources are permitted or restricted by default. Example: true",
           "type": "boolean"
         },
+        "validate_schema": {
+          "description": "Validate configuration against schema. Example: true",
+          "type": "boolean"
+        },
         "config_path": {
           "description": "Target path for generated service configs and permissions, if not set by $OUTPUT_CONFIG_PATH. Example: /config-out",
           "type": "string"

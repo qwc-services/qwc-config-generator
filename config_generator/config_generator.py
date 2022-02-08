@@ -149,6 +149,9 @@ class ConfigGenerator():
             self.temp_config_path, self.tenant
         )
 
+        self.do_validate_schema = str(generator_config.get(
+            'validate_schema', True)).lower() != 'false'
+
         try:
             # load ORM models for ConfigDB
             config_db_url = generator_config.get(
@@ -427,6 +430,10 @@ class ConfigGenerator():
         :param OrderedDict config: Config data
         :param str schema_url: JSON schema URL
         """
+        if not self.do_validate_schema:
+            self.logger.debug("Skipping schema validation")
+            return True
+
         # download JSON schema
         response = requests.get(schema_url)
         if response.status_code != requests.codes.ok:
