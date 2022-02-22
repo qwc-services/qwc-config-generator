@@ -15,7 +15,7 @@ from .dnd_form_generator import DnDFormGenerator
 class QGSReader:
     """QGSReader class
 
-    Read QGIS 2.18 or 3.x projects and extract data for QWC config.
+    Read QGIS 3.x projects and extract data for QWC config.
     """
 
     def __init__(self, logger, qgs_resources_path):
@@ -249,8 +249,11 @@ class QGSReader:
 
         for field in fieldnames:
 
-            if self.field_hidden(maplayer, field):
-                # skip hidden fields
+            edit_widget = maplayer.find(
+                "fieldConfiguration/field[@name='%s']/editWidget" % field
+            )
+            if edit_widget.get('type') == 'Hidden':
+            # skip hidden fields
                 continue
 
             attributes.append(field)
@@ -279,57 +282,6 @@ class QGSReader:
         }
 
     def edit_widget_constraints(self, maplayer, field):
-        """Get any constraints from edit widget config.
-
-        :param Element maplayer: QGS maplayer node
-        :param str field: Field name
-        """
-        if self.qgis_version > 30000:
-            return self.edit_widget_constraints_v3(maplayer, field)
-        else:
-            return self.edit_widget_constraints_v2(maplayer, field)
-
-    def edit_widget_constraints_v2(self, maplayer, field):
-        """Get any constraints from edit widget config (QGIS 2.18).
-
-        :param Element maplayer: QGS maplayer node
-        :param str field: Field name
-        """
-        # NOTE: use ordered keys
-        constraints = OrderedDict()
-
-        edittype = maplayer.find("edittypes/edittype[@name='%s']" % field)
-        widget_config = edittype.find('widgetv2config')
-        if widget_config.get('fieldEditable') == '0':
-            constraints['readOnly'] = True
-
-        if (not constraints.get('readOnly', False) and
-                widget_config.get('notNull') == '1'):
-            constraints['required'] = True
-
-        constraint_desc = widget_config.get('constraintDescription', '')
-        if len(constraint_desc) > 0:
-            constraints['placeholder'] = constraint_desc
-
-        if edittype.get('widgetv2type') == 'Range':
-            constraints['min'] = self.parse_number(widget_config.get('Min'))
-            constraints['max'] = self.parse_number(widget_config.get('Max'))
-            constraints['step'] = self.parse_number(widget_config.get('Step'))
-        elif edittype.get('widgetv2type') == 'ValueMap':
-            values = []
-            for value in widget_config.findall('value'):
-                # NOTE: use ordered keys
-                value_item = OrderedDict()
-                value_item['label'] = value.get('key')
-                value_item['value'] = value.get('value')
-                values.append(value_item)
-
-            if values:
-                constraints['values'] = values
-
-        return constraints
-
-    def edit_widget_constraints_v3(self, maplayer, field):
         """Get any constraints from edit widget config (QGIS 3.x).
 
         :param Element maplayer: QGS maplayer node
