@@ -354,22 +354,11 @@ class QGSReader:
                         "config/Option/Option[@name='IsMultiline']")
             constraints['multiline'] = multilineOpt is not None and multilineOpt.get('value') == "true"
 
+        elif edit_widget.get("type") == "ExternalResource":
+            filterOpt = edit_widget.find("config/Option/Option[@name='FileWidgetFilter']")
+            constraints['fileextensions'] = self.parse_fileextensions(filterOpt.get('value')) if filterOpt is not None else ""
+
         return constraints
-
-    def field_hidden(self, maplayer, field):
-        """Return whether field is hidden.
-
-        :param Element maplayer: QGS maplayer node
-        :param str field: Field name
-        """
-        if self.qgis_version > 30000:
-            edit_widget = maplayer.find(
-                "fieldConfiguration/field[@name='%s']/editWidget" % field
-            )
-            return edit_widget.get('type') == 'Hidden'
-        else:
-            edittype = maplayer.find("edittypes/edittype[@name='%s']" % field)
-            return edittype.get('widgetv2type') == 'Hidden'
 
     def parse_number(self, value):
         """Parse string as int or float, or return string if neither.
@@ -389,6 +378,14 @@ class QGSReader:
                 pass
 
         return result
+
+    def parse_fileextensions(self, value):
+        """Parse string as a comma separated list of file extensions of the form *.ext,
+         returning array of file extensions [".ext1", ".ext2", ...]
+
+        :param str value: File filter string
+        """
+        return list(map(lambda x: x.strip().lstrip('*'), value.split(",")))
 
     def lookup_attribute_data_types(self, meta):
         """Query column data types from GeoDB and add them to table metadata.
@@ -410,6 +407,7 @@ class QGSReader:
             for attr in meta.get('attributes'):
                 # upload field
                 if attr.endswith("__upload"):
+                    self.logger.warn("Using virtual <fieldname>__upload fields is deprecated, set the field widget type to 'Attachment' in the QGIS layer attribute form configuration instead.")
                     upload_fields.append(attr)
                     continue
 
@@ -494,8 +492,7 @@ class QGSReader:
                 target_field = field[0:len(field) - 8]
                 attributes.remove(field)
                 if target_field in meta['fields']:
-                    meta['fields'][target_field]['data_type'] = 'file'
-                    meta['fields'][target_field]['constraints'] = {"accept": meta['fields'][field].get('expression', "")}
+                    meta['fields'][target_field]['constraints'] = {"fileextensions": meta['fields'][field].get('expression', "").split(",")}
                 if field in meta['fields']:
                     del meta['fields'][field]
 
@@ -524,11 +521,11 @@ class QGSReader:
             else:
                 layername = maplayer.find('layername').text
 
-            uipath = None
             editorlayout = maplayer.find('editorlayout')
             if editorlayout is None:
                 continue
 
+            uipath = None
             if editorlayout.text == "uifilelayout":
                 editform = maplayer.find('editform')
                 if editform is not None:
@@ -545,8 +542,8 @@ class QGSReader:
                     except Exception as e:
                         self.logger.warning("Failed to copy form for layer %s: %s" % (layername, str(e)))
 
-            elif editorlayout.text == "tablayout":
-                uipath = gen.generate_form(maplayer, projectname, layername)
+            elif editorlayout.text == "tablayout" or editorlayout.text == "generatedlayout":
+                uipath = gen.generate_form(maplayer, projectname, layername, editorlayout.text)
 
             if uipath:
                 result[layername] = uipath

@@ -7,11 +7,7 @@ class DnDFormGenerator:
         self.logger = logger
         self.qwc_base_dir = qwc_base_dir
 
-    def generate_form(self, maplayer, projectname, layername):
-        attributeEditorForm = maplayer.find('attributeEditorForm')
-        if not attributeEditorForm:
-            return None
-
+    def generate_form(self, maplayer, projectname, layername, editorlayout):
         aliases = {}
         for entry in maplayer.find('aliases').findall('alias'):
             field = entry.get('field')
@@ -25,7 +21,15 @@ class DnDFormGenerator:
         widget.set("class", "QWidget")
         ui.append(widget)
 
-        self.__add_container_fields(maplayer, widget, attributeEditorForm, aliases)
+        if editorlayout == "tablayout":
+            attributeEditorForm = maplayer.find('attributeEditorForm')
+            if not attributeEditorForm:
+                return None
+            self.__add_tablayout_fields(maplayer, widget, attributeEditorForm, aliases)
+        elif editorlayout == "generatedlayout":
+            self.__add_autolayout_fields(maplayer, widget, aliases)
+        else:
+            return None
 
         text = ElementTree.tostring(ui, 'utf-8')
         outputdir = os.path.join(self.qwc_base_dir, 'assets', 'forms', 'autogen')
@@ -54,7 +58,7 @@ class DnDFormGenerator:
 
     def __create_editor_widget(self, maplayer, field):
         editWidget = maplayer.find("fieldConfiguration/field[@name='%s']/editWidget" % field)
-        if editWidget.get("type") == "Hidden":
+        if editWidget.get("type") == "Hidden" or not editWidget.get("type"):
             return None
         editableField = maplayer.find("editable/field[@name='%s']" % field)
         editable = editableField is None or editableField.get("editable") == "1"
@@ -65,6 +69,15 @@ class DnDFormGenerator:
         widget.set("name", field)
         self.__add_widget_property(widget, "readOnly", None, None, "false" if editable else "true", "property", "bool")
         self.__add_widget_property(widget, "required", None, None, "true" if required else "false", "property", "bool")
+
+        # Compatibility with deprecated <filename>__upload convention
+        uploadField = maplayer.find("expressionfields/field[@name='%s__upload']" % field)
+        if uploadField is not None:
+            widget.set("class", "QLineEdit")
+            widget.set("name", "%s__upload" % field)
+            filterOpt = ",".join(map(lambda entry: "*" + entry, uploadField.get("expression", "").split(",")))
+            self.__add_widget_property(widget, "text", None, "value", filterOpt)
+            return widget
 
         if editWidget.get("type") == "TextEdit":
             optMultiline = editWidget.find("config/Option/Option[@name='IsMultiline']")
@@ -133,7 +146,7 @@ class DnDFormGenerator:
             self.logger.warning("Warning: unhandled widget type %s" % editWidget.get("type"))
             return None
 
-    def __add_container_fields(self, maplayer, parent, container, aliases):
+    def __add_tablayout_fields(self, maplayer, parent, container, aliases):
 
         layout = ElementTree.Element("layout")
         layout.set("class", "QGridLayout")
@@ -163,7 +176,7 @@ class DnDFormGenerator:
                     self.__add_widget_property(widget, "title", child, "name", "", "attribute")
                     tabWidget.append(widget)
 
-                    self.__add_container_fields(maplayer, widget, child, aliases)
+                    self.__add_tablayout_fields(maplayer, widget, child, aliases)
                 else:
                     tabWidget = None
 
@@ -175,7 +188,7 @@ class DnDFormGenerator:
                         widget.set("class", "QFrame")
                     item.append(widget)
 
-                    self.__add_container_fields(maplayer, widget, child, aliases)
+                    self.__add_tablayout_fields(maplayer, widget, child, aliases)
             elif child.tag == "attributeEditorField":
                 tabWidget = None
 
@@ -210,6 +223,53 @@ class DnDFormGenerator:
         item.set("row", str(row + 1))
         item.set("column", "0")
         item.set("colspan", str(2 * ncols))
+        layout.append(item)
+
+        spacer = ElementTree.Element("spacer")
+        self.__add_widget_property(spacer, "orientation", None, None, "Qt::Vertical", "property", "enum")
+        item.append(spacer)
+
+    def __add_autolayout_fields(self, maplayer, parent, aliases):
+        fields = maplayer.findall("fieldConfiguration/field")
+        layout = ElementTree.Element("layout")
+        layout.set("class", "QGridLayout")
+        parent.append(layout)
+
+        row = 0
+
+        for field in fields:
+            # Skip expression fields
+            if maplayer.find("expressionfields/field[@name='%s']" % field.get("name")) is not None:
+                continue
+
+            editorWidget = self.__create_editor_widget(maplayer, field.get("name"))
+            if editorWidget is None:
+                continue
+
+            labelWidget = ElementTree.Element("widget")
+            labelWidget.set("class", "QLabel")
+            label = aliases.get(field.get("name"), field.get("name"))
+            self.__add_widget_property(labelWidget, "text", None, None, label)
+
+            labelItem = ElementTree.Element("item")
+            labelItem.set("row", str(row))
+            labelItem.set("column", str(0))
+            labelItem.append(labelWidget)
+
+            editorItem = ElementTree.Element("item")
+            editorItem.set("row", str(row))
+            editorItem.set("column", str(1))
+            editorItem.append(editorWidget)
+
+            layout.append(labelItem)
+            layout.append(editorItem)
+
+            row += 1
+
+        item = ElementTree.Element("item")
+        item.set("row", str(row + 1))
+        item.set("column", "0")
+        item.set("colspan", str(2))
         layout.append(item)
 
         spacer = ElementTree.Element("spacer")
