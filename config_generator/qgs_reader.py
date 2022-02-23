@@ -385,7 +385,7 @@ class QGSReader:
 
         :param str value: File filter string
         """
-        return list(map(lambda x: x.strip().lstrip('*'), value.split(",")))
+        return list(map(lambda x: x.strip().lstrip('*'), value.lower().split(",")))
 
     def lookup_attribute_data_types(self, meta):
         """Query column data types from GeoDB and add them to table metadata.
