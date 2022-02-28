@@ -543,7 +543,7 @@ class QGSReader:
                         self.logger.warning("Failed to copy form for layer %s: %s" % (layername, str(e)))
 
             elif editorlayout.text == "tablayout" or editorlayout.text == "generatedlayout":
-                uipath = gen.generate_form(maplayer, projectname, layername, editorlayout.text)
+                uipath = gen.generate_form(maplayer, projectname, layername, self.root)
 
             if uipath:
                 result[layername] = uipath

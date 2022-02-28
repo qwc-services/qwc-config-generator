@@ -7,29 +7,14 @@ class DnDFormGenerator:
         self.logger = logger
         self.qwc_base_dir = qwc_base_dir
 
-    def generate_form(self, maplayer, projectname, layername, editorlayout):
-        aliases = {}
-        for entry in maplayer.find('aliases').findall('alias'):
-            field = entry.get('field')
-            alias = entry.get('name')
-            aliases[field] = alias or field
+    def generate_form(self, maplayer, projectname, layername, project):
+        widget = self.__generate_form_widget(maplayer, project)
+        if not widget:
+            return None
 
         ui = ElementTree.Element("ui")
         ui.set("version", "4.0")
-
-        widget = ElementTree.Element("widget")
-        widget.set("class", "QWidget")
         ui.append(widget)
-
-        if editorlayout == "tablayout":
-            attributeEditorForm = maplayer.find('attributeEditorForm')
-            if not attributeEditorForm:
-                return None
-            self.__add_tablayout_fields(maplayer, widget, attributeEditorForm, aliases)
-        elif editorlayout == "generatedlayout":
-            self.__add_autolayout_fields(maplayer, widget, aliases)
-        else:
-            return None
 
         text = ElementTree.tostring(ui, 'utf-8')
         outputdir = os.path.join(self.qwc_base_dir, 'assets', 'forms', 'autogen')
@@ -45,6 +30,33 @@ class DnDFormGenerator:
 
         return ":/forms/autogen/%s_%s.ui?v=%d" % (projectname, layername, int(time.time()))
 
+    def __generate_form_widget(self, maplayer, project):
+        editorlayout = maplayer.find('editorlayout')
+        layerid = maplayer.find('id')
+        if editorlayout is None or layerid is None:
+            return None
+
+        aliases = {}
+        for entry in maplayer.find('aliases').findall('alias'):
+            field = entry.get('field')
+            alias = entry.get('name')
+            aliases[field] = alias or field
+
+        widget = ElementTree.Element("widget")
+        widget.set("class", "QWidget")
+
+        if editorlayout.text == "tablayout":
+            attributeEditorForm = maplayer.find('attributeEditorForm')
+            if not attributeEditorForm:
+                return None
+            self.__add_tablayout_fields(maplayer, project, widget, attributeEditorForm, aliases)
+        elif editorlayout.text == "generatedlayout":
+            self.__add_autolayout_fields(maplayer, project, widget, aliases)
+        else:
+            return None
+
+        return widget
+
     def __add_widget_property(self, widget, name, valueEl, key, defaultValue="", propClass="property", valueClass="string"):
         property = ElementTree.Element(propClass)
         property.set("name", name)
@@ -56,7 +68,7 @@ class DnDFormGenerator:
         property.append(string)
         widget.append(property)
 
-    def __create_editor_widget(self, maplayer, field):
+    def __create_editor_widget(self, maplayer, field, prefix=""):
         editWidget = maplayer.find("fieldConfiguration/field[@name='%s']/editWidget" % field)
         if editWidget.get("type") == "Hidden" or not editWidget.get("type"):
             return None
@@ -66,7 +78,7 @@ class DnDFormGenerator:
         required = constraintField is not None and constraintField.get("notnull_strength") == "1"
 
         widget = ElementTree.Element("widget")
-        widget.set("name", field)
+        widget.set("name", prefix + field)
         self.__add_widget_property(widget, "readOnly", None, None, "false" if editable else "true", "property", "bool")
         self.__add_widget_property(widget, "required", None, None, "true" if required else "false", "property", "bool")
 
@@ -74,7 +86,7 @@ class DnDFormGenerator:
         uploadField = maplayer.find("expressionfields/field[@name='%s__upload']" % field)
         if uploadField is not None:
             widget.set("class", "QLineEdit")
-            widget.set("name", "%s__upload" % field)
+            widget.set("name", "%s__upload" % (prefix + field))
             filterOpt = ",".join(map(lambda entry: "*" + entry, uploadField.get("expression", "").split(",")))
             self.__add_widget_property(widget, "text", None, "value", filterOpt)
             return widget
@@ -133,12 +145,12 @@ class DnDFormGenerator:
             value = editWidget.find("config/Option/Option[@name='Value']").get('value')
             layer = editWidget.find("config/Option/Option[@name='LayerName']").get('value')
             widget.set("name", "kvrel__{field}__{kvtable}__{keyfield}__{valuefield}".format(
-                field=field, kvtable=layer, keyfield=key, valuefield=value
+                field=prefix + field, kvtable=layer, keyfield=key, valuefield=value
             ))
             return widget
         elif editWidget.get("type") == "ExternalResource":
             widget.set("class", "QLineEdit")
-            widget.set("name", "%s__upload" % field)
+            widget.set("name", "%s__upload" % (prefix + field))
             filterOpt = editWidget.find("config/Option/Option[@name='FileWidgetFilter']")
             self.__add_widget_property(widget, "text", filterOpt, "value")
             return widget
@@ -146,7 +158,72 @@ class DnDFormGenerator:
             self.logger.warning("Warning: unhandled widget type %s" % editWidget.get("type"))
             return None
 
-    def __add_tablayout_fields(self, maplayer, parent, container, aliases):
+    def __create_relation_widget(self, project, relation, showlabel):
+        if not relation:
+            return None
+
+        referencingLayer = project.find(".//maplayer[id='%s']" % relation.get("referencingLayer"))
+        fieldRef = relation.find("./fieldRef")
+        if referencingLayer is None or fieldRef is None:
+            return None
+
+        referencingLayerName = referencingLayer.find("layername").text
+        fkField = fieldRef.get("referencingField")
+
+        aliases = {}
+        for entry in referencingLayer.find('aliases').findall('alias'):
+            field = entry.get('field')
+            alias = entry.get('name')
+            aliases[field] = alias or field
+
+        groupBox = ElementTree.Element("widget")
+        groupBox.set("class", "QGroupBox")
+        groupBox.set("name", "nrel__%s__%s" % (referencingLayerName, fkField))
+        self.__add_widget_property(groupBox, "title", relation, "name")
+
+        layout = ElementTree.Element("layout")
+        layout.set("class", "QGridLayout")
+
+        fields = referencingLayer.findall("fieldConfiguration/field")
+        col = 0
+        for field in fields:
+            # Skip expression fields
+            if referencingLayer.find("expressionfields/field[@name='%s']" % field.get("name")) is not None:
+                continue
+
+            # Skip foreign key field
+            if field.get("name") == fkField:
+                continue
+
+            editorWidget = self.__create_editor_widget(referencingLayer, field.get("name"), referencingLayerName + "__")
+            if editorWidget is None:
+                continue
+
+            labelWidget = ElementTree.Element("widget")
+            labelWidget.set("class", "QLabel")
+            labelWidget.set("name", "header__" + field.get("name"))
+            label = aliases.get(field.get("name"), field.get("name"))
+            self.__add_widget_property(labelWidget, "text", None, None, label)
+
+            labelItem = ElementTree.Element("item")
+            labelItem.set("row", "0")
+            labelItem.set("column", str(col))
+            labelItem.append(labelWidget)
+
+            editorItem = ElementTree.Element("item")
+            editorItem.set("row", "1")
+            editorItem.set("column", str(col))
+            editorItem.append(editorWidget)
+
+            layout.append(labelItem)
+            layout.append(editorItem)
+
+            col += 1
+
+        groupBox.append(layout)
+        return groupBox
+
+    def __add_tablayout_fields(self, maplayer, project, parent, container, aliases):
 
         layout = ElementTree.Element("layout")
         layout.set("class", "QGridLayout")
@@ -176,7 +253,7 @@ class DnDFormGenerator:
                     self.__add_widget_property(widget, "title", child, "name", "", "attribute")
                     tabWidget.append(widget)
 
-                    self.__add_tablayout_fields(maplayer, widget, child, aliases)
+                    self.__add_tablayout_fields(maplayer, project, widget, child, aliases)
                 else:
                     tabWidget = None
 
@@ -188,7 +265,7 @@ class DnDFormGenerator:
                         widget.set("class", "QFrame")
                     item.append(widget)
 
-                    self.__add_tablayout_fields(maplayer, widget, child, aliases)
+                    self.__add_tablayout_fields(maplayer, project, widget, child, aliases)
             elif child.tag == "attributeEditorField":
                 tabWidget = None
 
@@ -213,6 +290,20 @@ class DnDFormGenerator:
                     label = aliases.get(child.get("name"), child.get("name"))
                     self.__add_widget_property(labelWidget, "text", None, None, label)
                     labelItem.append(labelWidget)
+            elif child.tag == "attributeEditorRelation":
+                tabWidget = None
+
+                relation = project.find(".//relations/relation[@id='%s']" % child.get("relation"))
+                relationWidget = self.__create_relation_widget(project, relation, child.get("showLabel") == "1")
+                if relationWidget is None:
+                    continue
+
+                relationItem = ElementTree.Element("item")
+                relationItem.set("row", str(row))
+                relationItem.set("column", str(col))
+                relationItem.set("colspan", "2")
+                relationItem.append(relationWidget)
+                layout.append(relationItem)
 
             col += 2
             if col >= 2 * ncols:
@@ -229,7 +320,7 @@ class DnDFormGenerator:
         self.__add_widget_property(spacer, "orientation", None, None, "Qt::Vertical", "property", "enum")
         item.append(spacer)
 
-    def __add_autolayout_fields(self, maplayer, parent, aliases):
+    def __add_autolayout_fields(self, maplayer, project, parent, aliases):
         fields = maplayer.findall("fieldConfiguration/field")
         layout = ElementTree.Element("layout")
         layout.set("class", "QGridLayout")
@@ -264,6 +355,26 @@ class DnDFormGenerator:
             layout.append(labelItem)
             layout.append(editorItem)
 
+            row += 1
+
+        layerid = maplayer.find('id').text
+        for relation in project.findall(".//relations/relation"):
+            referencingLayer = project.find(".//maplayer[id='%s']" % relation.get("referencingLayer"))
+            fieldRef = relation.find("./fieldRef")
+            if relation.get("referencedLayer") != layerid or referencingLayer is None or fieldRef is None:
+                continue
+
+            widget = self.__create_relation_widget(project, relation, True)
+            if not widget:
+                continue
+
+            item = ElementTree.Element("item")
+            item.set("row", str(row))
+            item.set("column", str(0))
+            item.set("colspan", str(2))
+            item.append(widget)
+
+            layout.append(item)
             row += 1
 
         item = ElementTree.Element("item")
