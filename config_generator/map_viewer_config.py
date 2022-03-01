@@ -639,6 +639,10 @@ class MapViewerConfig(ServiceConfig):
                 sublayers.append(self.collect_layers(
                     sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers))
 
+            # abstract
+            if 'abstract' in layer:
+                item_layer['abstract'] = layer.get('abstract')
+
             item_layer['sublayers'] = sublayers
 
             # expanded
