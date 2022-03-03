@@ -435,7 +435,15 @@ class ConfigGenerator():
             return True
 
         # download JSON schema
-        response = requests.get(schema_url)
+        try:
+            response = requests.get(schema_url)
+        except Exception as e:
+            self.logger.error(
+                "Could not download JSON schema from %s:\n%s" %
+                (schema_url, str(e))
+            )
+            return False
+
         if response.status_code != requests.codes.ok:
             self.logger.error(
                 "Could not download JSON schema from %s:\n%s" %

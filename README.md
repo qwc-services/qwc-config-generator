@@ -26,7 +26,8 @@ Example `tenantConfig.json`:
     "config_db_url": "postgresql:///?service=qwc_configdb",
     "default_qgis_server_url": "http://localhost:8001/ows/",
     "qgis_projects_base_dir": "/data",
-    "permissions_default_allow": true
+    "permissions_default_allow": true,
+    "validate_schema": true
   },
   "themesConfig": {
       "defaultScales": [100000000, 50000000, 25000000, 10000000, 4000000, 2000000, 1000000, 400000, 200000, 80000, 40000, 20000, 10000, 8000, 6000, 4000, 2000, 1000, 500, 250, 100],
@@ -253,6 +254,11 @@ The config generator also has the ability to split a layer, that has been [class
       ]
     }
 ```
+
+
+### Schema validation
+
+By default, the config-generator will validate the service configurations in `tenantConfig.json` against the schema definition of the service. This requires network access to `raw.githubusercontent.com`. You can disable the schema validation by setting `"validate_schema": false` in config-generator `config` block in `tenantConfig.json`.
 
 ### Permissions
 
