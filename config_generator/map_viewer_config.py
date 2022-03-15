@@ -679,6 +679,9 @@ class MapViewerConfig(ServiceConfig):
             if maxScale:
                 item_layer["maxScale"] = int(float(maxScale))
 
+            if 'dimensions' in layer:
+                item_layer["dimensions"] = layer.get('dimensions')
+
             # abstract
             if 'abstract' in layer:
                 item_layer['abstract'] = layer.get('abstract')

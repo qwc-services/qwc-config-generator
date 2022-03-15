@@ -478,6 +478,16 @@ class CapabilitiesReader():
         if layer_title_tag is not None:
             wms_layer['title'] = layer_title_tag.text
 
+        # collect dimensions
+        wms_layer['dimensions'] = []
+        for dim in layer.findall("%sDimension" % np, ns):
+            wms_layer['dimensions'].append({
+                'units': dim.get('units'),
+                'name': dim.get('name'),
+                'multiple': dim.get('multipleValues') == '1',
+                'value': dim.text
+            })
+
         # collect sub layers if group layer
         group_layers = []
         for sub_layer in layer.findall('%sLayer' % np, ns):
