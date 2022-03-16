@@ -249,13 +249,6 @@ class QGSReader:
 
         for field in fieldnames:
 
-            edit_widget = maplayer.find(
-                "fieldConfiguration/field[@name='%s']/editWidget" % field
-            )
-            if edit_widget.get('type') == 'Hidden':
-            # skip hidden fields
-                continue
-
             attributes.append(field)
             # NOTE: use ordered keys
             fields[field] = OrderedDict()
@@ -357,6 +350,9 @@ class QGSReader:
         elif edit_widget.get("type") == "ExternalResource":
             filterOpt = edit_widget.find("config/Option/Option[@name='FileWidgetFilter']")
             constraints['fileextensions'] = self.parse_fileextensions(filterOpt.get('value')) if filterOpt is not None else ""
+        elif edit_widget.get('type') == 'Hidden':
+            constraints['hidden'] = True
+            constraints['readOnly'] = True
 
         return constraints
 
