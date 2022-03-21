@@ -70,7 +70,7 @@ class DnDFormGenerator:
 
     def __create_editor_widget(self, maplayer, field, prefix=""):
         editWidget = maplayer.find("fieldConfiguration/field[@name='%s']/editWidget" % field)
-        if editWidget.get("type") == "Hidden" or not editWidget.get("type"):
+        if editWidget.get("type") == "Hidden" or editWidget.get("type") == "RelationReference" or not editWidget.get("type"):
             return None
         editableField = maplayer.find("editable/field[@name='%s']" % field)
         editable = editableField is None or editableField.get("editable") == "1"
