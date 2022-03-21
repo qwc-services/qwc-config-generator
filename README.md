@@ -26,6 +26,8 @@ Example `tenantConfig.json`:
     "config_db_url": "postgresql:///?service=qwc_configdb",
     "default_qgis_server_url": "http://localhost:8001/ows/",
     "qgis_projects_base_dir": "/data",
+    "qgis_projects_scan_base_dir": "/data/scan",
+    "qgis_projects_gen_base_dir": "/data/gen",
     "permissions_default_allow": true,
     "validate_schema": true
   },
