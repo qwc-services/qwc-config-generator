@@ -133,6 +133,7 @@ class DataServiceConfig(ServiceConfig):
                     dataset['schema'] = meta.get('schema')
                     dataset['table_name'] = meta.get('table_name')
                     dataset['primary_key'] = meta.get('primary_key')
+                    dataset['dimensions'] = meta.get('dimensions')
 
                     dataset['fields'] = []
                     for key, attr_meta in meta.get('fields', {}).items():

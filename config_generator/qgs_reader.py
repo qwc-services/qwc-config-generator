@@ -124,6 +124,7 @@ class QGSReader:
                 config['database'] = self.db_connection(datasource)
                 config.update(self.table_metadata(maplayer, datasource))
                 config.update(self.attributes_metadata(maplayer))
+                config.update(self.dimension_metadata(maplayer))
 
                 break
 
@@ -272,6 +273,20 @@ class QGSReader:
         return {
             'attributes': attributes,
             'fields': fields
+        }
+
+    def dimension_metadata(self, maplayer):
+        wmsDimensions = maplayer.findall("wmsDimensions/dimension")
+        dimensions = {}
+        for dimension in wmsDimensions:
+            dimensions[dimension.get('name')] = {
+                'startfield': dimension.get('fieldName'),
+                'endfield': dimension.get('endFieldName'),
+                'units': dimension.get('units')
+            }
+
+        return {
+            'dimensions': dimensions
         }
 
     def edit_widget_constraints(self, maplayer, field):
