@@ -5,4 +5,5 @@ qwc-services-core==1.2.7
 requests==2.26.0
 SQLAlchemy==1.4.28
 Flask==2.0.2
+Werkzeug==2.0.2
 python-dotenv==0.19.2
