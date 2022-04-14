@@ -4,9 +4,6 @@ from urllib.parse import urljoin, urlparse
 from xml.etree import ElementTree
 
 import requests
-import os
-from pathlib import Path
-from shutil import move, copyfile
 
 
 class CapabilitiesReader():
@@ -16,12 +13,13 @@ class CapabilitiesReader():
     QWC2 themes config file (themesConfig.json).
     """
 
-    def __init__(self, generator_config, themes_config, logger):
+    def __init__(self, generator_config, themes_config, logger, default_qgis_server_url):
         """Constructor
 
         :param obj generator_config: ConfigGenerator config
         :param dict themes_config: themes config
         :param Logger logger: Logger
+        :param str default_qgis_server_url: default QGIS server URL
         """
         self.logger = logger
 
@@ -33,22 +31,13 @@ class CapabilitiesReader():
                 "Error loading QWC2 themes config file")
 
         # get default QGIS server URL from ConfigGenerator config
-        self.default_qgis_server_url = generator_config.get(
-            'default_qgis_server_url', 'http://localhost:8001/ows/'
-        ).rstrip('/') + '/'
+        self.default_qgis_server_url = default_qgis_server_url
 
         # cache for capabilities: {<service name>: <capabilities>}
         self.wms_capabilities = OrderedDict()
 
         # lookup for services names by URL: {<url>: <service_name>}
         self.service_name_lookup = {}
-
-        # get qwc2 directory from ConfigGenerator config
-        self.qwc_base_dir = generator_config.get("qwc2_base_dir")
-
-        # get split_categorized_layers parameter from ConfigGenerator config
-        self.split_categorized_layers = generator_config.get(
-            'split_categorized_layers', False)
 
         # layer opacity values for QGIS <= 3.10 from ConfigGenerator config
         self.layer_opacities = generator_config.get("layer_opacities", {})
@@ -57,163 +46,6 @@ class CapabilitiesReader():
         self.skip_print_layer_groups = generator_config.get(
             'skip_print_layer_groups', False)
 
-    def preprocess_qgs_projects(self, generator_config, tenant):
-        config_in_path = os.environ.get(
-            'INPUT_CONFIG_PATH', 'config-in/'
-        )
-
-        if os.path.exists(config_in_path) is False:
-            self.logger.warning(
-                "The specified path does not exist: " + config_in_path)
-            return
-
-        qgs_projects_dir = os.path.join(
-            config_in_path, tenant, "qgis_projects")
-        if os.path.exists(qgs_projects_dir):
-            self.logger.info(
-                "Searching for projects files in " + qgs_projects_dir)
-        else:
-            self.logger.debug(
-                "The qgis_projects sub directory does not exist: " +
-                qgs_projects_dir)
-            return
-
-        # Output directory for processed projects
-        qgis_projects_gen_base_dir = generator_config.get(
-            'qgis_projects_gen_base_dir')
-        if not qgis_projects_gen_base_dir:
-            self.logger.warning("Skipping preprocessing qgis projects in " +
-                                qgs_projects_dir +
-                                ": qgis_projects_gen_base_dir is not set")
-            return
-
-        for dirpath, dirs, files in os.walk(qgs_projects_dir,
-                                            followlinks=True):
-            for filename in files:
-                if Path(filename).suffix in [".qgs", ".qgz"]:
-                    fname = os.path.join(dirpath, filename)
-                    relpath = os.path.relpath(fname, qgs_projects_dir)
-                    self.logger.info("Processing " + fname)
-
-                    # convert project
-                    dest_path = os.path.join(
-                        qgis_projects_gen_base_dir, relpath)
-
-                    if self.split_categorized_layers is True:
-                        from .categorize_groups_script import split_categorized_layers
-                        split_categorized_layers(fname, dest_path)
-                    else:
-                        copyfile(fname, dest_path)
-                    if not os.path.exists(dest_path):
-                        self.logger.warning(
-                            "The project: " + dest_path +
-                            " could not be generated.\n"
-                            "Please check if needed permissions to create the"
-                            " file are granted.")
-                        continue
-                    self.logger.info("Written to " + dest_path)
-
-    def search_qgs_projects(self, generator_config):
-        if self.themes_config is None:
-            return
-
-        qgis_projects_base_dir = generator_config.get(
-            'qgis_projects_base_dir')
-        qgis_projects_scan_base_dir = generator_config.get(
-            'qgis_projects_scan_base_dir')
-        if not qgis_projects_scan_base_dir:
-            self.logger.info(
-                "Skipping scanning for projects" +
-                " (qgis_projects_scan_base_dir not set)")
-            return
-
-        if os.path.exists(qgis_projects_scan_base_dir):
-            self.logger.info(
-                "Searching for projects files in " + qgis_projects_scan_base_dir)
-        else:
-            self.logger.error(
-                "The qgis_projects_scan_base_dir sub directory" +
-                " does not exist: " + qgis_projects_scan_base_dir)
-            return
-
-        # collect existing item urls
-        items = self.themes_config.get("themes", {}).get(
-            "items", {})
-        wms_urls = []
-        has_default = False
-        for item in items:
-            if item.get("url"):
-                wms_urls.append(item["url"])
-            if item.get("default", False):
-                has_default = True
-
-        # This is needed because we don't want to
-        # print the error message "thumbmail dir not found"
-        # multiple times
-        thumbnail_dir_exists = True
-        thumbnail_directory = ""
-        if self.qwc_base_dir is None:
-            thumbnail_dir_exists = False
-            self.logger.info(
-                            "Skipping automatic thumbnail search "
-                            "(qwc2_base_dir was not set)")
-        else:
-            thumbnail_directory = os.path.join(
-                self.qwc_base_dir, "assets/img/mapthumbs")
-
-        for dirpath, dirs, files in os.walk(qgis_projects_scan_base_dir,
-                                            followlinks=True):
-            for filename in files:
-                if Path(filename).suffix in [".qgs", ".qgz"]:
-                    fname = os.path.join(dirpath, filename)
-                    relpath = os.path.relpath(dirpath,
-                                              qgis_projects_base_dir)
-                    wmspath = os.path.join(relpath, Path(filename).stem)
-                    wmsurlpath = urlparse(urljoin(self.default_qgis_server_url, wmspath)).path
-
-                    # Add to themes items
-                    item = OrderedDict()
-                    item["url"] = wmsurlpath
-                    item["backgroundLayers"] = self.themes_config.get(
-                        "defaultBackgroundLayers", [])
-                    item["searchProviders"] = self.themes_config.get(
-                        "defaultSearchProviders", [])
-                    item["mapCrs"] = self.themes_config.get(
-                        "defaultMapCrs")
-
-                    # Check if thumbnail directory exists
-                    if thumbnail_dir_exists and not os.path.exists(
-                            thumbnail_directory):
-                        self.logger.info(
-                            "Thumbnail directory: %s does not exist" % (
-                                thumbnail_directory))
-                        thumbnail_dir_exists = False
-
-                    # Scanning for thumbnail
-                    if thumbnail_dir_exists:
-                        thumbnail_filename = "%s.png" % Path(filename).stem
-                        self.logger.info("Scanning for thumbnail(%s) under %s" % (
-                            thumbnail_filename, thumbnail_directory))
-                        thumbnail_path = os.path.join(
-                                thumbnail_directory, thumbnail_filename)
-
-                        if os.path.exists(thumbnail_path):
-                            self.logger.info("Thumbnail: %s was found" % (
-                                thumbnail_filename))
-                            item["thumbnail"] = thumbnail_filename
-                        else:
-                            self.logger.info(
-                                "Thumbnail: %s could not be found under %s" % (
-                                    thumbnail_filename, thumbnail_path))
-
-                    if item["url"] not in wms_urls:
-                        self.logger.info("Adding project " + fname)
-                        if not has_default:
-                            item["default"] = True
-                            has_default = True
-                        items.append(item)
-                    else:
-                        self.logger.info("Skipping project " + fname)
 
     def load_all_project_settings(self):
         """Load and parse GetProjectSettings for all theme items from
