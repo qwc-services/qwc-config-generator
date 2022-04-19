@@ -95,6 +95,8 @@ class OGCServiceConfig(ServiceConfig):
 
         for service_name in self.themes_reader.wms_service_names():
             cap = self.themes_reader.wms_capabilities(service_name)
+            if not cap:
+                continue
 
             # NOTE: use ordered keys
             wms_service = OrderedDict()
@@ -219,6 +221,8 @@ class OGCServiceConfig(ServiceConfig):
                 continue
 
             cap = self.themes_reader.wms_capabilities(service_name)
+            if not cap:
+                continue
 
             # NOTE: use ordered keys
             wms_permissions = OrderedDict()

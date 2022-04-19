@@ -61,6 +61,8 @@ class PrintServiceConfig(ServiceConfig):
 
         for service_name in self.themes_reader.wms_service_names():
             cap = self.themes_reader.wms_capabilities(service_name)
+            if not cap:
+                return None
 
             # collect print templates
             if 'print_templates' in cap:

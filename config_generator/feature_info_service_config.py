@@ -86,6 +86,8 @@ class FeatureInfoServiceConfig(ServiceConfig):
 
         for service_name in self.themes_reader.wms_service_names():
             cap = self.themes_reader.wms_capabilities(service_name)
+            if not cap:
+                continue
 
             # NOTE: use ordered keys
             wms_service = OrderedDict()

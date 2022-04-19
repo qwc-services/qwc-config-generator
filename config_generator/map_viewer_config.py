@@ -336,11 +336,7 @@ class MapViewerConfig(ServiceConfig):
         # get capabilities
         service_name = self.themes_reader.service_name(cfg_item['url'])
         cap = self.themes_reader.wms_capabilities(service_name)
-        if cap is None:
-            self.logger.warning(
-                "Skipping theme item '%s': Could not get capabilities for %s" %
-                (cfg_item.get('title', ""), cfg_item['url'])
-            )
+        if not cap:
             return None
 
         root_layer = cap.get('root_layer', {})
