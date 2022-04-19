@@ -10,12 +10,12 @@ class OGCServiceConfig(ServiceConfig):
     Generate OGC service config and permissions.
     """
 
-    def __init__(self, generator_config, capabilities_reader, config_models,
+    def __init__(self, generator_config, themes_reader, config_models,
                  service_config, logger):
         """Constructor
 
         :param obj generator_config: ConfigGenerator config
-        :param CapabilitiesReader capabilities_reader: CapabilitiesReader
+        :param CapabilitiesReader themes_reader: ThemesReader
         :param ConfigModels config_models: Helper for ORM models
         :param obj service_config: Additional service config
         :param Logger logger: Logger
@@ -32,7 +32,7 @@ class OGCServiceConfig(ServiceConfig):
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
 
-        self.capabilities_reader = capabilities_reader
+        self.themes_reader = themes_reader
 
         self.config_models = config_models
         self.permissions_query = PermissionsQuery(config_models, logger)
@@ -93,8 +93,8 @@ class OGCServiceConfig(ServiceConfig):
         cfg_generator_config = self.service_config.get('generator_config', {})
         cfg_wms_services = cfg_generator_config.get('wms_services', {})
 
-        for service_name in self.capabilities_reader.wms_service_names():
-            cap = self.capabilities_reader.wms_capabilities.get(service_name)
+        for service_name in self.themes_reader.wms_service_names():
+            cap = self.themes_reader.wms_capabilities(service_name)
 
             # NOTE: use ordered keys
             wms_service = OrderedDict()
@@ -205,7 +205,7 @@ class OGCServiceConfig(ServiceConfig):
 
         is_public_role = (role == self.permissions_query.public_role())
 
-        for service_name in self.capabilities_reader.wms_service_names():
+        for service_name in self.themes_reader.wms_service_names():
             # lookup permissions
             if self.permissions_default_allow:
                 restricted_for_public = service_name in \
@@ -218,7 +218,7 @@ class OGCServiceConfig(ServiceConfig):
                 # WMS not permitted
                 continue
 
-            cap = self.capabilities_reader.wms_capabilities.get(service_name)
+            cap = self.themes_reader.wms_capabilities(service_name)
 
             # NOTE: use ordered keys
             wms_permissions = OrderedDict()

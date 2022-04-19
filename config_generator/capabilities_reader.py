@@ -1,5 +1,4 @@
 from collections import OrderedDict
-import json
 from urllib.parse import urljoin, urlparse
 from xml.etree import ElementTree
 
@@ -9,35 +8,21 @@ import requests
 class CapabilitiesReader():
     """CapabilitiesReader class
 
-    Load and parse GetProjectSettings for all theme items from a
-    QWC2 themes config file (themesConfig.json).
+    Load and parse GetProjectSettings.
     """
 
-    def __init__(self, generator_config, themes_config, logger, default_qgis_server_url):
+    def __init__(self, generator_config, logger):
         """Constructor
 
         :param obj generator_config: ConfigGenerator config
-        :param dict themes_config: themes config
         :param Logger logger: Logger
-        :param str default_qgis_server_url: default QGIS server URL
         """
         self.logger = logger
 
-        # read QWC2 themes config file
-        self.themes_config = themes_config
-
-        if self.themes_config is None:
-            self.logger.critical(
-                "Error loading QWC2 themes config file")
-
         # get default QGIS server URL from ConfigGenerator config
-        self.default_qgis_server_url = default_qgis_server_url
-
-        # cache for capabilities: {<service name>: <capabilities>}
-        self.wms_capabilities = OrderedDict()
-
-        # lookup for services names by URL: {<url>: <service_name>}
-        self.service_name_lookup = {}
+        self.default_qgis_server_url = generator_config.get(
+            'default_qgis_server_url', 'http://localhost:8001/ows/'
+        ).rstrip('/') + '/'
 
         # layer opacity values for QGIS <= 3.10 from ConfigGenerator config
         self.layer_opacities = generator_config.get("layer_opacities", {})
@@ -47,39 +32,13 @@ class CapabilitiesReader():
             'skip_print_layer_groups', False)
 
 
-    def load_all_project_settings(self):
-        """Load and parse GetProjectSettings for all theme items from
-        QWC2 themes config.
-        """
-        self.load_project_settings_for_group(
-            self.themes_config.get('themes', {})
-        )
-
-    def wms_service_names(self):
-        """Return all WMS service names in alphabetical order."""
-        return sorted(self.wms_capabilities.keys())
-
-    def load_project_settings_for_group(self, item_group):
-        """Recursively load and parse GetProjectSettings for a
-        theme item group."""
-        for item in item_group.get('items', []):
-            self.load_project_settings(item)
-
-        for group in item_group.get('groups', []):
-            # collect group items
-            self.load_project_settings_for_group(group)
-
-    def load_project_settings(self, item):
+    def read_service_capabilities(self, url, service_name, item):
         """Load and parse GetProjectSettings for a theme item.
 
-        :param obj item: QWC2 themes config item.
+        :param str url: service URL
+        :param str service_name: service name
+        :param object item: theme item
         """
-        # get service name
-        url = item.get('url')
-        service_name = self.service_name(url)
-        if service_name in self.wms_capabilities:
-            # skip service already in cache
-            return
 
         try:
             # get GetProjectSettings
@@ -108,7 +67,7 @@ class CapabilitiesReader():
                     "Could not get GetProjectSettings from %s:\n%s" %
                     (full_url, response.content)
                 )
-                return
+                return {}
 
             document = response.content
 
@@ -137,7 +96,7 @@ class CapabilitiesReader():
                     "No root layer found for %s: %s" %
                     (full_url, response.content)
                 )
-                return
+                return {}
 
             # NOTE: use ordered keys
             capabilities = OrderedDict()
@@ -212,7 +171,7 @@ class CapabilitiesReader():
                     "No (non geometryless) layers found for %s: %s" %
                     (full_url, response.content)
                 )
-                return
+                return {}
             # Check if a layer has the same name as the root layer - and if so, abort
             root_layer_name = capabilities['root_layer'].get('name')
             layers = capabilities['root_layer'].get('layers')
@@ -242,46 +201,13 @@ class CapabilitiesReader():
             if geometryless_layers:
                 capabilities['geometryless_layers'] = geometryless_layers
 
-            self.wms_capabilities[service_name] = capabilities
+            return capabilities
         except Exception as e:
             self.logger.critical(
                 "Could not get GetProjectSettings from %s:\n%s" %
                 (full_url, e)
             )
-
-    def service_name(self, url):
-        """Return service name as relative path to default QGIS server URL
-        or last part of URL path if on a different WMS server.
-
-        :param str url:  Theme item URL
-        """
-        # get full URL
-        full_url = urljoin(self.default_qgis_server_url, url)
-
-        if full_url in self.service_name_lookup:
-            # service name from cache
-            return self.service_name_lookup[full_url]
-
-        service_name = full_url
-        if service_name.startswith(self.default_qgis_server_url):
-            # get relative path to default QGIS server URL
-            service_name = service_name[len(self.default_qgis_server_url):]
-        else:
-            # get last part of URL path for other WMS server
-            service_name = urlparse(full_url).path.split('/')[-1]
-
-        # make sure service name is unique
-        base_name = service_name
-        suffix = 1
-        while service_name in self.service_name_lookup.values():
-            # add suffix to name
-            service_name = "%s_%s" % (base_name, suffix)
-            suffix += 1
-
-        # add to lookup
-        self.service_name_lookup[full_url] = service_name
-
-        return service_name
+            return {}
 
     def collect_wms_layers(self, layer, internal_print_layers, ns, np,
                            fallback_name=""):

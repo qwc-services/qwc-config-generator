@@ -18,33 +18,31 @@ class QGSReader:
     Read QGIS 3.x projects and extract data for QWC config.
     """
 
-    def __init__(self, logger, qgs_resources_path):
+    def __init__(self, logger, qgs_resources_path, qgs_path):
         """Constructor
 
         :param Logger logger: Application logger
         :param str qgs_resources_path: Path to qgis server data dir
+        :param str qgs_path: QGS name with optional path relative to
+                             QGIS server data dir
         """
         self.logger = logger
         self.root = None
         self.qgis_version = 0
 
-        self.qgs_resources_path = qgs_resources_path
-
-        self.db_engine = DatabaseEngine()
-
-    def read(self, qgs_path):
-        """Read QGIS project file and return True on success.
-
-        :param str qgs_path: QGS name with optional path relative to
-                             QGIS server data dir
-        """
         self.map_prefix = qgs_path
         qgs_file = "%s.qgs" % qgs_path
-        self.qgs_path = os.path.join(self.qgs_resources_path, qgs_file)
+        self.qgs_path = os.path.join(qgs_resources_path, qgs_file)
         if not os.path.exists(self.qgs_path):
             self.logger.warn("Could not find QGS file '%s'" % self.qgs_path)
             return False
 
+        self.db_engine = DatabaseEngine()
+
+    def read(self):
+        """Read QGIS project file and return True on success.
+        """
+        self.logger.info("Reading '%s.qgs'" % self.map_prefix)
         try:
             tree = ElementTree.parse(self.qgs_path)
             self.root = tree.getroot()
@@ -121,16 +119,18 @@ class QGSReader:
                     continue
 
                 datasource = maplayer.find('datasource').text
-                config['database'] = self.db_connection(datasource)
-                config.update(self.table_metadata(maplayer, datasource))
-                config.update(self.attributes_metadata(maplayer))
-                config.update(self.dimension_metadata(maplayer))
+                config['database'] = self.__db_connection(datasource)
+                config.update(self.__table_metadata(maplayer, datasource))
+                config.update(self.__attributes_metadata(maplayer))
+                config.update(self.__dimension_metadata(maplayer))
+
+                self.__lookup_attribute_data_types(config)
 
                 break
 
         return config
 
-    def db_connection(self, datasource):
+    def __db_connection(self, datasource):
         """Parse QGIS datasource URI and return SQLALchemy DB connection
         string for a PostgreSQL database or connection service.
 
@@ -183,7 +183,7 @@ class QGSReader:
 
         return connection_string
 
-    def table_metadata(self, maplayer, datasource):
+    def __table_metadata(self, maplayer, datasource):
         """Parse QGIS datasource URI and return table metadata.
 
         :param str datasource: QGIS datasource URI
@@ -226,7 +226,7 @@ class QGSReader:
 
         return metadata
 
-    def attributes_metadata(self, maplayer):
+    def __attributes_metadata(self, maplayer):
         """Collect layer attributes.
 
         :param Element maplayer: QGS maplayer node
@@ -260,7 +260,7 @@ class QGSReader:
                 fields[field]['alias'] = alias.get('name')
 
             # get any constraints from edit widgets
-            constraints = self.edit_widget_constraints(maplayer, field)
+            constraints = self.__edit_widget_constraints(maplayer, field)
             if constraints:
                 fields[field]['constraints'] = constraints
 
@@ -275,7 +275,7 @@ class QGSReader:
             'fields': fields
         }
 
-    def dimension_metadata(self, maplayer):
+    def __dimension_metadata(self, maplayer):
         wmsDimensions = maplayer.findall("wmsDimensions/dimension")
         dimensions = {}
         for dimension in wmsDimensions:
@@ -289,7 +289,7 @@ class QGSReader:
             'dimensions': dimensions
         }
 
-    def edit_widget_constraints(self, maplayer, field):
+    def __edit_widget_constraints(self, maplayer, field):
         """Get any constraints from edit widget config (QGIS 3.x).
 
         :param Element maplayer: QGS maplayer node
@@ -328,11 +328,11 @@ class QGSReader:
                         "config/Option/Option[@name='Max']")
             step_option = edit_widget.find(
                         "config/Option/Option[@name='Step']")
-            constraints['min'] = self.parse_number(
+            constraints['min'] = self.__parse_number(
                 min_option.get('value')) if min_option else -2147483648
-            constraints['max'] = self.parse_number(
+            constraints['max'] = self.__parse_number(
                 max_option.get('value')) if max_option else 2147483647
-            constraints['step'] = self.parse_number(
+            constraints['step'] = self.__parse_number(
                 step_option.get('value')) if step_option else 1
         elif edit_widget.get('type') == 'ValueMap':
             values = []
@@ -364,14 +364,14 @@ class QGSReader:
 
         elif edit_widget.get("type") == "ExternalResource":
             filterOpt = edit_widget.find("config/Option/Option[@name='FileWidgetFilter']")
-            constraints['fileextensions'] = self.parse_fileextensions(filterOpt.get('value')) if filterOpt is not None else ""
+            constraints['fileextensions'] = self.__parse_fileextensions(filterOpt.get('value')) if filterOpt is not None else ""
         elif edit_widget.get('type') == 'Hidden':
             constraints['hidden'] = True
             constraints['readOnly'] = True
 
         return constraints
 
-    def parse_number(self, value):
+    def __parse_number(self, value):
         """Parse string as int or float, or return string if neither.
 
         :param str value: Number value as string
@@ -390,7 +390,7 @@ class QGSReader:
 
         return result
 
-    def parse_fileextensions(self, value):
+    def __parse_fileextensions(self, value):
         """Parse string as a comma separated list of file extensions of the form *.ext,
          returning array of file extensions [".ext1", ".ext2", ...]
 
@@ -398,7 +398,7 @@ class QGSReader:
         """
         return list(map(lambda x: x.strip().lstrip('*'), value.lower().split(",")))
 
-    def lookup_attribute_data_types(self, meta):
+    def __lookup_attribute_data_types(self, meta):
         """Query column data types from GeoDB and add them to table metadata.
 
         :param obj meta: Table metadata

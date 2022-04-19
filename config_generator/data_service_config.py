@@ -4,7 +4,6 @@ from sqlalchemy.orm import joinedload
 from .service_config import ServiceConfig
 
 from .permissions_query import PermissionsQuery
-from .qgs_reader import QGSReader
 
 
 class DataServiceConfig(ServiceConfig):
@@ -13,10 +12,13 @@ class DataServiceConfig(ServiceConfig):
     Generate Data service config.
     """
 
-    def __init__(self, service_config, generator_config,
-                 config_models, logger):
+    def __init__(self, generator_config, themes_reader,
+                 config_models, service_config, logger):
         """Constructor
 
+        :param obj generator_config: ConfigGenerator config
+        :param CapabilitiesReader themes_reader: ThemesReader
+        :param ConfigModels config_models: Helper for ORM models
         :param obj service_config: Additional service config
         :param Logger logger: Logger
         """
@@ -31,6 +33,7 @@ class DataServiceConfig(ServiceConfig):
         self.permissions_query = PermissionsQuery(config_models, logger)
 
         self.generator_config = generator_config
+        self.themes_reader = themes_reader
 
         self.qgis_projects_base_dir = generator_config.get(
             'qgis_projects_base_dir', '/tmp/'
@@ -107,60 +110,47 @@ class DataServiceConfig(ServiceConfig):
         datasets = []
 
         for qgs_name, map_datasets in self.available_datasets(session).items():
-            qgs_reader = QGSReader(self.logger, self.qgis_projects_base_dir)
-            self.logger.info("Reading '%s.qgs'" % qgs_name)
-            if qgs_reader.read(qgs_name):
-                for layer_name in qgs_reader.pg_layers():
-                    if layer_name not in map_datasets:
-                        # skip layers not in datasets
-                        continue
+            for layer_name in self.themes_reader.pg_layers(qgs_name):
+                if layer_name not in map_datasets:
+                    # skip layers not in datasets
+                    continue
 
-                    try:
-                        # get layer metadata from QGIS project
-                        meta = qgs_reader.layer_metadata(layer_name)
-                        qgs_reader.lookup_attribute_data_types(meta)
-                    except Exception as e:
-                        self.logger.error(
-                            "Could not get metadata for dataset '%s.%s':\n%s" %
-                            (qgs_name, layer_name, e)
-                        )
+                meta = self.themes_reader.layer_metadata(qgs_name, layer_name)
+
+                # NOTE: use ordered keys
+                dataset = OrderedDict()
+                dataset['name'] = qgs_name + '.' + layer_name
+                dataset['db_url'] = meta.get('database')
+                dataset['schema'] = meta.get('schema')
+                dataset['table_name'] = meta.get('table_name')
+                dataset['primary_key'] = meta.get('primary_key')
+
+                dataset['fields'] = []
+                for key, attr_meta in meta.get('fields', {}).items():
+
+                    if attr_meta.get('expression'):
+                        # Skip expression field
                         continue
 
                     # NOTE: use ordered keys
-                    dataset = OrderedDict()
-                    dataset['name'] = qgs_name + '.' + layer_name
-                    dataset['db_url'] = meta.get('database')
-                    dataset['schema'] = meta.get('schema')
-                    dataset['table_name'] = meta.get('table_name')
-                    dataset['primary_key'] = meta.get('primary_key')
-                    dataset['dimensions'] = meta.get('dimensions')
+                    field = OrderedDict()
+                    field['name'] = key
+                    field['data_type'] = attr_meta.get('data_type')
+                    if attr_meta.get('constraints'):
+                        # add any constraints
+                        field['constraints'] = attr_meta.get('constraints')
+                    dataset['fields'].append(field)
 
-                    dataset['fields'] = []
-                    for key, attr_meta in meta.get('fields', {}).items():
+                if meta.get('geometry_column'):
+                    # NOTE: use ordered keys
+                    geometry = OrderedDict()
+                    geometry['geometry_column'] = meta['geometry_column']
+                    geometry['geometry_type'] = meta['geometry_type']
+                    geometry['srid'] = meta['srid']
 
-                        if attr_meta.get('expression'):
-                            # Skip expression field
-                            continue
+                    dataset['geometry'] = geometry
 
-                        # NOTE: use ordered keys
-                        field = OrderedDict()
-                        field['name'] = key
-                        field['data_type'] = attr_meta.get('data_type')
-                        if attr_meta.get('constraints'):
-                            # add any constraints
-                            field['constraints'] = attr_meta.get('constraints')
-                        dataset['fields'].append(field)
-
-                    if meta.get('geometry_column'):
-                        # NOTE: use ordered keys
-                        geometry = OrderedDict()
-                        geometry['geometry_column'] = meta['geometry_column']
-                        geometry['geometry_type'] = meta['geometry_type']
-                        geometry['srid'] = meta['srid']
-
-                        dataset['geometry'] = geometry
-
-                    datasets.append(dataset)
+                datasets.append(dataset)
 
         return datasets
 
@@ -276,141 +266,139 @@ class DataServiceConfig(ServiceConfig):
                 # map not permitted
                 continue
 
-            qgs_reader = QGSReader(self.logger, self.qgis_projects_base_dir)
-            if qgs_reader.read(map_name):
-                for layer_name in qgs_reader.pg_layers():
-                    if layer_name not in datasets:
-                        # skip layers not in datasets
-                        continue
+            for layer_name in self.themes_reader.pg_layers(map_name):
+                if layer_name not in datasets:
+                    # skip layers not in datasets
+                    continue
 
-                    # lookup permissions (dataset restricted by default)
-                    restricted_for_public = layer_name not in \
-                        public_permitted_datasets.get(map_name, {})
-                    permitted_for_role = layer_name in \
-                        role_permitted_datasets.get(map_name, {})
-                    if restricted_for_public and not permitted_for_role:
-                        # dataset not permitted
-                        continue
+                # lookup permissions (dataset restricted by default)
+                restricted_for_public = layer_name not in \
+                    public_permitted_datasets.get(map_name, {})
+                permitted_for_role = layer_name in \
+                    role_permitted_datasets.get(map_name, {})
+                if restricted_for_public and not permitted_for_role:
+                    # dataset not permitted
+                    continue
 
-                    # get layer metadata from QGIS project
-                    meta = qgs_reader.layer_metadata(layer_name)
+                # get layer metadata from QGIS project
+                meta = self.themes_reader.layer_metadata(map_name, layer_name)
 
-                    # NOTE: use ordered keys
-                    dataset_permissions = OrderedDict()
-                    dataset_permissions['name'] = (
-                        "%s.%s" % (map_name, layer_name)
+                # NOTE: use ordered keys
+                dataset_permissions = OrderedDict()
+                dataset_permissions['name'] = (
+                    "%s.%s" % (map_name, layer_name)
+                )
+
+                # collect attribute names (allowed by default)
+                attributes = []
+                if is_public_role:
+                    # collect all permitted attributes
+                    restricted_attributes = (
+                        public_restrictions['attributes'].
+                        get(map_name, {}).get(layer_name, {})
                     )
-
-                    # collect attribute names (allowed by default)
-                    attributes = []
-                    if is_public_role:
-                        # collect all permitted attributes
-                        restricted_attributes = (
+                    attributes = [
+                        attr for attr in meta['attributes']
+                        if attr not in restricted_attributes
+                    ]
+                else:
+                    if restricted_for_public:
+                        # collect restricted attributes not permitted
+                        # for role
+                        restricted_attributes = set(
                             public_restrictions['attributes'].
-                            get(map_name, {}).get(layer_name, {})
+                            get(map_name, {}).get(layer_name, {}).keys()
                         )
+                        permitted_attributes = set(
+                            role_permissions['attributes'].
+                            get(map_name, {}).get(layer_name, {}).keys()
+                        )
+                        restricted_attributes -= permitted_attributes
+
+                        # collect all permitted attributes
                         attributes = [
                             attr for attr in meta['attributes']
                             if attr not in restricted_attributes
                         ]
                     else:
-                        if restricted_for_public:
-                            # collect restricted attributes not permitted
-                            # for role
-                            restricted_attributes = set(
-                                public_restrictions['attributes'].
-                                get(map_name, {}).get(layer_name, {}).keys()
-                            )
-                            permitted_attributes = set(
-                                role_permissions['attributes'].
-                                get(map_name, {}).get(layer_name, {}).keys()
-                            )
-                            restricted_attributes -= permitted_attributes
+                        # collect additional attributes
+                        permitted_attributes = (
+                            role_permissions['attributes'].
+                            get(map_name, {}).get(layer_name, {}).keys()
+                        )
+                        attributes = [
+                            attr for attr in meta['attributes']
+                            if attr in permitted_attributes
+                        ]
 
-                            # collect all permitted attributes
-                            attributes = [
-                                attr for attr in meta['attributes']
-                                if attr not in restricted_attributes
-                            ]
-                        else:
-                            # collect additional attributes
-                            permitted_attributes = (
-                                role_permissions['attributes'].
-                                get(map_name, {}).get(layer_name, {}).keys()
-                            )
-                            attributes = [
-                                attr for attr in meta['attributes']
-                                if attr in permitted_attributes
-                            ]
+                dataset_permissions['attributes'] = attributes
 
-                    dataset_permissions['attributes'] = attributes
+                # collect CRUD permissions
+                writable = False
+                creatable = False
+                readable = False
+                updatable = False
+                deletable = False
+                additional_crud = False
 
-                    # collect CRUD permissions
-                    writable = False
-                    creatable = False
-                    readable = False
-                    updatable = False
-                    deletable = False
-                    additional_crud = False
+                if (
+                    layer_name in
+                    role_permissions['data'].get(map_name, {})
+                ):
+                    # 'data' permitted
+                    writable = layer_name in \
+                        role_writeable_datasets.get(map_name, {})
+                    creatable = writable
+                    readable = True
+                    updatable = writable
+                    deletable = writable
 
-                    if (
-                        layer_name in
-                        role_permissions['data'].get(map_name, {})
-                    ):
-                        # 'data' permitted
-                        writable = layer_name in \
-                            role_writeable_datasets.get(map_name, {})
-                        creatable = writable
-                        readable = True
-                        updatable = writable
-                        deletable = writable
+                # combine with detailed CRUD data permissions
+                creatable |= layer_name in \
+                    role_permissions['data_create'].get(map_name, {})
+                readable |= layer_name in \
+                    role_permissions['data_read'].get(map_name, {})
+                updatable |= layer_name in \
+                    role_permissions['data_update'].get(map_name, {})
+                deletable |= layer_name in \
+                    role_permissions['data_delete'].get(map_name, {})
 
-                    # combine with detailed CRUD data permissions
-                    creatable |= layer_name in \
-                        role_permissions['data_create'].get(map_name, {})
-                    readable |= layer_name in \
-                        role_permissions['data_read'].get(map_name, {})
-                    updatable |= layer_name in \
-                        role_permissions['data_update'].get(map_name, {})
-                    deletable |= layer_name in \
-                        role_permissions['data_delete'].get(map_name, {})
+                writable |= (
+                    creatable and readable and updatable and deletable
+                )
 
-                    writable |= (
-                        creatable and readable and updatable and deletable
-                    )
+                if is_public_role or restricted_for_public:
+                    # collect all CRUD permissions
+                    dataset_permissions['writable'] = writable
+                    dataset_permissions['creatable'] = creatable
+                    dataset_permissions['readable'] = readable
+                    dataset_permissions['updatable'] = updatable
+                    dataset_permissions['deletable'] = deletable
 
-                    if is_public_role or restricted_for_public:
-                        # collect all CRUD permissions
+                    additional_crud = restricted_for_public
+                else:
+                    # collect additional CRUD permissions
+                    if writable:
                         dataset_permissions['writable'] = writable
+                    if creatable:
                         dataset_permissions['creatable'] = creatable
+                    if readable:
                         dataset_permissions['readable'] = readable
+                    if updatable:
                         dataset_permissions['updatable'] = updatable
+                    if deletable:
                         dataset_permissions['deletable'] = deletable
 
-                        additional_crud = restricted_for_public
-                    else:
-                        # collect additional CRUD permissions
-                        if writable:
-                            dataset_permissions['writable'] = writable
-                        if creatable:
-                            dataset_permissions['creatable'] = creatable
-                        if readable:
-                            dataset_permissions['readable'] = readable
-                        if updatable:
-                            dataset_permissions['updatable'] = updatable
-                        if deletable:
-                            dataset_permissions['deletable'] = deletable
+                    additional_crud = creatable or readable or updatable or deletable
 
-                        additional_crud = creatable or readable or updatable or deletable
-
-                    if is_public_role:
-                        # add public dataset
-                        permissions.append(dataset_permissions)
-                    elif restricted_for_public:
-                        # add dataset permitted for role
-                        permissions.append(dataset_permissions)
-                    elif attributes or additional_crud:
-                        # only add additional permissions
-                        permissions.append(dataset_permissions)
+                if is_public_role:
+                    # add public dataset
+                    permissions.append(dataset_permissions)
+                elif restricted_for_public:
+                    # add dataset permitted for role
+                    permissions.append(dataset_permissions)
+                elif attributes or additional_crud:
+                    # only add additional permissions
+                    permissions.append(dataset_permissions)
 
         return permissions

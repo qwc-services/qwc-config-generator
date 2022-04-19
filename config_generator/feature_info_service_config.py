@@ -10,12 +10,12 @@ class FeatureInfoServiceConfig(ServiceConfig):
     Generate FeatureInfo service config and permissions.
     """
 
-    def __init__(self, generator_config, capabilities_reader, config_models,
+    def __init__(self, generator_config, themes_reader, config_models,
                  service_config, logger):
         """Constructor
 
         :param obj generator_config: ConfigGenerator config
-        :param CapabilitiesReader capabilities_reader: CapabilitiesReader
+        :param CapabilitiesReader themes_reader: ThemesReader
         :param ConfigModels config_models: Helper for ORM models
         :param obj service_config: Additional service config
         :param Logger logger: Logger
@@ -35,7 +35,7 @@ class FeatureInfoServiceConfig(ServiceConfig):
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
 
-        self.capabilities_reader = capabilities_reader
+        self.themes_reader = themes_reader
 
     def config(self):
         """Return service config."""
@@ -84,8 +84,8 @@ class FeatureInfoServiceConfig(ServiceConfig):
         """Collect WMS service resources from capabilities."""
         wms_services = []
 
-        for service_name in self.capabilities_reader.wms_service_names():
-            cap = self.capabilities_reader.wms_capabilities.get(service_name)
+        for service_name in self.themes_reader.wms_service_names():
+            cap = self.themes_reader.wms_capabilities(service_name)
 
             # NOTE: use ordered keys
             wms_service = OrderedDict()

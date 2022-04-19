@@ -9,12 +9,12 @@ class PrintServiceConfig(ServiceConfig):
     Generate Print service config.
     """
 
-    def __init__(self, capabilities_reader, service_config,
+    def __init__(self, themes_reader, service_config,
                  logger):
         """Constructor
 
         :param obj generator_config: ConfigGenerator config
-        :param CapabilitiesReader capabilities_reader: CapabilitiesReader
+        :param CapabilitiesReader themes_reader: ThemesReader
         :param obj service_config: Additional service config
         :param Logger logger: Logger
         """
@@ -25,7 +25,7 @@ class PrintServiceConfig(ServiceConfig):
             logger
         )
 
-        self.capabilities_reader = capabilities_reader
+        self.themes_reader = themes_reader
 
     def config(self):
         """Return service config."""
@@ -59,8 +59,8 @@ class PrintServiceConfig(ServiceConfig):
         """Collect print template resources from capabilities."""
         print_templates = []
 
-        for service_name in self.capabilities_reader.wms_service_names():
-            cap = self.capabilities_reader.wms_capabilities.get(service_name)
+        for service_name in self.themes_reader.wms_service_names():
+            cap = self.themes_reader.wms_capabilities(service_name)
 
             # collect print templates
             if 'print_templates' in cap:

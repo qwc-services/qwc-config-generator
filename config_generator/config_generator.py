@@ -12,7 +12,7 @@ from urllib.parse import urljoin, urlparse
 
 from qwc_services_core.config_models import ConfigModels
 from qwc_services_core.database import DatabaseEngine
-from .capabilities_reader import CapabilitiesReader
+from .theme_reader import ThemeReader
 from .data_service_config import DataServiceConfig
 from .ext_service_config import ExtServiceConfig
 from .feature_info_service_config import FeatureInfoServiceConfig
@@ -119,7 +119,7 @@ class ConfigGenerator():
     """ConfigGenerator class
 
     Generate JSON files for service configs and permissions
-    from a themesConfig.json, WMS GetCapabilities and QWC ConfigDB.
+    from a tenantConfig.json and QWC ConfigDB.
     """
 
     def __init__(self, config, logger):
@@ -183,11 +183,10 @@ class ConfigGenerator():
         # Search for QGS projects in scan dir and automatically generate theme items
         self.search_qgs_projects(generator_config, themes_config)
 
-        # load capabilites for all QWC2 theme items
-        self.capabilities_reader = CapabilitiesReader(
-            generator_config, themes_config, self.logger, self.default_qgis_server_url
+        # load metadata for all QWC2 theme items
+        self.theme_reader = ThemeReader(
+            generator_config, themes_config, self.logger
         )
-        self.capabilities_reader.load_all_project_settings()
 
         # lookup for additional service configs by name
         self.service_configs = {}
@@ -198,32 +197,32 @@ class ConfigGenerator():
         self.config_handler = {
             # services with resources
             'ogc': OGCServiceConfig(
-                generator_config, self.capabilities_reader, self.config_models,
+                generator_config, self.theme_reader, self.config_models,
                 self.service_config('ogc'), self.logger
             ),
             'mapViewer': MapViewerConfig(
                 self.temp_tenant_path,
-                generator_config, self.capabilities_reader, self.config_models,
+                generator_config, self.theme_reader, self.config_models,
                 self.service_config('mapViewer'), self.logger
             ),
             'featureInfo': FeatureInfoServiceConfig(
-                generator_config, self.capabilities_reader, self.config_models,
+                generator_config, self.theme_reader, self.config_models,
                 self.service_config('featureInfo'), self.logger
             ),
             'print': PrintServiceConfig(
-                self.capabilities_reader,
+                self.theme_reader,
                 self.service_config('print'), self.logger
             ),
             'search': SearchServiceConfig(
                 self.config_models, self.service_config('search'), self.logger
             ),
             'legend': LegendServiceConfig(
-                generator_config, self.capabilities_reader, self.config_models,
+                generator_config, self.theme_reader, self.config_models,
                 self.service_config('legend'), self.logger
             ),
             'data': DataServiceConfig(
-                self.service_config('data'), generator_config,
-                self.config_models, self.logger
+                generator_config, self.theme_reader, self.config_models,
+                self.service_config('data'), self.logger
             ),
             'ext': ExtServiceConfig(
                 self.config_models, self.service_config('ext'), self.logger
@@ -715,7 +714,7 @@ class ConfigGenerator():
 
     def maps(self):
         """Return list of map names from QWC2 theme items."""
-        return self.capabilities_reader.wms_service_names()
+        return self.theme_reader.wms_service_names()
 
     def map_details(self, map_name, with_attributes=False):
         """Return details for a map from capabilities
@@ -727,10 +726,11 @@ class ConfigGenerator():
         map_details['layers'] = []
 
         # find map in capabilities
-        cap = self.capabilities_reader.wms_capabilities.get(map_name)
-        if cap is None:
+        theme_metadata = self.theme_reader.theme_metadata.get(map_name)
+        if theme_metadata is None:
             map_details['error'] = "Map not found"
         else:
+            cap = theme_metadata['wms_capabilities']
             # collect list of layer names
             root_layer = cap.get('root_layer', {})
             if with_attributes is False:
