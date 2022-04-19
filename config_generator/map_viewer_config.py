@@ -410,7 +410,7 @@ class MapViewerConfig(ServiceConfig):
         externalLayers = cfg_item.get("externalLayers") if "externalLayers" in cfg_item else []
         for layer in root_layer.get('layers', []):
             layers.append(self.collect_layers(
-                layer, search_layers, 1, collapseLayerGroupsBelowLevel, externalLayers))
+                layer, search_layers, 1, collapseLayerGroupsBelowLevel, externalLayers, service_name))
         item['sublayers'] = layers
         item['expanded'] = True
         item['drawingOrder'] = cap.get('drawing_order', [])
@@ -613,7 +613,7 @@ class MapViewerConfig(ServiceConfig):
         if field in cfg_item:
             item[field] = cfg_item.get(field)
 
-    def collect_layers(self, layer, search_layers, level, collapseBelowLevel, externalLayers):
+    def collect_layers(self, layer, search_layers, level, collapseBelowLevel, externalLayers, service_name):
         """Recursively collect layer tree from capabilities.
 
         :param obj layer: Layer or group layer
@@ -632,7 +632,7 @@ class MapViewerConfig(ServiceConfig):
             for sublayer in layer['layers']:
                 # recursively collect sub layer
                 sublayers.append(self.collect_layers(
-                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers))
+                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers, service_name))
 
             # abstract
             if 'abstract' in layer:
@@ -676,6 +676,18 @@ class MapViewerConfig(ServiceConfig):
 
             if 'dimensions' in layer:
                 item_layer["dimensions"] = layer.get('dimensions')
+                # Fallback for pre qgis-3.26.0
+                meta = None
+                for dimension in item_layer["dimensions"]:
+                    if not dimension["fieldName"]:
+                        if not meta:
+                            meta = self.themes_reader.layer_metadata(service_name, layer['name'])
+                            if not meta or 'dimensions' not in meta:
+                                break
+                        dimmeta = meta['dimensions']
+                        if dimension['name'] in dimmeta:
+                            dimension["fieldName"] = dimmeta[dimension['name']]["fieldName"]
+                            dimension["endFieldName"] = dimmeta[dimension['name']]["endFieldName"]
 
             # abstract
             if 'abstract' in layer:

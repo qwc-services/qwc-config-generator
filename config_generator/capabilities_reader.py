@@ -243,7 +243,9 @@ class CapabilitiesReader():
                 'units': dim.get('units'),
                 'name': dim.get('name'),
                 'multiple': dim.get('multipleValues') == '1',
-                'value': dim.text
+                'value': dim.text,
+                'fieldName': dim.get('fieldName', None),
+                'endFieldName': dim.get('endFieldName', None)
             })
 
         # collect sub layers if group layer

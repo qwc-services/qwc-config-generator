@@ -280,9 +280,8 @@ class QGSReader:
         dimensions = {}
         for dimension in wmsDimensions:
             dimensions[dimension.get('name')] = {
-                'startfield': dimension.get('fieldName'),
-                'endfield': dimension.get('endFieldName'),
-                'units': dimension.get('units')
+                'fieldName': dimension.get('fieldName'),
+                'endFieldName': dimension.get('endFieldName')
             }
 
         return {
