@@ -31,6 +31,10 @@ class CapabilitiesReader():
         self.skip_print_layer_groups = generator_config.get(
             'skip_print_layer_groups', False)
 
+        self.project_settings_read_timeout = generator_config.get(
+            "project_settings_read_timeout", 60
+        )
+
 
     def read_service_capabilities(self, url, service_name, item):
         """Load and parse GetProjectSettings for a theme item.
@@ -59,7 +63,7 @@ class CapabilitiesReader():
                     'REQUEST': 'GetProjectSettings',
                     'CLEARCACHE': '1'
                 },
-                timeout=60
+                timeout=self.project_settings_read_timeout
             )
 
             if response.status_code != requests.codes.ok:

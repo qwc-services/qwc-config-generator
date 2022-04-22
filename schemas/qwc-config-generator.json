@@ -86,6 +86,10 @@
         "split_categorized_layers": {
           "description": "Set to true to activate the categorize groups funcitonality",
           "type": "boolean"
+        },
+        "project_settings_read_timeout": {
+          "description": "Timeout for GetProjectSettings request, default: 60sec",
+          "type": "number"
         }
       },
       "required": [
