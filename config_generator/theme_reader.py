@@ -70,7 +70,7 @@ class ThemeReader():
         capabilities = self.capabilities_reader.read_service_capabilities(url, service_name, item)
         if not capabilities:
             self.logger.warning(
-                "Could not get capabilities for %s" % (cfg_item['url'])
+                "Could not get capabilities for %s" % url
             )
 
         qgs_reader = QGSReader(self.logger, self.qgis_projects_base_dir, service_name)
