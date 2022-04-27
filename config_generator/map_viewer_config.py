@@ -274,6 +274,7 @@ class MapViewerConfig(ServiceConfig):
             })
 
         themes['pluginData'] = themes_config_themes.get('pluginData', {})
+        themes['snapping'] = themes_config_themes.get('snapping', {})
         themes['themeInfoLinks'] = themes_config_themes.get(
             'themeInfoLinks', []
         )
@@ -458,6 +459,7 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'mapTips', item)
         self.set_optional_config(cfg_item, 'userMap', item)
         self.set_optional_config(cfg_item, 'pluginData', item)
+        self.set_optional_config(cfg_item, 'snapping', item)
         self.set_optional_config(cfg_item, 'themeInfoLinks', item)
 
         # TODO: generate thumbnail
