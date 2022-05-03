@@ -19,11 +19,17 @@ class MapViewerConfig(ServiceConfig):
     EDIT_GEOM_TYPES = {
         None: None,
         'POINT': 'Point',
+        'POINTZ': 'PointZ',
         'MULTIPOINT': 'MultiPoint',
+        'MULTIPOINTZ': 'MultiPointZ',
         'LINESTRING': 'LineString',
+        'LINESTRINGZ': 'LineStringZ',
         'MULTILINESTRING': 'MultiLineString',
+        'MULTILINESTRINGZ': 'MultiLineStringZ',
         'POLYGON': 'Polygon',
-        'MULTIPOLYGON': 'MultiPolygon'
+        'POLYGONZ': 'PolygonZ',
+        'MULTIPOLYGON': 'MultiPolygon',
+        'MULTIPOLYGONZ': 'MultiPolygonZ'
     }
 
     # lookup for edit field types:
