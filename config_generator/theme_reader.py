@@ -75,6 +75,10 @@ class ThemeReader():
 
         qgs_reader = QGSReader(self.logger, self.qgis_projects_base_dir, service_name)
         success = qgs_reader.read()
+        if not success:
+            self.logger.warning(
+                    "Failed to read project file for %s." % service_name
+                )
 
         self.theme_metadata[service_name] = {
             'service_name': service_name,
@@ -89,6 +93,13 @@ class ThemeReader():
         return self.theme_metadata[service_name]['wms_capabilities']
 
     def pg_layers(self, service_name):
+        if not service_name in self.theme_metadata:
+            self.logger.warning(
+                    ("Requested metadata for service %s which does not exist, "
+                    "there might be map resource with an invalid name.") % service_name
+                )
+            return []
+
         if not self.theme_metadata[service_name]['project']:
             return []
 
