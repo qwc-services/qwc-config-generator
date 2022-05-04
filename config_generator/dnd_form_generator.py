@@ -158,7 +158,7 @@ class DnDFormGenerator:
             self.logger.warning("Warning: unhandled widget type %s" % editWidget.get("type"))
             return None
 
-    def __create_relation_widget(self, project, relation, showlabel):
+    def __create_relation_widget(self, project, relation, showlabel, label=""):
         if not relation:
             return None
 
@@ -179,7 +179,11 @@ class DnDFormGenerator:
         groupBox = ElementTree.Element("widget")
         groupBox.set("class", "QGroupBox")
         groupBox.set("name", "nrel__%s__%s" % (referencingLayerName, fkField))
-        self.__add_widget_property(groupBox, "title", relation, "name")
+        if showlabel:
+            if label:
+                self.__add_widget_property(groupBox, "title", None, None, label)
+            else:
+                self.__add_widget_property(groupBox, "title", relation, "name")
 
         layout = ElementTree.Element("layout")
         layout.set("class", "QGridLayout")
@@ -294,7 +298,7 @@ class DnDFormGenerator:
                 tabWidget = None
 
                 relation = project.find(".//relations/relation[@id='%s']" % child.get("relation"))
-                relationWidget = self.__create_relation_widget(project, relation, child.get("showLabel") == "1")
+                relationWidget = self.__create_relation_widget(project, relation, child.get("showLabel") == "1", child.get("label"))
                 if relationWidget is None:
                     continue
 
