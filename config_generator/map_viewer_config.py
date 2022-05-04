@@ -443,6 +443,7 @@ class MapViewerConfig(ServiceConfig):
 
         self.set_optional_config(cfg_item, 'printLabelConfig', item)
         self.set_optional_config(cfg_item, 'printLabelForSearchResult', item)
+        self.set_optional_config(cfg_item, 'printLabelForAttribution', item)
 
         self.set_optional_config(cfg_item, 'extraLegendParameters', item)
 
