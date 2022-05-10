@@ -357,7 +357,13 @@ class DataServiceConfig(ServiceConfig):
                 creatable |= layer_name in \
                     role_permissions['data_create'].get(map_name, {})
                 readable |= layer_name in \
-                    role_permissions['data_read'].get(map_name, {})
+                    role_permissions['data_read'].get(map_name, {}) \
+                    or layer_name in \
+                    role_permissions['data_create'].get(map_name, {}) \
+                    or layer_name in \
+                    role_permissions['data_update'].get(map_name, {}) \
+                    or layer_name in \
+                    role_permissions['data_delete'].get(map_name, {}) 
                 updatable |= layer_name in \
                     role_permissions['data_update'].get(map_name, {})
                 deletable |= layer_name in \
