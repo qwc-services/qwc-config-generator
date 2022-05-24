@@ -35,7 +35,6 @@ class QGSReader:
         self.qgs_path = os.path.join(qgs_resources_path, qgs_file)
         if not os.path.exists(self.qgs_path):
             self.logger.warn("Could not find QGS file '%s'" % self.qgs_path)
-            return False
 
         self.db_engine = DatabaseEngine()
 
