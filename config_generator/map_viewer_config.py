@@ -790,7 +790,7 @@ class MapViewerConfig(ServiceConfig):
             return edit_config
 
         # Collect ui forms
-        forms = self.themes_reader.collect_ui_forms(map_name, self.qwc_base_dir)
+        forms = self.themes_reader.collect_ui_forms(map_name, self.qwc_base_dir, edit_datasets)
 
         # collect edit datasets
         for layer_name in self.themes_reader.pg_layers(map_name):
