@@ -760,7 +760,6 @@ class MapViewerConfig(ServiceConfig):
         ]
         datasets_query = session.query(Permission) \
             .join(Permission.resource) \
-            .filter(Permission.write) \
             .filter(Resource.parent_id == map_obj.id) \
             .filter(Resource.type.in_(resource_types)) \
             .distinct(Resource.name, Resource.type) \
@@ -768,9 +767,10 @@ class MapViewerConfig(ServiceConfig):
 
         edit_datasets = {}
         for permission in datasets_query.all():
-            creatable = permission.resource.type in ['data', 'data_create']
-            updatable = permission.resource.type in ['data', 'data_update']
-            deletable = permission.resource.type in ['data', 'data_delete']
+            writeable = permission.write
+            creatable = writeable and permission.resource.type in ['data', 'data_create']
+            updatable = writeable and permission.resource.type in ['data', 'data_update']
+            deletable = writeable and permission.resource.type in ['data', 'data_delete']
 
             if permission.resource.name in edit_datasets :
                 creatable |= edit_datasets[permission.resource.name]['creatable']
