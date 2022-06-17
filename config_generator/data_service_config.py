@@ -108,6 +108,9 @@ class DataServiceConfig(ServiceConfig):
         :param Session session: DB session
         """
         datasets = []
+        keyvaltables = {}
+        added_datasets = set()
+        autogen_keyvaltable_datasets = self.generator_config.get('autogen_keyvaltable_datasets', False)
 
         for qgs_name, map_datasets in self.available_datasets(session).items():
             for layer_name in self.themes_reader.pg_layers(qgs_name):
@@ -116,6 +119,8 @@ class DataServiceConfig(ServiceConfig):
                     continue
 
                 meta = self.themes_reader.layer_metadata(qgs_name, layer_name)
+                if autogen_keyvaltable_datasets:
+                    keyvaltables.update(meta.get('keyvaltables', {}))
 
                 # NOTE: use ordered keys
                 dataset = OrderedDict()
@@ -150,6 +155,23 @@ class DataServiceConfig(ServiceConfig):
 
                     dataset['geometry'] = geometry
 
+                added_datasets.add(dataset['name'])
+                datasets.append(dataset)
+
+        for key, value in keyvaltables.items():
+            if not key in added_datasets:
+                dataset = OrderedDict()
+                dataset['name'] = key
+                dataset['db_url'] = value.get('database')
+                dataset['schema'] = value.get('schema')
+                dataset['table_name'] = value.get('table_name')
+                dataset['primary_key'] = value.get('primary_key')
+                dataset['fields'] = []
+                for key, attr_meta in value.get('fields').items():
+                    field = OrderedDict()
+                    field['name'] = key
+                    dataset['fields'].append(field)
+                    dataset['readonlypermitted'] = True
                 datasets.append(dataset)
 
         return datasets

@@ -119,7 +119,7 @@ class QGSReader:
 
                 datasource = maplayer.find('datasource').text
                 config['database'] = self.__db_connection(datasource)
-                config.update(self.__table_metadata(maplayer, datasource))
+                config.update(self.__table_metadata(datasource, maplayer))
                 config.update(self.__attributes_metadata(maplayer))
                 config.update(self.__dimension_metadata(maplayer))
 
@@ -182,7 +182,7 @@ class QGSReader:
 
         return connection_string
 
-    def __table_metadata(self, maplayer, datasource):
+    def __table_metadata(self, datasource, maplayer=None):
         """Parse QGIS datasource URI and return table metadata.
 
         :param str datasource: QGIS datasource URI
@@ -218,7 +218,7 @@ class QGSReader:
         m = re.search(r"srid=([\d.]+)", datasource)
         if m is not None:
             metadata['srid'] = int(m.group(1))
-        else:
+        elif maplayer:
             srid = maplayer.find('srs/spatialrefsys/srid')
             if srid is not None:
                 metadata['srid'] = int(srid.text)
@@ -247,6 +247,7 @@ class QGSReader:
             for alias in aliases.findall('alias'):
                 fieldnames.append(alias.get('field'))
 
+        keyvaltables = {}
         for field in fieldnames:
 
             attributes.append(field)
@@ -259,7 +260,7 @@ class QGSReader:
                 fields[field]['alias'] = alias.get('name')
 
             # get any constraints from edit widgets
-            constraints = self.__edit_widget_constraints(maplayer, field)
+            constraints = self.__edit_widget_constraints(maplayer, field, keyvaltables)
             if constraints:
                 fields[field]['constraints'] = constraints
 
@@ -271,7 +272,8 @@ class QGSReader:
 
         return {
             'attributes': attributes,
-            'fields': fields
+            'fields': fields,
+            'keyvaltables': keyvaltables
         }
 
     def __dimension_metadata(self, maplayer):
@@ -287,7 +289,7 @@ class QGSReader:
             'dimensions': dimensions
         }
 
-    def __edit_widget_constraints(self, maplayer, field):
+    def __edit_widget_constraints(self, maplayer, field, keyvaltables):
         """Get any constraints from edit widget config (QGIS 3.x).
 
         :param Element maplayer: QGS maplayer node
@@ -353,7 +355,17 @@ class QGSReader:
                         "config/Option/Option[@name='Value']").get('value')
             layerName = edit_widget.find(
                         "config/Option/Option[@name='LayerName']").get('value')
+            layerSource = edit_widget.find(
+                        "config/Option/Option[@name='LayerSource']").get('value')
             constraints['keyvalrel'] = self.map_prefix + "." + layerName + ":" + key + ":" + value
+
+            keyvaltables[self.map_prefix + "." + layerName] = self.__table_metadata(layerSource)
+            keyvaltables[self.map_prefix + "." + layerName]['database'] = self.__db_connection(layerSource)
+            keyvaltables[self.map_prefix + "." + layerName]['fields'] = {
+                key: {},
+                value: {}
+            }
+
 
         elif edit_widget.get('type') == 'TextEdit':
             multilineOpt = edit_widget.find(
