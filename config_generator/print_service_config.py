@@ -9,21 +9,16 @@ class PrintServiceConfig(ServiceConfig):
     Generate Print service config.
     """
 
-    def __init__(self, themes_reader, service_config,
-                 logger):
+    def __init__(self, themes_reader, schema_url, service_config, logger):
         """Constructor
 
         :param obj generator_config: ConfigGenerator config
         :param CapabilitiesReader themes_reader: ThemesReader
+        :param str schema_url: JSON schema URL for service config
         :param obj service_config: Additional service config
         :param Logger logger: Logger
         """
-        super().__init__(
-            'print',
-            'https://github.com/qwc-services/qwc-print-service/raw/master/schemas/qwc-print-service.json',
-            service_config,
-            logger
-        )
+        super().__init__('print', schema_url, service_config, logger)
 
         self.themes_reader = themes_reader
 

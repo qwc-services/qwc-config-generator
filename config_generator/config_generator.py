@@ -193,65 +193,92 @@ class ConfigGenerator():
         for service_config in self.config.get('services', []):
             self.service_configs[service_config['name']] = service_config
 
+        # load schema-versions.json
+        schema_versions = {}
+        schema_versions_path = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            '../schemas/schema-versions.json'
+        )
+        try:
+            with open(schema_versions_path) as f:
+                schema_versions = json.load(f)
+        except Exception as e:
+            msg = (
+                "Could not load JSON schema versions from %s:\n%s" %
+                (schema_versions_path, e)
+            )
+            self.logger.error(msg)
+            raise Exception(msg)
+
+        # lookup for JSON schema URLs by service name
+        self.schema_urls = {}
+        for schema in schema_versions.get('schemas', []):
+            self.schema_urls[schema.get('service')] = schema.get('schema_url', '')
+
+        # get path to downloaded JSON schema files
+        self.json_schemas_path = os.environ.get('JSON_SCHEMAS_PATH', '/tmp/')
+
         # create service config handlers
         self.config_handler = {
             # services with resources
             'ogc': OGCServiceConfig(
                 generator_config, self.theme_reader, self.config_models,
-                self.service_config('ogc'), self.logger
+                self.schema_urls.get('ogc'), self.service_config('ogc'),
+                self.logger
             ),
             'mapViewer': MapViewerConfig(
                 self.temp_tenant_path,
                 generator_config, self.theme_reader, self.config_models,
+                self.schema_urls.get('mapViewer'),
                 self.service_config('mapViewer'), self.logger
             ),
             'featureInfo': FeatureInfoServiceConfig(
                 generator_config, self.theme_reader, self.config_models,
+                self.schema_urls.get('featureInfo'),
                 self.service_config('featureInfo'), self.logger
             ),
             'print': PrintServiceConfig(
-                self.theme_reader,
+                self.theme_reader, self.schema_urls.get('print'),
                 self.service_config('print'), self.logger
             ),
             'search': SearchServiceConfig(
-                self.config_models, self.service_config('search'), self.logger
+                self.config_models, self.schema_urls.get('search'),
+                self.service_config('search'), self.logger
             ),
             'legend': LegendServiceConfig(
                 generator_config, self.theme_reader, self.config_models,
-                self.service_config('legend'), self.logger
+                self.schema_urls.get('legend'), self.service_config('legend'),
+                self.logger
             ),
             'data': DataServiceConfig(
                 generator_config, self.theme_reader, self.config_models,
-                self.service_config('data'), self.logger
+                self.schema_urls.get('data'), self.service_config('data'),
+                self.logger
             ),
             'ext': ExtServiceConfig(
-                self.config_models, self.service_config('ext'), self.logger
+                self.config_models, self.schema_urls.get('ext'),
+                self.service_config('ext'), self.logger
             ),
 
             # config-only services
             'adminGui': ServiceConfig(
-                'adminGui',
-                'https://github.com/qwc-services/qwc-admin-gui/raw/master/schemas/qwc-admin-gui.json',
+                'adminGui', self.schema_urls.get('adminGui'),
                 self.service_config('adminGui'), self.logger, 'admin-gui'
             ),
             'dbAuth': ServiceConfig(
-                'dbAuth',
-                'https://github.com/qwc-services/qwc-db-auth/raw/master/schemas/qwc-db-auth.json',
+                'dbAuth', self.schema_urls.get('dbAuth'),
                 self.service_config('dbAuth'), self.logger, 'db-auth'
             ),
             'elevation': ServiceConfig(
-                'elevation',
-                'https://github.com/qwc-services/qwc-elevation-service/raw/master/schemas/qwc-elevation-service.json',
+                'elevation', self.schema_urls.get('elevation'),
                 self.service_config('elevation'), self.logger
             ),
             'mapinfo': ServiceConfig(
-                'mapinfo',
-                'https://github.com/qwc-services/qwc-mapinfo-service/raw/master/schemas/qwc-mapinfo-service.json',
+                'mapinfo', self.schema_urls.get('mapinfo'),
                 self.service_config('mapinfo'), self.logger
             ),
             'permalink': ServiceConfig(
-                'permalink',
-                'https://github.com/qwc-services/qwc-permalink-service/raw/master/schemas/qwc-permalink-service.json',
+                'permalink', self.schema_urls.get('permalink'),
                 self.service_config('permalink'), self.logger
             )
         }
@@ -344,7 +371,10 @@ class ConfigGenerator():
 
         Return True if the service permissions could be generated.
         """
-        permissions_config = PermissionsConfig(self.config_models, self.logger)
+        permissions_config = PermissionsConfig(
+            self.config_models, self.schema_urls.get('permissions'),
+            self.logger
+        )
         permissions_query = PermissionsQuery(self.config_models, self.logger)
         permissions = permissions_config.base_config()
 
@@ -445,29 +475,44 @@ class ConfigGenerator():
             self.logger.debug("Skipping schema validation")
             return True
 
-        # download JSON schema
+        # load local JSON schema file
+        schema = None
         try:
-            response = requests.get(schema_url)
+            # parse schema URL
+            file_name = os.path.basename(urlparse(schema_url).path)
+            file_path = os.path.join(self.json_schemas_path, file_name)
+            with open(file_path) as f:
+                schema = json.load(f)
         except Exception as e:
-            self.logger.error(
-                "Could not download JSON schema from %s:\n%s" %
-                (schema_url, str(e))
+            self.logger.warning(
+                "Could not load JSON schema from %s:\n%s" % (file_path, e)
             )
-            return False
 
-        if response.status_code != requests.codes.ok:
-            self.logger.error(
-                "Could not download JSON schema from %s:\n%s" %
-                (schema_url, response.text)
-            )
-            return False
+        if not schema:
+            # download JSON schema
+            self.logger.info("Downloading JSON schema from %s" % schema_url)
+            try:
+                response = requests.get(schema_url)
+            except Exception as e:
+                self.logger.error(
+                    "Could not download JSON schema from %s:\n%s" %
+                    (schema_url, str(e))
+                )
+                return False
 
-        # parse JSON
-        try:
-            schema = json.loads(response.text)
-        except Exception as e:
-            self.logger.error("Could not parse JSON schema:\n%s" % e)
-            return False
+            if response.status_code != requests.codes.ok:
+                self.logger.error(
+                    "Could not download JSON schema from %s:\n%s" %
+                    (schema_url, response.text)
+                )
+                return False
+
+            # parse JSON
+            try:
+                schema = json.loads(response.text)
+            except Exception as e:
+                self.logger.error("Could not parse JSON schema:\n%s" % e)
+                return False
 
         # FIXME: remove external schema refs from MapViewer schema for now
         #        until QWC2 JSON schemas are available

@@ -11,19 +11,15 @@ class SearchServiceConfig(ServiceConfig):
     Generate Search service config and permissions.
     """
 
-    def __init__(self, config_models, service_config, logger):
+    def __init__(self, config_models, schema_url, service_config, logger):
         """Constructor
 
         :param ConfigModels config_models: Helper for ORM models
+        :param str schema_url: JSON schema URL for service config
         :param obj service_config: Additional service config
         :param Logger logger: Logger
         """
-        super().__init__(
-            'search',
-            'https://github.com/qwc-services/qwc-fulltext-search-service/raw/master/schemas/qwc-search-service.json',
-            service_config,
-            logger
-        )
+        super().__init__('search', schema_url, service_config, logger)
 
         self.config_models = config_models
         self.permissions_query = PermissionsQuery(config_models, logger)

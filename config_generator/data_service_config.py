@@ -13,21 +13,17 @@ class DataServiceConfig(ServiceConfig):
     """
 
     def __init__(self, generator_config, themes_reader,
-                 config_models, service_config, logger):
+                 config_models, schema_url, service_config, logger):
         """Constructor
 
         :param obj generator_config: ConfigGenerator config
         :param CapabilitiesReader themes_reader: ThemesReader
         :param ConfigModels config_models: Helper for ORM models
+        :param str schema_url: JSON schema URL for service config
         :param obj service_config: Additional service config
         :param Logger logger: Logger
         """
-        super().__init__(
-            'data',
-            'https://github.com/qwc-services/qwc-data-service/raw/master/schemas/qwc-data-service.json',
-            service_config,
-            logger
-        )
+        super().__init__('data', schema_url, service_config, logger)
 
         self.config_models = config_models
         self.permissions_query = PermissionsQuery(config_models, logger)

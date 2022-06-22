@@ -21,6 +21,11 @@ class ServiceConfig():
         self.service_name = service_name
         self.service_name_in_config = service_name_in_config
         self.schema = schema_url
+        if not self.schema:
+            logger.error(
+                "Schema URL for service '%s' may not be blank" % service_name
+            )
+            self.schema = ""
         self.service_config = service_config
         self.logger = logger
 

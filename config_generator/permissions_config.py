@@ -7,16 +7,17 @@ class PermissionsConfig():
     Collect and generate QWC service permissions.
     """
 
-    def __init__(self, config_models, logger):
+    def __init__(self, config_models, schema_url, logger):
         """Constructor
 
         :param ConfigModels config_models: Helper for ORM models
+        :param str schema_url: JSON schema URL for service config
         :param Logger logger: Logger
         """
         self.config_models = config_models
         self.logger = logger
 
-        self.schema = 'https://github.com/qwc-services/qwc-services-core/raw/master/schemas/qwc-services-permissions.json'
+        self.schema = schema_url
 
     def base_config(self):
         """Return basic config with user, groups and roles."""
@@ -25,6 +26,7 @@ class PermissionsConfig():
 
         session = self.config_models.session()
 
+        permissions['$schema'] = self.schema
         permissions['users'] = self.users(session)
         permissions['groups'] = self.groups(session)
         permissions['roles'] = self.roles(session)

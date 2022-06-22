@@ -53,22 +53,18 @@ class MapViewerConfig(ServiceConfig):
     }
 
     def __init__(self, tenant_path, generator_config, themes_reader,
-                 config_models, service_config, logger):
+                 config_models, schema_url, service_config, logger):
         """Constructor
 
         :param str tenant_path: Path to config files of tenant
         :param obj generator_config: ConfigGenerator config
         :param CapabilitiesReader themes_reader: ThemesReader
         :param ConfigModels config_models: Helper for ORM models
+        :param str schema_url: JSON schema URL for service config
         :param obj service_config: Additional service config
         :param Logger logger: Logger
         """
-        super().__init__(
-            'mapViewer',
-            'https://github.com/qwc-services/qwc-map-viewer/raw/master/schemas/qwc-map-viewer.json',
-            service_config,
-            logger
-        )
+        super().__init__('mapViewer', schema_url, service_config, logger)
 
         self.tenant_path = tenant_path
         self.themes_reader = themes_reader

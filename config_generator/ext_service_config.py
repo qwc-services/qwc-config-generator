@@ -13,19 +13,15 @@ class ExtServiceConfig(ServiceConfig):
     Generate external link service config and permissions.
     """
 
-    def __init__(self, config_models, service_config, logger):
+    def __init__(self, config_models, schema_url, service_config, logger):
         """Constructor
 
         :param ConfigModels config_models: Helper for ORM models
+        :param str schema_url: JSON schema URL for service config
         :param obj service_config: Additional service config
         :param Logger logger: Logger
         """
-        super().__init__(
-            'ext',
-            'https://github.com/qwc-services/qwc-ext-service/raw/master/schemas/qwc-ext-service.json',
-            service_config,
-            logger
-        )
+        super().__init__('ext', schema_url, service_config, logger)
 
         self.config_models = config_models
         self.permissions_query = PermissionsQuery(config_models, logger)
