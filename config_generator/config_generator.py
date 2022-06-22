@@ -514,30 +514,6 @@ class ConfigGenerator():
                 self.logger.error("Could not parse JSON schema:\n%s" % e)
                 return False
 
-        # FIXME: remove external schema refs from MapViewer schema for now
-        #        until QWC2 JSON schemas are available
-        if config.get('service') == 'map-viewer':
-            self.logger.info(
-                "Skipping JSON schema check for MapViewer"
-            )
-            resources = schema['properties']['resources']['properties']
-            # QWC2 application configuration as simple dict
-            resources['qwc2_config']['properties']['config'] = {
-                'type': 'object'
-            }
-            # QWC2 themes configuration as simple dict with 'themes'
-            resources['qwc2_themes'] = {
-                'type': 'object',
-                'properties': {
-                    'themes': {
-                        'type': 'object'
-                    }
-                },
-                'required': [
-                    'themes'
-                ]
-            }
-
         # validate against schema
         valid = True
         validator = jsonschema.validators.validator_for(schema)(schema)
