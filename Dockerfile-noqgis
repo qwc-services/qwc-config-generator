@@ -9,3 +9,7 @@ RUN \
     apk add --no-cache --virtual build-deps --update git postgresql-dev g++ python3-dev && \
     pip3 install --no-cache-dir -r /srv/qwc_service/requirements.txt && \
     apk del build-deps
+
+# download JSON schemas for QWC services
+ENV JSON_SCHEMAS_PATH=/srv/qwc_service/schemas/
+RUN python3 /srv/qwc_service/download_json_schemas.py

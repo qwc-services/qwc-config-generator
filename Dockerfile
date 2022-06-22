@@ -15,3 +15,7 @@ RUN \
 
 # This is needed because the qgis.core library is not capable of running in multiple threads
 ENV UWSGI_THREADS=1
+
+# download JSON schemas for QWC services
+ENV JSON_SCHEMAS_PATH=/srv/qwc_service/schemas/
+RUN python3 /srv/qwc_service/download_json_schemas.py
