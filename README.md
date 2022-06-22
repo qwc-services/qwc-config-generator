@@ -29,7 +29,8 @@ Example `tenantConfig.json`:
     "qgis_projects_scan_base_dir": "/data/scan",
     "qgis_projects_gen_base_dir": "/data/gen",
     "permissions_default_allow": true,
-    "validate_schema": true
+    "validate_schema": true,
+    "autogen_keyvaltable_datasets": false
   },
   "themesConfig": {
       "defaultScales": [100000000, 50000000, 25000000, 10000000, 4000000, 2000000, 1000000, 400000, 200000, 80000, 40000, 20000, 10000, 8000, 6000, 4000, 2000, 1000, 500, 250, 100],
