@@ -191,16 +191,13 @@ class QGSReader:
         metadata = OrderedDict()
 
         # parse schema, table and geometry column
-        m = re.search(r'table="(.+?)" \((\w+)\)', datasource)
+        m = re.search(r'table="([^"]+)"\."([^"]+)" \((\w+)\)', datasource)
         if m is not None:
-            table = m.group(1)
-            parts = table.split('"."')
-            metadata['schema'] = parts[0]
-            metadata['table_name'] = parts[1]
-
-            metadata['geometry_column'] = m.group(2)
+            metadata['schema'] = m.group(1)
+            metadata['table_name'] = m.group(2)
+            metadata['geometry_column'] = m.group(3)
         else:
-            m = re.search(r'table="(.+?)"."(.+?)"', datasource)
+            m = re.search(r'table="([^"]+)"\."([^"]+)"', datasource)
             if m is not None:
                 metadata['schema'] = m.group(1)
                 metadata['table_name'] = m.group(2)
@@ -427,6 +424,10 @@ class QGSReader:
             connection_string = meta.get('database')
             schema = meta.get('schema')
             table_name = meta.get('table_name')
+
+            if not schema or not table_name:
+                self.logger.warn("Skipping attribute lookup for dataset with unknown table and/or schema name")
+                return
 
             # connect to GeoDB
             geo_db = self.db_engine.db_engine(connection_string)
