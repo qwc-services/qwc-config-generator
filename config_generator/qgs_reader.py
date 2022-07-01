@@ -270,10 +270,18 @@ class QGSReader:
             if expressionfields_field is not None:
                 fields[field]['expression'] = expressionfields_field.get('expression').lstrip("'").rstrip("'")
 
+        displayField = None
+        previewExpression = maplayer.find('previewExpression')
+        if previewExpression is not None:
+            m = re.match(r'^"([^"]+)"$', previewExpression.text)
+            if m:
+                displayField = m.group(1)
+
         return {
             'attributes': attributes,
             'fields': fields,
-            'keyvaltables': keyvaltables
+            'keyvaltables': keyvaltables,
+            'displayField': displayField
         }
 
     def __dimension_metadata(self, maplayer):

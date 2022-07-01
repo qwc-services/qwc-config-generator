@@ -821,6 +821,7 @@ class MapViewerConfig(ServiceConfig):
             # NOTE: use ordered keys
             dataset = OrderedDict()
             dataset['layerName'] = layer_name
+            dataset['displayField'] = meta['displayField']
             dataset['editDataset'] = dataset_name
             dataset['geomType'] = self.EDIT_GEOM_TYPES.get(
                 meta['geometry_type']
