@@ -857,6 +857,9 @@ class MapViewerConfig(ServiceConfig):
                     if 'values' in field['constraints']:
                         edit_field['type'] = 'list'
 
+                    if 'fileextensions' in field['constraints']:
+                        edit_field['type'] = 'file'
+
                 fields.append(edit_field)
 
             dataset['fields'] = fields
