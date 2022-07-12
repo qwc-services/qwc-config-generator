@@ -269,7 +269,7 @@ class QGSReader:
 
         displayField = None
         previewExpression = maplayer.find('previewExpression')
-        if previewExpression is not None:
+        if previewExpression is not None and previewExpression.text is not None:
             m = re.match(r'^"([^"]+)"$', previewExpression.text)
             if m:
                 displayField = m.group(1)
