@@ -334,11 +334,11 @@ class QGSReader:
             step_option = edit_widget.find(
                         "config/Option/Option[@name='Step']")
             constraints['min'] = self.__parse_number(
-                min_option.get('value')) if min_option else -2147483648
+                min_option.get('value')) if min_option is not None else -2147483648
             constraints['max'] = self.__parse_number(
-                max_option.get('value')) if max_option else 2147483647
+                max_option.get('value')) if max_option is not None else 2147483647
             constraints['step'] = self.__parse_number(
-                step_option.get('value')) if step_option else 1
+                step_option.get('value')) if step_option is not None else 1
         elif edit_widget.get('type') == 'ValueMap':
             values = []
             for option_map in edit_widget.findall(
