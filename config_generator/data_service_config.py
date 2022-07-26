@@ -109,10 +109,12 @@ class DataServiceConfig(ServiceConfig):
         autogen_keyvaltable_datasets = self.generator_config.get('autogen_keyvaltable_datasets', False)
 
         for qgs_name, map_datasets in self.available_datasets(session).items():
+            map_datasets = list(map_datasets)
             for layer_name in self.themes_reader.pg_layers(qgs_name):
                 if layer_name not in map_datasets:
                     # skip layers not in datasets
                     continue
+                map_datasets.remove(layer_name)
 
                 meta = self.themes_reader.layer_metadata(qgs_name, layer_name)
                 if autogen_keyvaltable_datasets:
@@ -153,6 +155,9 @@ class DataServiceConfig(ServiceConfig):
 
                 added_datasets.add(dataset['name'])
                 datasets.append(dataset)
+
+            if map_datasets:
+                self.logger.warn("The following data resources did not match any layer in the QGS project %s: %s" % (qgs_name, ",".join(map_datasets)))
 
         for key, value in keyvaltables.items():
             if not key in added_datasets:
