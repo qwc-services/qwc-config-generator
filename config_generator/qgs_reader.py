@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import math
 import os
 import re
 from xml.etree import ElementTree
@@ -333,12 +334,17 @@ class QGSReader:
                         "config/Option/Option[@name='Max']")
             step_option = edit_widget.find(
                         "config/Option/Option[@name='Step']")
+            prec_option = edit_widget.find(
+                        "config/Option/Option[@name='Precision']")
             constraints['min'] = self.__parse_number(
                 min_option.get('value')) if min_option is not None else -2147483648
             constraints['max'] = self.__parse_number(
                 max_option.get('value')) if max_option is not None else 2147483647
             constraints['step'] = self.__parse_number(
                 step_option.get('value')) if step_option is not None else 1
+            constraints['prec'] = self.__parse_number(
+                prec_option.get('value')) if step_option is not None else math.ceil(abs(math.log10(constraints['step'])))
+
         elif edit_widget.get('type') == 'ValueMap':
             values = []
             for option_map in edit_widget.findall(
