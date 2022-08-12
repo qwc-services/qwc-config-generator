@@ -168,11 +168,19 @@ class DataServiceConfig(ServiceConfig):
                 dataset['table_name'] = value.get('table_name')
                 dataset['primary_key'] = value.get('primary_key')
                 dataset['fields'] = []
-                for key, attr_meta in value.get('fields').items():
+
+                meta = self.themes_reader.layer_metadata(qgs_name, value.get('layername'))
+                for key, attr_meta in meta.get('fields', {}).items():
+                    if attr_meta.get('expression'):
+                        # Skip expression field
+                        continue
+                    # NOTE: use ordered keys
                     field = OrderedDict()
                     field['name'] = key
+                    field['data_type'] = attr_meta.get('data_type')
                     dataset['fields'].append(field)
-                    dataset['readonlypermitted'] = True
+
+                dataset['readonlypermitted'] = True
                 datasets.append(dataset)
 
         return datasets
