@@ -6,6 +6,7 @@ from xml.etree import ElementTree
 import psycopg2
 import shutil
 import time
+from urllib.parse import quote as urlquote
 
 from sqlalchemy.sql import text as sql_text
 
@@ -177,7 +178,9 @@ class QGSReader:
             # postgresql://user:password@host:port/dbname
             connection_string = 'postgresql://'
             if user and password:
-                connection_string += "%s:%s@" % (user, password)
+                connection_string += "%s:%s@" % (
+                    urlquote(user), urlquote(password)
+                )
 
             connection_string += "%s:%s/%s" % (host, port, dbname)
 
