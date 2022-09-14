@@ -118,7 +118,8 @@ class ThemeReader():
         return self.theme_metadata[service_name]['layer_metadata'][layername]
 
     def collect_ui_forms(self, service_name, qwc_base_dir, edit_datasets):
-        return self.theme_metadata[service_name]['project'].collect_ui_forms(qwc_base_dir, edit_datasets)
+        metadata = self.theme_metadata[service_name]['layer_metadata']
+        return self.theme_metadata[service_name]['project'].collect_ui_forms(qwc_base_dir, edit_datasets, metadata)
 
     def service_name(self, url):
         """Return service name as relative path to default QGIS server URL

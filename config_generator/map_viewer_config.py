@@ -785,9 +785,6 @@ class MapViewerConfig(ServiceConfig):
             # no edit datasets for this map
             return edit_config
 
-        # Collect ui forms
-        forms = self.themes_reader.collect_ui_forms(map_name, self.qwc_base_dir, edit_datasets)
-
         # collect edit datasets
         for layer_name in self.themes_reader.pg_layers(map_name):
             if layer_name not in edit_datasets:
@@ -818,6 +815,9 @@ class MapViewerConfig(ServiceConfig):
                 )
                 continue
 
+            # Collect ui forms
+            forms = self.themes_reader.collect_ui_forms(map_name, self.qwc_base_dir, edit_datasets)
+            
             # NOTE: use ordered keys
             dataset = OrderedDict()
             dataset['layerName'] = layer_name
