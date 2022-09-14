@@ -1,11 +1,69 @@
 import os
 import time
+import re
 from xml.etree import ElementTree
+
+from sqlalchemy.sql import text as sql_text
+from qwc_services_core.database import DatabaseEngine
 
 class DnDFormGenerator:
     def __init__(self, logger, qwc_base_dir):
         self.logger = logger
         self.qwc_base_dir = qwc_base_dir
+        self.db_engine = DatabaseEngine()
+
+    def __db_connection(self, datasource):
+        """Parse QGIS datasource URI and return SQLALchemy DB connection
+        string for a PostgreSQL database or connection service.
+
+        :param str datasource: QGIS datasource URI
+        """
+        connection_string = None
+
+        if 'service=' in datasource:
+            # PostgreSQL connection service
+            m = re.search(r"service='([\w ]+)'", datasource)
+            if m is not None:
+                connection_string = 'postgresql:///?service=%s' % m.group(1)
+
+        elif 'dbname=' in datasource:
+            # PostgreSQL database
+            dbname, host, port, user, password = '', '', '', '', ''
+
+            m = re.search(r"dbname='(.+?)' \w+=", datasource)
+            if m is not None:
+                dbname = m.group(1)
+
+            m = re.search(r"host=(\S+)", datasource)
+            if m is not None:
+                host = m.group(1)
+
+            m = re.search(r"port=(\d+)", datasource)
+            if m is not None:
+                port = m.group(1)
+
+            m = re.search(r"user='(.+?)' \w+=", datasource)
+            if m is not None:
+                user = m.group(1)
+                # unescape \' and \\'
+                user = re.sub(r"\\'", "'", user)
+                user = re.sub(r"\\\\", r"\\", user)
+
+            m = re.search(r"password='(.+?)' \w+=", datasource)
+            if m is not None:
+                password = m.group(1)
+                # unescape \' and \\'
+                password = re.sub(r"\\'", "'", password)
+                password = re.sub(r"\\\\", r"\\", password)
+
+            # postgresql://user:password@host:port/dbname
+            connection_string = 'postgresql://'
+            if user and password:
+                connection_string += "%s:%s@" % (user, password)
+
+            connection_string += "%s:%s/%s" % (host, port, dbname)
+
+        return connection_string
 
     def generate_form(self, maplayer, projectname, layername, project):
         widget = self.__generate_form_widget(maplayer, project)
@@ -80,6 +138,13 @@ class DnDFormGenerator:
         editable = editableField is None or editableField.get("editable") == "1"
         constraintField = maplayer.find("constraints/constraint[@field='%s']" % field)
         required = constraintField is not None and constraintField.get("notnull_strength") == "1"
+        datasource = maplayer.find('datasource').text
+        m = re.search(r'table="([^"]+)"\."([^"]+)" \((\w+)\)', datasource)
+        schema = m.group(1)
+        table = m.group(2)
+        connection_string = self.__db_connection(maplayer.find('datasource').text)
+        geo_db = self.db_engine.db_engine(connection_string)
+        conn = geo_db.connect()
 
         widget = ElementTree.Element("widget")
         widget.set("name", prefix + field)
@@ -142,6 +207,34 @@ class DnDFormGenerator:
                         self.__add_widget_property(item, "value", child, "value")
                         self.__add_widget_property(item, "text", child, "name")
                         widget.append(item)
+            return widget
+        elif editWidget.get("type") == "Enumeration":
+            values = {}
+            sql =  sql_text(("""
+            SELECT udt_schema::text ||'.'|| udt_name::text as defined_type
+            FROM information_schema.columns
+            WHERE table_schema = '{schema}' AND column_name = '{column}' and table_name = '{table}'
+            GROUP BY defined_type
+            LIMIT 1;
+        """).format(schema = schema, table = table, column = field))
+            result = conn.execute(sql)
+            for row in result:
+                defined_type = row['defined_type']
+            try : 
+                widget.set("class", "QComboBox")
+                sql = sql_text("SELECT unnest(enum_range(NULL:: %s))::text as values ;" % defined_type)
+                result = conn.execute(sql)
+                for row in result : 
+                    values['value']= row['values']
+                    values['name']=  row['values']
+                    item = ElementTree.Element("item")
+                    self.__add_widget_property(item, "value", values, "value")
+                    self.__add_widget_property(item, "text", values, "name")
+                    widget.append(item)
+            except Exception: 
+                widget.set("class", "QLineEdit")
+                self.logger.warning("Failed to add Enumeration widget in %s for %s" % (table, field))
+                pass
             return widget
         elif editWidget.get("type") == "ValueRelation":
             widget.set("class", "QComboBox")
