@@ -1,6 +1,5 @@
 import os
 import time
-import re
 from xml.etree import ElementTree
 
 from sqlalchemy.sql import text as sql_text
