@@ -814,9 +814,6 @@ class MapViewerConfig(ServiceConfig):
                     (meta.get('geometry_type', None), dataset_name, table)
                 )
                 continue
-
-            # Collect ui forms
-            forms = self.themes_reader.collect_ui_forms(map_name, self.qwc_base_dir, edit_datasets)
             
             # NOTE: use ordered keys
             dataset = OrderedDict()
@@ -827,6 +824,8 @@ class MapViewerConfig(ServiceConfig):
                 meta['geometry_type']
             )
             dataset['permissions'] = edit_datasets[layer_name]
+            
+            forms = self.themes_reader.collect_ui_forms(map_name, self.qwc_base_dir, dataset['layerName'])
 
             if layer_name in forms:
                 dataset['form'] = forms[layer_name]

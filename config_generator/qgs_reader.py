@@ -551,7 +551,8 @@ class QGSReader:
 
         :param str qwc_base_dir: The qwc base dir
         """
-
+        
+        gen = DnDFormGenerator(self.logger, qwc_base_dir, metadata[edit_datasets])
         projectname = os.path.splitext(os.path.basename(self.qgs_path))[0]
         result = {}
         for maplayer in self.root.findall('.//maplayer'):
@@ -571,8 +572,6 @@ class QGSReader:
             if editorlayout is None:
                 continue
 
-            metadata = metadata[layername]
-            gen = DnDFormGenerator(self.logger, qwc_base_dir, metadata)
 
             uipath = None
             if editorlayout.text == "uifilelayout":
