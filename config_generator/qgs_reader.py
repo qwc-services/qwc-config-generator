@@ -563,7 +563,7 @@ class QGSReader:
             else:
                 layername = maplayer.find('layername').text
 
-            if layername not in edit_dataset:
+            if layername != edit_dataset:
                 # skip layers not in datasets
                 continue
 
