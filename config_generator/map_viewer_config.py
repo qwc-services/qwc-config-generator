@@ -850,6 +850,9 @@ class MapViewerConfig(ServiceConfig):
                 edit_field['name'] = alias
                 edit_field['type'] = data_type
 
+                if 'defaultValue' in field:
+                    edit_field['defaultValue'] = field['defaultValue']
+
                 if 'constraints' in field:
                     # add any constraints
                     edit_field['constraints'] = field['constraints']

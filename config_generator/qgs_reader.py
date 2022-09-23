@@ -262,6 +262,13 @@ class QGSReader:
             if alias is not None and alias.get('name'):
                 fields[field]['alias'] = alias.get('name')
 
+            # get default value
+            default = maplayer.find("defaults/default[@field='%s']" % field)
+            if default is not None and default.get('expression'):
+                m = re.match(r"^'([^']+)'$", default.get('expression'))
+                if m:
+                    fields[field]['defaultValue'] = m.group(1)
+
             # get any constraints from edit widgets
             constraints = self.__edit_widget_constraints(maplayer, field, keyvaltables)
             if constraints:
