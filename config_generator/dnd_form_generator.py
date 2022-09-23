@@ -2,11 +2,16 @@ import os
 import time
 from xml.etree import ElementTree
 
+from sqlalchemy.sql import text as sql_text
+from qwc_services_core.database import DatabaseEngine
+
 class DnDFormGenerator:
-    def __init__(self, logger, qwc_base_dir):
+    def __init__(self, logger, qwc_base_dir, metadata):
         self.logger = logger
         self.qwc_base_dir = qwc_base_dir
-
+        self.db_engine = DatabaseEngine()
+        self.metadata = metadata
+        
     def generate_form(self, maplayer, projectname, layername, project):
         widget = self.__generate_form_widget(maplayer, project)
         if not widget:
@@ -80,6 +85,7 @@ class DnDFormGenerator:
         editable = editableField is None or editableField.get("editable") == "1"
         constraintField = maplayer.find("constraints/constraint[@field='%s']" % field)
         required = constraintField is not None and constraintField.get("notnull_strength") == "1"
+        conn = self.db_engine.db_engine(self.metadata['database']).connect()
 
         widget = ElementTree.Element("widget")
         widget.set("name", prefix + field)
@@ -142,6 +148,34 @@ class DnDFormGenerator:
                         self.__add_widget_property(item, "value", child, "value")
                         self.__add_widget_property(item, "text", child, "name")
                         widget.append(item)
+            return widget
+        elif editWidget.get("type") == "Enumeration":
+            values = {}
+            sql =  sql_text(("""
+            SELECT udt_schema::text ||'.'|| udt_name::text as defined_type
+            FROM information_schema.columns
+            WHERE table_schema = '{schema}' AND column_name = '{column}' and table_name = '{table}'
+            GROUP BY defined_type
+            LIMIT 1;
+        """).format(schema = self.metadata['schema'], table = self.metadata['table_name'], column = field))
+            result = conn.execute(sql)
+            for row in result:
+                defined_type = row['defined_type']
+            try : 
+                widget.set("class", "QComboBox")
+                sql = sql_text("SELECT unnest(enum_range(NULL:: %s))::text as values ;" % defined_type)
+                result = conn.execute(sql)
+                for row in result : 
+                    values['value'] = row['values']
+                    values['name'] = row['values']
+                    item = ElementTree.Element("item")
+                    self.__add_widget_property(item, "value", values, "value")
+                    self.__add_widget_property(item, "text", values, "name")
+                    widget.append(item)
+            except Exception: 
+                widget.set("class", "QLineEdit")
+                self.logger.warning("Failed to add Enumeration widget in %s for %s" % (self.metadata['table_name'], field))
+                pass
             return widget
         elif editWidget.get("type") == "ValueRelation":
             widget.set("class", "QComboBox")

@@ -546,12 +546,12 @@ class QGSReader:
                 conn.close()
             raise
 
-    def collect_ui_forms(self, qwc_base_dir, edit_datasets):
+    def collect_ui_forms(self, qwc_base_dir, edit_dataset, metadata):
         """ Collect UI form files from project
 
         :param str qwc_base_dir: The qwc base dir
         """
-        gen = DnDFormGenerator(self.logger, qwc_base_dir)
+        gen = DnDFormGenerator(self.logger, qwc_base_dir, metadata)
         projectname = os.path.splitext(os.path.basename(self.qgs_path))[0]
         result = {}
         for maplayer in self.root.findall('.//maplayer'):
@@ -563,13 +563,14 @@ class QGSReader:
             else:
                 layername = maplayer.find('layername').text
 
-            if layername not in edit_datasets:
+            if layername != edit_dataset:
                 # skip layers not in datasets
                 continue
 
             editorlayout = maplayer.find('editorlayout')
             if editorlayout is None:
                 continue
+
 
             uipath = None
             if editorlayout.text == "uifilelayout":

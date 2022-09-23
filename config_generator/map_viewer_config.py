@@ -785,9 +785,6 @@ class MapViewerConfig(ServiceConfig):
             # no edit datasets for this map
             return edit_config
 
-        # Collect ui forms
-        forms = self.themes_reader.collect_ui_forms(map_name, self.qwc_base_dir, edit_datasets)
-
         # collect edit datasets
         for layer_name in self.themes_reader.pg_layers(map_name):
             if layer_name not in edit_datasets:
@@ -827,6 +824,8 @@ class MapViewerConfig(ServiceConfig):
                 meta['geometry_type']
             )
             dataset['permissions'] = edit_datasets[layer_name]
+            
+            forms = self.themes_reader.collect_ui_forms(map_name, self.qwc_base_dir, layer_name)
 
             if layer_name in forms:
                 dataset['form'] = forms[layer_name]
