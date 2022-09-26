@@ -177,7 +177,7 @@ For a full example see [tenantConfig-example.json](tenantConfig-example.json) ([
 *NOTE:* QWC2 themes are defined under `themesConfig` in the ConfigGenerator configuration and not in a separate file.
 
 QGIS projects can be automatically detected when `qgis_projects_scan_base_dir` is defined.
-In order to have projects automatically addred, the following settings need to be defined in `themesConfig`.
+In order to have projects automatically added, the following settings need to be defined in `themesConfig`.
 
 - `defaultBackgroundLayers`
 - `defaultSearchProviders`
