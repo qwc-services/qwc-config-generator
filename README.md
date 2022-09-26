@@ -4,7 +4,7 @@
 QWC Config Generator
 ====================
 
-Generate JSON files for service configs and permissions from WMS GetCapabilities, QGS projects and QWC ConfigDB.
+Generates JSON files for service configs and permissions from WMS GetCapabilities, QGS projects and QWC ConfigDB.
 
 
 Setup
