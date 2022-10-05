@@ -402,6 +402,8 @@ class QGSReader:
         elif edit_widget.get('type') == 'Hidden':
             constraints['hidden'] = True
             constraints['readOnly'] = True
+        elif edit_widget.get('type') == 'CheckBox':
+            constraints['required'] = False
 
         return constraints
 
