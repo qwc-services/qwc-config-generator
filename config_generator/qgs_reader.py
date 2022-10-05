@@ -268,6 +268,8 @@ class QGSReader:
                 m = re.match(r"^'([^']+)'$", default.get('expression'))
                 if m:
                     fields[field]['defaultValue'] = m.group(1)
+                else:
+                    fields[field]['defaultValue'] = "expr:%s" % default.get('expression').strip()
 
             # get any constraints from edit widgets
             constraints = self.__edit_widget_constraints(maplayer, field, keyvaltables)
