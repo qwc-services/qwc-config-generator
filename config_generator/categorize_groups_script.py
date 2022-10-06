@@ -1,6 +1,4 @@
 import os
-
-import qgis.core
 from qgis.core import *
 
 
@@ -49,8 +47,9 @@ def categorize_layers(src_path, dest_path):
         layer_order.append(_layer.name())
 
     for layer in project_instance.mapLayers().values():
-        if layer.customProperty(
-                "convert_categorized_layer", "false").lower() == "true":
+        context = QgsExpressionContextUtils.layerScope(layer)
+        if context.hasVariable("convert_categorized_layer") and context.variable(
+                "convert_categorized_layer").lower() == "true":
             layers.append(layer.name())
 
     if not layers:
@@ -88,15 +87,6 @@ def categorize_layers(src_path, dest_path):
     project_instance.write(dest_path)
 
     return dest_path
-
-
-def save_custom_property(layers, project_instance):
-    for layer in project_instance.mapLayers().values():
-        if layer.name() in layers:
-            layer.setCustomProperty("convert_categorized_layer", "true")
-        else:
-            layer.removeCustomProperty("convert_categorized_layer")
-    project_instance.write()
 
 
 def create_categorized_layer(categories_list, base_layer,
