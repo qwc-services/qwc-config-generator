@@ -191,9 +191,11 @@ The ConfigGenerator can also autodetect thumbnails when adding projects. The pro
 
 The ConfigGenerator has also the ability to split a layer, that has been [classified](https://docs.qgis.org/3.16/en/docs/training_manual/vector_classification/classification.html) with QGIS, into multiple layers and move them into a new group (the group name will be the original layer name). The following steps need to be done, to activate this functionality:
 
-1. in the ConfigGenerator configuration set: `"split_categorized_layers": true`
+1. In the ConfigGenerator configuration set: `"split_categorized_layers": true`
 
-2. define the environment variable `QGIS_APPLICATION_PREFIX_PATH` (default: `/usr`). The prefix path is the location where QGIS is installed on your system (the split function needs this, because it uses the `qgis.core` library)
+2. Define the environment variable `QGIS_APPLICATION_PREFIX_PATH` (default: `/usr`). The prefix path is the location where QGIS is installed on your system (the split function needs this, because it uses the `qgis.core` library)
+
+3. For all layers that you want to split, create the [variable](https://docs.qgis.org/3.22/en/docs/user_manual/working_with_vector/vector_properties.html#variables-properties) 'convert_categorized_layer' and set it to 'true'.
 
 *NOTE:* the Search service configuration takes its resources directly from the ConfigGenerator configuration. Its Permissions are collected from the ConfigDB (`solr_facet` resources), unless they are defined in the ConfigGenerator configuration.
 
