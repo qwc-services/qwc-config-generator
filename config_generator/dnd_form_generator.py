@@ -85,6 +85,9 @@ class DnDFormGenerator:
         editable = editableField is None or editableField.get("editable") == "1"
         constraintField = maplayer.find("constraints/constraint[@field='%s']" % field)
         required = constraintField is not None and constraintField.get("notnull_strength") == "1"
+        if editWidget.get("type") == "CheckBox":
+            # Don't translate NOT NULL constraint into required for checkboxes
+            required = False
         conn = self.db_engine.db_engine(self.metadata['database']).connect()
 
         widget = ElementTree.Element("widget")
