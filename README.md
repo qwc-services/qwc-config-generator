@@ -189,20 +189,6 @@ The ConfigGenerator can also autodetect thumbnails when adding projects. The pro
 - the thumbnail of the project has to be located in the QWC2 thumbnail directory (Example: `/qwc/assets/img/mapthumbs`)
 - the thumbnail image needs to have the same filename as the QGIS project
 
-The ConfigGenerator has also the ability to split a layer, that has been [classified](https://docs.qgis.org/3.16/en/docs/training_manual/vector_classification/classification.html) with QGIS, into multiple layers and move them into a new group (the group name will be the original layer name). The following steps need to be done, to activate this functionality:
-
-1. Place the projects whose layers you want to split below `<input_config_dir>/<tenant>/qgis_projects`.
-
-2. Ensure `qgis_projects_gen_base_dir` is set in the ConfigGenerator configuration, see the [schema definition](https://github.com/qwc-services/qwc-config-generator/blob/master/schemas/qwc-config-generator.json) for more details.
-
-3. In the ConfigGenerator configuration set: `"split_categorized_layers": true`
-
-4. If necessary, define the environment variable `QGIS_APPLICATION_PREFIX_PATH` (default: `/usr`). The prefix path is the location where QGIS is installed on your system (the split function needs this, because it uses the `qgis.core` library)
-
-5. For all layers that you want to split, create the [variable](https://docs.qgis.org/3.22/en/docs/user_manual/working_with_vector/vector_properties.html#variables-properties) 'convert_categorized_layer' and set it to 'true'.
-
-6. The ConfigGenerator will process the projects and write the modified projects to qgis_projects_gen_base_dir`. Hence, if for instance qgis_projects_base_dir=/data` and `qgis_projects_gen_base_dir=/data/gen`, the resource name for map `mymap` will be `gen/mymap`.
-
 *NOTE:* the Search service configuration takes its resources directly from the ConfigGenerator configuration. Its Permissions are collected from the ConfigDB (`solr_facet` resources), unless they are defined in the ConfigGenerator configuration.
 
 *NOTE:* the FeatureInfo service configuration may take additional WMS service resources and permissions directly from the ConfigGenerator configuration, e.g. for external info layers. Its Permissions are collected from the ConfigDB (`feature_info_service`, `feature_info_layer` resources), unless they are defined in the ConfigGenerator configuration. Example:
@@ -266,6 +252,24 @@ The ConfigGenerator has also the ability to split a layer, that has been [classi
     }
 ```
 
+
+### Split categorized layers
+
+The ConfigGenerator has also the ability to split a layer, that has been [classified](https://docs.qgis.org/3.16/en/docs/training_manual/vector_classification/classification.html) with QGIS, into multiple layers and move them into a new group (the group name will be the original layer name). The following steps need to be done, to activate this functionality:
+
+1. Place the projects whose layers you want to split below `<input_config_dir>/<tenant>/qgis_projects`.
+
+2. Ensure `qgis_projects_gen_base_dir` is set in the ConfigGenerator configuration, see the [schema definition](https://github.com/qwc-services/qwc-config-generator/blob/master/schemas/qwc-config-generator.json) for more details.
+
+3. In the ConfigGenerator configuration set: `"split_categorized_layers": true`
+
+4. If necessary, define the environment variable `QGIS_APPLICATION_PREFIX_PATH` (default: `/usr`). The prefix path is the location where QGIS is installed on your system (the split function needs this, because it uses the `qgis.core` library)
+
+5. For all layers that you want to split, create the [variable](https://docs.qgis.org/3.22/en/docs/user_manual/working_with_vector/vector_properties.html#variables-properties) 'convert_categorized_layer' and set it to 'true'.
+
+6. The ConfigGenerator will process the projects and write the modified projects to qgis_projects_gen_base_dir`. Hence, if for instance qgis_projects_base_dir=/data` and `qgis_projects_gen_base_dir=/data/gen`, the resource name for map `mymap` will be `gen/mymap`.
+
+*NOTE:* If you are using the qwc-config-generator Docker images, make sure you are using `qwc-config-generator:v<version>` and not `qwc-config-generator:v<version>-noqgis`.
 
 ### Schema validation
 
