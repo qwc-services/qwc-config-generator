@@ -114,6 +114,10 @@ class QGSReader:
             else:
                 maplayer_name = maplayer.find('layername').text
             if maplayer_name == layer_name:
+
+                config.update(self.__attributes_metadata(maplayer))
+                config.update(self.__dimension_metadata(maplayer))
+
                 provider = maplayer.find('provider').text
                 if provider != 'postgres':
                     self.logger.info("Not a PostgreSQL layer")
@@ -122,8 +126,6 @@ class QGSReader:
                 datasource = maplayer.find('datasource').text
                 config['database'] = self.__db_connection(datasource)
                 config.update(self.__table_metadata(datasource, maplayer))
-                config.update(self.__attributes_metadata(maplayer))
-                config.update(self.__dimension_metadata(maplayer))
 
                 self.__lookup_attribute_data_types(config)
 
