@@ -470,21 +470,13 @@ class QGSReader:
                 if attr in fields and 'expression' in fields.get(attr):
                     continue
 
-                # build query SQL
-                sql = sql_text("""
-                    SELECT data_type, character_maximum_length,
-                        numeric_precision, numeric_scale
-                    FROM information_schema.columns
-                    WHERE table_schema = '{schema}' AND table_name = '{table}'
-                        AND column_name = '{column}'
-                    ORDER BY ordinal_position;
-                """.format(schema=schema, table=table_name, column=attr))
-
                 # execute query
                 data_type = None
                 # NOTE: use ordered keys
                 constraints = OrderedDict()
-                result = conn.execute(sql)
+                result = self.__query_column_metadata(
+                    schema, table_name, attr, conn
+                )
                 for row in result:
                     data_type = row['data_type']
 
@@ -558,6 +550,87 @@ class QGSReader:
             if conn:
                 conn.close()
             raise
+
+    def __query_column_metadata(self, schema, table, column, conn):
+        """Get column metadata from GeoDB.
+
+        :param str schema: Schema name
+        :param str table: Table name
+        :param str column: Column name
+        :param Connection conn: DB connection
+        """
+        # build query SQL for tables and views
+        sql = sql_text("""
+            SELECT data_type, character_maximum_length,
+                numeric_precision, numeric_scale
+            FROM information_schema.columns
+            WHERE table_schema = '{schema}' AND table_name = '{table}'
+                AND column_name = '{column}'
+            ORDER BY ordinal_position;
+        """.format(schema=schema, table=table, column=column))
+        # execute query
+        result = conn.execute(sql)
+
+        if result.rowcount == 0:
+            # fallback to query SQL for materialized views
+
+            # SQL partially based on definition of information_schema.columns:
+            #   https://github.com/postgres/postgres/tree/master/src/backendsrc/backend/catalog/information_schema.sql#L674
+            sql = sql_text("""
+                SELECT
+                    ns.nspname AS table_schema,
+                    c.relname AS table_name,
+                    a.attname AS column_name,
+                    format_type(a.atttypid, null) AS data_type,
+                    CASE
+                        WHEN a.atttypmod = -1 /* default typmod */
+                            THEN NULL
+                        WHEN a.atttypid IN (1042, 1043) /* char, varchar */
+                            THEN a.atttypmod - 4
+                        WHEN a.atttypid IN (1560, 1562) /* bit, varbit */
+                            THEN a.atttypmod
+                        ELSE
+                            NULL
+                    END AS character_maximum_length,
+                    CASE a.atttypid
+                        WHEN 21 /*int2*/ THEN 16
+                        WHEN 23 /*int4*/ THEN 32
+                        WHEN 20 /*int8*/ THEN 64
+                        WHEN 1700 /*numeric*/ THEN
+                            CASE
+                                WHEN a.atttypmod = -1
+                                    THEN NULL
+                                ELSE ((a.atttypmod - 4) >> 16) & 65535
+                            END
+                        WHEN 700 /*float4*/ THEN 24 /*FLT_MANT_DIG*/
+                        WHEN 701 /*float8*/ THEN 53 /*DBL_MANT_DIG*/
+                        ELSE NULL
+                    END AS numeric_precision,
+                    CASE
+                        WHEN a.atttypid IN (21, 23, 20) /* int */ THEN 0
+                        WHEN a.atttypid IN (1700) /* numeric */ THEN
+                            CASE
+                                WHEN a.atttypmod = -1
+                                    THEN NULL
+                                ELSE (a.atttypmod - 4) & 65535
+                            END
+                        ELSE NULL
+                    END AS numeric_scale
+                FROM pg_catalog.pg_class c
+                    JOIN pg_catalog.pg_namespace ns ON ns.oid = c.relnamespace
+                    JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
+                WHERE
+                    /* tables, views, materialized views */
+                    c.relkind in ('r', 'v', 'm')
+                    AND ns.nspname = '{schema}'
+                    AND c.relname = '{table}'
+                    AND a.attname = '{column}'
+                ORDER BY nspname, relname, attnum
+            """.format(schema=schema, table=table, column=column))
+            # execute query
+            result = conn.execute(sql)
+
+        return result
 
     def collect_ui_forms(self, qwc_base_dir, edit_dataset, metadata):
         """ Collect UI form files from project
