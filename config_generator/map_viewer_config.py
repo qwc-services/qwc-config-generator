@@ -290,6 +290,7 @@ class MapViewerConfig(ServiceConfig):
             'defaultPrintResolutions'
         )
         themes['defaultPrintGrid'] = themes_config.get('defaultPrintGrid')
+        themes['defaultSearchProviders'] = themes_config.get('defaultSearchProviders')
 
         qwc2_themes['themes'] = themes
 
