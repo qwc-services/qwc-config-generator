@@ -361,10 +361,6 @@ class DnDFormGenerator:
         item.set("colspan", str(2 * ncols))
         layout.append(item)
 
-        spacer = ElementTree.Element("spacer")
-        self.__add_widget_property(spacer, "orientation", None, None, "Qt::Vertical", "property", "enum")
-        item.append(spacer)
-
     def __add_autolayout_fields(self, maplayer, project, parent, aliases):
         fields = maplayer.findall("fieldConfiguration/field")
         layout = ElementTree.Element("layout")
@@ -427,7 +423,3 @@ class DnDFormGenerator:
         item.set("column", "0")
         item.set("colspan", str(2))
         layout.append(item)
-
-        spacer = ElementTree.Element("spacer")
-        self.__add_widget_property(spacer, "orientation", None, None, "Qt::Vertical", "property", "enum")
-        item.append(spacer)
