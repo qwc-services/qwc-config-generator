@@ -1,5 +1,6 @@
 import json
 import os
+import sys
 import requests
 
 from urllib.parse import urlparse
@@ -7,6 +8,7 @@ from urllib.parse import urlparse
 
 # get target path
 json_schemas_path = os.environ.get('JSON_SCHEMAS_PATH', '/tmp/')
+branch = sys.argv[1] if len(sys.argv) > 1 else 'master'
 
 print(
     "Downloading JSON schemas for all QWC service configs to %s" %
@@ -17,7 +19,7 @@ print(
 schema_versions = {}
 schema_versions_path = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
-    'schemas/schema-versions.json'
+    f'schemas/schema-versions-{branch}.json'
 )
 try:
     with open(schema_versions_path) as f:

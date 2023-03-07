@@ -15,23 +15,38 @@ jobs:
         run: |
           if [ ${{ startsWith(github.ref, 'refs/tags/') }} = true ]; then
             echo "tag=latest,${GITHUB_REF:10}" >>$GITHUB_OUTPUT
+            # Branch of JSON schema files to include
+            if [ ${{ contains(github.ref, '-lts') }} = true ]; then
+              # tag v2023.0-lts -> branch 2023-lts
+              TAG=${GITHUB_REF:11}
+              echo "branch=${TAG/.[0-9]-lts/-lts}" >>$GITHUB_OUTPUT          
+            else
+              echo "branch=master" >>$GITHUB_OUTPUT          
+            fi
           else
             echo "tag=latest" >>$GITHUB_OUTPUT
+            echo "branch=master" >>$GITHUB_OUTPUT          
           fi
 
-      - name: Build and publish docker image
-        uses: elgohr/Publish-Docker-Github-Action@2.12
-        with:
-          name: sourcepole/${{ github.event.repository.name }}
-          username: ${{ secrets.DOCKER_HUB_USER }}
-          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-          tags: "${{ steps.get_tag.outputs.tag }}"
-
       - name: Build and publish docker image without qgis
-        uses: elgohr/Publish-Docker-Github-Action@2.12
+        uses: elgohr/Publish-Docker-Github-Action@v5
+        env:
+          BRANCH: "${{ steps.get_tag.outputs.branch }}"
         with:
           name: sourcepole/${{ github.event.repository.name }}
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
           dockerfile: Dockerfile-noqgis
+          buildargs: BRANCH
           tags: "${{ steps.get_tag.outputs.tag }}-noqgis"
+
+      - name: Build and publish docker image
+        uses: elgohr/Publish-Docker-Github-Action@v5
+        env:
+          BRANCH: "${{ steps.get_tag.outputs.branch }}"
+        with:
+          name: sourcepole/${{ github.event.repository.name }}
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+          buildargs: BRANCH
+          tags: "${{ steps.get_tag.outputs.tag }}"

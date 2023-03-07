@@ -1,0 +1,60 @@
+{
+  "schemas": [
+    {
+      "service": "adminGui",
+      "schema_url": "https://github.com/qwc-services/qwc-admin-gui/raw/2023-lts/schemas/qwc-admin-gui.json"
+    },
+    {
+      "service": "data",
+      "schema_url": "https://github.com/qwc-services/qwc-data-service/raw/2023-lts/schemas/qwc-data-service.json"
+    },
+    {
+      "service": "dbAuth",
+      "schema_url": "https://github.com/qwc-services/qwc-db-auth/raw/2023-lts/schemas/qwc-db-auth.json"
+    },
+    {
+      "service": "elevation",
+      "schema_url": "https://github.com/qwc-services/qwc-elevation-service/raw/2023-lts/schemas/qwc-elevation-service.json"
+    },
+    {
+      "service": "ext",
+      "schema_url": "https://github.com/qwc-services/qwc-ext-service/raw/2023-lts/schemas/qwc-ext-service.json"
+    },
+    {
+      "service": "featureInfo",
+      "schema_url": "https://github.com/qwc-services/qwc-feature-info-service/raw/2023-lts/schemas/qwc-feature-info-service.json"
+    },
+    {
+      "service": "legend",
+      "schema_url": "https://github.com/qwc-services/qwc-legend-service/raw/2023-lts/schemas/qwc-legend-service.json"
+    },
+    {
+      "service": "mapinfo",
+      "schema_url": "https://github.com/qwc-services/qwc-mapinfo-service/raw/2023-lts/schemas/qwc-mapinfo-service.json"
+    },
+    {
+      "service": "mapViewer",
+      "schema_url": "https://github.com/qwc-services/qwc-map-viewer/raw/2023-lts/schemas/qwc-map-viewer.json"
+    },
+    {
+      "service": "ogc",
+      "schema_url": "https://github.com/qwc-services/qwc-ogc-service/raw/2023-lts/schemas/qwc-ogc-service.json"
+    },
+    {
+      "service": "permalink",
+      "schema_url": "https://github.com/qwc-services/qwc-permalink-service/raw/2023-lts/schemas/qwc-permalink-service.json"
+    },
+    {
+      "service": "permissions",
+      "schema_url": "https://github.com/qwc-services/qwc-services-core/raw/v1.3.15/schemas/qwc-services-permissions.json"
+    },
+    {
+      "service": "print",
+      "schema_url": "https://github.com/qwc-services/qwc-print-service/raw/2023-lts/schemas/qwc-print-service.json"
+    },
+    {
+      "service": "search",
+      "schema_url": "https://github.com/qwc-services/qwc-fulltext-search-service/raw/2023-lts/schemas/qwc-search-service.json"
+    }
+  ]
+}
