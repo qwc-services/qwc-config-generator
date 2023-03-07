@@ -30,6 +30,7 @@ jobs:
 
       - name: Build and publish docker image without qgis
         uses: elgohr/Publish-Docker-Github-Action@v5
+        if: github.event_name != 'pull_request'
         env:
           BRANCH: "${{ steps.get_tag.outputs.branch }}"
         with:
@@ -42,6 +43,7 @@ jobs:
 
       - name: Build and publish docker image
         uses: elgohr/Publish-Docker-Github-Action@v5
+        if: github.event_name != 'pull_request'
         env:
           BRANCH: "${{ steps.get_tag.outputs.branch }}"
         with:
