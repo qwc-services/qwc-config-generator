@@ -234,6 +234,13 @@ class CapabilitiesReader():
         else:
             layer_name = fallback_name
 
+        if "," in layer_name:
+            self.logger.warning(
+                f"The layer '{layer_name}' contains a comma! "
+                "The WMS name of a layer must not contain a comma! "
+                "Either remove the comma or specify 'short_name' in the QGIS project."
+            )
+
         wms_layer['name'] = layer_name
 
         layer_title_tag = layer.find('%sTitle' % np, ns)
