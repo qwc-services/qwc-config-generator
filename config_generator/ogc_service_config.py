@@ -54,10 +54,10 @@ class OGCServiceConfig(ServiceConfig):
         resources = OrderedDict()
         config['resources'] = resources
 
-        # collect resources from capabilities
+        # collect WMS service resources from capabilities
         resources['wms_services'] = self.wms_services()
-        # TODO: WFS service resources
-        resources['wfs_services'] = []
+        # collect WFS service resources from capabilities
+        resources['wfs_services'] = self.wfs_services()
 
         return config
 
@@ -73,7 +73,7 @@ class OGCServiceConfig(ServiceConfig):
         session = self.config_models.session()
 
         permissions['wms_services'] = self.wms_permissions(role, session)
-        permissions['wfs_services'] = []
+        permissions['wfs_services'] = self.wfs_permissions(role, session)
 
         session.close()
 
@@ -157,6 +157,39 @@ class OGCServiceConfig(ServiceConfig):
                 wms_layer['queryable'] = True
 
         return wms_layer
+
+    def wfs_services(self):
+        """Collect WFS service resources from capabilities."""
+        wfs_services = []
+
+        for service_name in self.themes_reader.wfs_service_names():
+            cap = self.themes_reader.wfs_capabilities(service_name)
+            if not cap:
+                continue
+
+            # NOTE: use ordered keys
+            wfs_service = OrderedDict()
+            wfs_service['name'] = cap['name']
+
+            if not cap['wfs_url'].startswith(self.default_qgis_server_url):
+                wfs_service['wfs_url'] = cap['wfs_url']
+
+            # collect WFS layers
+            wfs_layers = []
+            for layer_cap in cap['wfs_layers']:
+                # NOTE: use ordered keys
+                wfs_layer = OrderedDict()
+
+                wfs_layer['name'] = layer_cap['name']
+                wfs_layer['attributes'] = layer_cap['attributes']
+
+                wfs_layers.append(wfs_layer)
+
+            wfs_service['layers'] = wfs_layers
+
+            wfs_services.append(wfs_service)
+
+        return wfs_services
 
     # permissions
 
@@ -384,7 +417,7 @@ class OGCServiceConfig(ServiceConfig):
         capabilities and permissions.
 
         :param str service_name: Name of parent WMS service
-        :param obj cap: Capabilities
+        :param obj cap: WMS Capabilities
         :param bool is_public_role: Whether current role is public
         :param obj role_permissions: Lookup for role permissions
         :param obj public_permissions: Lookup for public permissions
@@ -463,7 +496,7 @@ class OGCServiceConfig(ServiceConfig):
         """Return permitted print templates from capabilities and permissions.
 
         :param str service_name: Name of parent WMS service
-        :param obj cap: Capabilities
+        :param obj cap: WMS Capabilities
         :param bool is_public_role: Whether current role is public
         :param obj role_permissions: Lookup for role permissions
         :param obj public_permissions: Lookup for public permissions
@@ -527,3 +560,176 @@ class OGCServiceConfig(ServiceConfig):
             ]
 
         return print_templates
+
+    def wfs_permissions(self, role, session):
+        """Collect WFS Service permissions from capabilities and ConfigDB.
+
+        NOTE: the same map, layer and attribute resources and permission
+              in the ConfigDB are used for both WMS and WFS
+
+        :param str role: Role name
+        :param Session session: DB session
+        """
+        permissions = []
+
+        # helper method aliases
+        non_public_resources = self.permissions_query.non_public_resources
+        permitted_resources = self.permissions_query.permitted_resources
+
+        # collect role permissions from ConfigDB
+        role_permissions = {
+            'maps': permitted_resources('map', role, session),
+            'layers': permitted_resources('layer', role, session),
+            'attributes': permitted_resources('attribute', role, session)
+        }
+
+        # collect public permissions from ConfigDB
+        public_role = self.permissions_query.public_role()
+        public_permissions = {
+            'maps': permitted_resources('map', public_role, session),
+            'layers': permitted_resources('layer', public_role, session),
+            'attributes':
+                permitted_resources('attribute', public_role, session)
+        }
+
+        # collect public restrictions from ConfigDB
+        public_restrictions = {
+            'maps': non_public_resources('map', session),
+            'layers': non_public_resources('layer', session),
+            'attributes': non_public_resources('attribute', session)
+        }
+
+        is_public_role = (role == self.permissions_query.public_role())
+
+        for service_name in self.themes_reader.wfs_service_names():
+            # lookup permissions
+            if self.permissions_default_allow:
+                restricted_for_public = service_name in \
+                    public_restrictions['maps']
+            else:
+                restricted_for_public = service_name not in \
+                    public_permissions['maps']
+            permitted_for_role = service_name in role_permissions['maps']
+            if restricted_for_public and not permitted_for_role:
+                # WFS not permitted
+                continue
+
+            cap = self.themes_reader.wfs_capabilities(service_name)
+            if not cap:
+                continue
+
+            # NOTE: use ordered keys
+            wfs_permissions = OrderedDict()
+            wfs_permissions['name'] = cap['name']
+
+            # collect WFS layers
+            layers = self.collect_wfs_layer_permissions(
+                service_name, cap, is_public_role, role_permissions,
+                public_permissions, public_restrictions, restricted_for_public
+            )
+            wfs_permissions['layers'] = layers
+
+            if layers:
+                permissions.append(wfs_permissions)
+
+        return permissions
+
+    def collect_wfs_layer_permissions(self, service_name, cap, is_public_role,
+                                      role_permissions, public_permissions,
+                                      public_restrictions, map_restricted):
+        """Return permitted WFS layers from capabilities and permissions.
+
+        :param str service_name: Name of parent WFS service
+        :param obj cap: WFS Capabilities
+        :param bool is_public_role: Whether current role is public
+        :param obj role_permissions: Lookup for role permissions
+        :param obj public_permissions: Lookup for public permissions
+        :param obj public_restrictions: Lookup for public restrictions
+        :param bool map_restricted: Whether parent map is restricted
+                                    for public
+        """
+        wfs_layers = []
+
+        # collect WFS layer permissions and restrictions
+        for layer in cap['wfs_layers']:
+            # lookup permissions
+            if self.permissions_default_allow:
+                restricted_for_public = layer['name'] in \
+                    public_restrictions['layers'].get(service_name, {})
+            else:
+                restricted_for_public = layer['name'] not in \
+                    public_permissions['layers'].get(service_name, {})
+
+            role_permitted_layers = role_permissions[
+                'layers'].get(service_name, {})
+            all_layers_permitted = "*" in role_permitted_layers
+            permitted_for_role = all_layers_permitted or \
+                layer['name'] in role_permitted_layers
+            layer_or_map_restricted = restricted_for_public or map_restricted
+
+            if restricted_for_public and not permitted_for_role:
+                # WFS layer not permitted
+                continue
+
+            # NOTE: use ordered keys
+            wfs_layer = OrderedDict()
+            wfs_layer['name'] = layer['name']
+
+            # collect WFS attribute permissions
+            # NOTE: attributes are always allowed by default
+            if is_public_role:
+                # collect all permitted attributes
+                restricted_attributes = (
+                    public_restrictions['attributes'].
+                    get(service_name, {}).get(layer['name'], {})
+                )
+                wfs_layer['attributes'] = [
+                    attr for attr in layer['attributes']
+                    if attr not in restricted_attributes
+                ]
+            else:
+                attributes = None
+
+                if layer_or_map_restricted:
+                    # collect restricted attributes not permitted for role
+                    restricted_attributes = set(
+                        public_restrictions['attributes'].
+                        get(service_name, {}).get(layer['name'], {}).keys()
+                    )
+                    permitted_attributes = set(
+                        role_permissions['attributes'].
+                        get(service_name, {}).get(layer['name'], {}).keys()
+                    )
+                    restricted_attributes -= permitted_attributes
+
+                    # collect all permitted attributes
+                    attributes = [
+                        attr for attr in layer['attributes']
+                        if attr not in restricted_attributes
+                    ]
+
+                else:
+                    # collect additional attributes
+                    permitted_attributes = (
+                        role_permissions['attributes'].
+                        get(service_name, {}).get(layer['name'], {}).keys()
+                    )
+                    attributes = [
+                        attr for attr in layer['attributes']
+                        if attr in permitted_attributes
+                    ]
+
+                if attributes:
+                    wfs_layer['attributes'] = attributes
+
+            if is_public_role:
+                # add public layer
+                wfs_layers.append(wfs_layer)
+            elif layer_or_map_restricted:
+                # add layer permitted for role
+                wfs_layers.append(wfs_layer)
+            elif wfs_layer.get('attributes', []):
+                # add layer with additional attributes
+                wfs_layers.append(wfs_layer)
+
+        return wfs_layers

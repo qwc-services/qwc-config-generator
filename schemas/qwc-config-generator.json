@@ -84,15 +84,19 @@
           "type": "object"
         },
         "split_categorized_layers": {
-          "description": "Set to true to activate the categorize groups funcitonality",
+          "description": "Set to true to activate the categorize groups functionality",
           "type": "boolean"
         },
         "project_settings_read_timeout": {
-          "description": "Timeout for GetProjectSettings request, default: 60sec",
+          "description": "Timeout for GetProjectSettings, GetCapabilities and DescribeFeatureType requests. Default: 60sec",
           "type": "number"
         },
         "autogen_keyvaltable_datasets": {
           "description": "Whether to automatically generate data service datasets used for key-value relationships without requiring corresponding data resources to be created. Warning: this will expose the key and value fields of the key-value table as world readable. Default: false",
+          "type": "boolean"
+        },
+        "generate_wfs_services": {
+          "description": "Generate WFS service resources and permissions for the OGC service. Default: false",
           "type": "boolean"
         }
       },

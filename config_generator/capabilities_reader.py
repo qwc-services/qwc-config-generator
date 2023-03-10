@@ -8,7 +8,7 @@ import requests
 class CapabilitiesReader():
     """CapabilitiesReader class
 
-    Load and parse GetProjectSettings.
+    Load and parse WMS GetProjectSettings.and WFS Capabilities
     """
 
     def __init__(self, generator_config, logger):
@@ -35,9 +35,10 @@ class CapabilitiesReader():
             "project_settings_read_timeout", 60
         )
 
+    # WMS GetProjectSettings
 
-    def read_service_capabilities(self, url, service_name, item):
-        """Load and parse GetProjectSettings for a theme item.
+    def read_wms_service_capabilities(self, url, service_name, item):
+        """Load and parse WMS GetProjectSettings for a theme item.
 
         :param str url: service URL
         :param str service_name: service name
@@ -48,7 +49,7 @@ class CapabilitiesReader():
             # get GetProjectSettings
             full_url = urljoin(self.default_qgis_server_url, url)
             self.logger.info(
-                "Downloading GetProjectSettings from %s" % full_url
+                "Downloading WMS GetProjectSettings from %s" % full_url
             )
 
             if len(full_url) > 2000:
@@ -68,14 +69,14 @@ class CapabilitiesReader():
 
             if response.status_code != requests.codes.ok:
                 self.logger.critical(
-                    "Could not get GetProjectSettings from %s:\n%s" %
+                    "Could not get WMS GetProjectSettings from %s:\n%s" %
                     (full_url, response.content)
                 )
                 return {}
 
             document = response.content
 
-            # parse GetProjectSettings XML
+            # parse WMS GetProjectSettings XML
             ElementTree.register_namespace('', 'http://www.opengis.net/wms')
             ElementTree.register_namespace('qgs', 'http://www.qgis.org/wms')
             ElementTree.register_namespace('sld', 'http://www.opengis.net/sld')
@@ -208,7 +209,7 @@ class CapabilitiesReader():
             return capabilities
         except Exception as e:
             self.logger.critical(
-                "Could not get GetProjectSettings from %s:\n%s" %
+                "Could not get WMS GetProjectSettings from %s:\n%s" %
                 (full_url, e)
             )
             return {}
@@ -462,3 +463,213 @@ class CapabilitiesReader():
             print_templates.append(print_template)
 
         return print_templates
+
+    # WFS Capabilities
+
+    def read_wfs_service_capabilities(self, url, service_name, item):
+        """Load and parse WFS GetCapabilities for a theme item.
+
+        NOTE: returns empty result if WFS does not contains any layers
+
+        :param str url: service URL
+        :param str service_name: service name
+        :param object item: theme item
+        """
+        try:
+            # get GetProjectSettings
+            full_url = urljoin(self.default_qgis_server_url, url)
+            self.logger.info(
+                "Downloading WFS GetCapabilities from %s" % full_url
+            )
+
+            if len(full_url) > 2000:
+                self.logger.warning(
+                    "WFS URL is longer than 2000 characters!")
+
+            response = requests.get(
+                full_url,
+                params={
+                    'SERVICE': 'WFS',
+                    'VERSION': '1.1.0',
+                    'REQUEST': 'GetCapabilities',
+                    'CLEARCACHE': '1'
+                },
+                timeout=self.project_settings_read_timeout
+            )
+
+            if response.status_code != requests.codes.ok:
+                self.logger.error(
+                    "Could not get WFS GetCapabilities from %s:\n%s" %
+                    (full_url, response.content)
+                )
+                return {}
+
+            document = response.content
+
+            # parse WFS Capabilities XML
+            ElementTree.register_namespace('', 'http://www.opengis.net/wfs')
+            ElementTree.register_namespace('ows', 'http://www.opengis.net/ows')
+            ElementTree.register_namespace('gml', 'http://www.opengis.net/gml')
+            ElementTree.register_namespace('ogc', 'http://www.opengis.net/ogc')
+            ElementTree.register_namespace(
+                'xlink', 'http://www.w3.org/1999/xlink'
+            )
+            root = ElementTree.fromstring(document)
+
+            # use default namespace for XML search
+            # namespace dict
+            ns = {
+                'ns': 'http://www.opengis.net/wfs',
+                'ows': 'http://www.opengis.net/ows'
+            }
+            # namespace prefix
+            np = 'ns:'
+            np_ows = 'ows:'
+            if not root.tag.startswith('{http://'):
+                # do not use namespace
+                ns = {}
+                np = ''
+
+            feature_type_list = root.find('%sFeatureTypeList' % np, ns)
+            if feature_type_list is None:
+                self.logger.warning(
+                    "No FeatureTypeList found for %s: %s" %
+                    (full_url, response.content)
+                )
+                return {}
+
+            if feature_type_list.find('%sFeatureType' % np, ns) is None:
+                self.logger.debug("No WFS layers found for %s" % full_url)
+                return {}
+
+            # NOTE: use ordered keys
+            capabilities = OrderedDict()
+
+            capabilities['name'] = service_name
+            capabilities['wfs_url'] = full_url
+
+            # get service title
+            service_title = root.find('%sServiceIdentification/%sTitle' % (np_ows, np_ows), ns)
+            if service_title is not None:
+                capabilities['title'] = service_title.text
+
+            # get service abstract
+            service_abstract = root.find('%sServiceIdentification/%sAbstract' % (np_ows, np_ows), ns)
+            if service_abstract is not None:
+                capabilities['abstract'] = service_abstract.text
+
+            # collect service keywords
+            keyword_list = root.find('%sServiceIdentification/%sKeywords' % (np_ows, np_ows), ns)
+            if keyword_list is not None:
+                keywords = [
+                    keyword.text for keyword
+                    in keyword_list.findall('%sKeyword' % np_ows, ns)
+                ]
+                if keywords:
+                    capabilities['keywords'] = ', '.join(keywords)
+
+            # service provider
+            provider_name = root.find("%sServiceProvider/%sProviderName" % (np_ows, np_ows), ns)
+            individual_name = root.find("%sServiceProvider/%sServiceContact/%sIndividualName" % (np_ows, np_ows, np_ows), ns)
+            position_name = root.find("%sServiceProvider/%sServiceContact/%sPositionName" % (np_ows, np_ows, np_ows), ns)
+
+            capabilities["contact"] = {
+                "person": individual_name.text if individual_name is not None else None,
+                "organization": provider_name.text if provider_name is not None else None,
+                "position": position_name.text if position_name is not None else None
+            }
+
+            # collect WFS layer attributes
+            wfs_layers_attributes = self.collect_wfs_layers_attributes(full_url)
+
+            # collect WFS layers
+            wfs_layers = []
+            for layer in feature_type_list.findall('%sFeatureType' % np, ns):
+                # NOTE: use ordered keys
+                wfs_layer = OrderedDict()
+
+                layer_name = layer.find('%sName' % np, ns).text
+                wfs_layer['name'] = layer_name
+                wfs_layer['title'] = layer.find('%sTitle' % np, ns).text
+                wfs_layer['attributes'] = wfs_layers_attributes.get(layer_name, [])
+
+                wfs_layers.append(wfs_layer)
+
+            capabilities["wfs_layers"] = wfs_layers
+
+            return capabilities
+        except Exception as e:
+            self.logger.error(
+                "Could not get WFS GetCapabilities from %s:\n%s" %
+                (full_url, e)
+            )
+            return {}
+
+    def collect_wfs_layers_attributes(self, full_url):
+        """Get all WFS layer attributes from WFS DescribeFeatureType.
+
+        Returns dict as {<layer name>: [<attributes>]}
+
+        :param str full_url: WFS URL
+        """
+        try:
+            self.logger.info(
+                "Downloading WFS DescribeFeatureType from %s" % full_url
+            )
+
+            response = requests.get(
+                full_url,
+                params={
+                    'SERVICE': 'WFS',
+                    'VERSION': '1.1.0',
+                    'REQUEST': 'DescribeFeatureType'
+                },
+                timeout=self.project_settings_read_timeout
+            )
+
+            if response.status_code != requests.codes.ok:
+                self.logger.error(
+                    "Could not get WFS DescribeFeatureType from %s:\n%s" %
+                    (full_url, response.content)
+                )
+                return {}
+
+            document = response.content
+
+            # parse WFS Capabilities XML
+            ElementTree.register_namespace('', 'http://www.w3.org/2001/XMLSchema')
+            ElementTree.register_namespace('gml', 'http://www.opengis.net/gml')
+            ElementTree.register_namespace('qgs', 'http://www.qgis.org/wms')
+            ElementTree.register_namespace('ogc', 'http://www.opengis.net/ogc')
+            root = ElementTree.fromstring(document)
+
+            # use default namespace for XML search
+            # namespace dict
+            ns = {'ns': 'http://www.w3.org/2001/XMLSchema'}
+            # namespace prefix
+            np = 'ns:'
+            if not root.tag.startswith('{http://'):
+                # do not use namespace
+                ns = {}
+                np = ''
+
+            layers_attributes = {}
+
+            for complex_type in root.findall('%scomplexType' % np, ns):
+                # extract layer name from complexType by removing "Type" suffix
+                # e.g. "edit_pointsType" -> "edit_points"
+                layer_name = complex_type.get('name').rstrip('Type')
+
+                attributes = []
+                for element in complex_type.findall('%scomplexContent/%sextension/%ssequence/%selement' % (np, np, np, np), ns):
+                    attributes.append(element.get('name'))
+
+                layers_attributes[layer_name] = attributes
+
+            return layers_attributes
+        except Exception as e:
+            self.logger.error(
+                "Could not get WFS DescribeFeatureType from %s:\n%s" %
+                (full_url, e)
+            )
+            return {}

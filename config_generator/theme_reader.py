@@ -38,6 +38,10 @@ class ThemeReader():
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
 
+        self.generate_wfs_services = generator_config.get(
+            'generate_wfs_services', False
+        )
+
         self.read_metadata_for_group(
             themes_config.get('themes', {})
         )
@@ -45,6 +49,15 @@ class ThemeReader():
     def wms_service_names(self):
         """Return all WMS service names in alphabetical order."""
         return sorted(self.theme_metadata.keys())
+
+    def wfs_service_names(self):
+        """Return all WFS service names in alphabetical order."""
+        # collect services with WFS capabilites
+        wfs_services = []
+        for service_name in self.theme_metadata:
+            if self.theme_metadata[service_name]['wfs_capabilities']:
+                wfs_services.append(service_name)
+        return sorted(wfs_services)
 
     def read_metadata_for_group(self, item_group):
         """Recursively read theme metadata for theme item group."""
@@ -67,11 +80,15 @@ class ThemeReader():
             # skip service already in cache
             return
 
-        capabilities = self.capabilities_reader.read_service_capabilities(url, service_name, item)
-        if not capabilities:
+        wms_capabilities = self.capabilities_reader.read_wms_service_capabilities(url, service_name, item)
+        if not wms_capabilities:
             self.logger.warning(
-                "Could not get capabilities for %s" % url
+                "Could not get WMS capabilities for %s" % url
             )
+
+        wfs_capabilities = {}
+        if self.generate_wfs_services:
+            wfs_capabilities = self.capabilities_reader.read_wfs_service_capabilities(url, service_name, item)
 
         qgs_reader = QGSReader(self.logger, self.qgis_projects_base_dir, service_name)
         success = qgs_reader.read()
@@ -83,7 +100,8 @@ class ThemeReader():
         self.theme_metadata[service_name] = {
             'service_name': service_name,
             'url': url,
-            'wms_capabilities': capabilities,
+            'wms_capabilities': wms_capabilities,
+            'wfs_capabilities': wfs_capabilities,
             'project': qgs_reader if success else None,
             'pg_layers': None,
             'layer_metadata': {}
@@ -91,6 +109,9 @@ class ThemeReader():
 
     def wms_capabilities(self, service_name):
         return self.theme_metadata[service_name]['wms_capabilities']
+
+    def wfs_capabilities(self, service_name):
+        return self.theme_metadata[service_name]['wfs_capabilities']
 
     def pg_layers(self, service_name):
         if not service_name in self.theme_metadata:
