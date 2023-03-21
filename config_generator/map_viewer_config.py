@@ -2,7 +2,7 @@ from collections import OrderedDict
 import json
 import os
 import requests
-from urllib.parse import urljoin
+import urllib.parse
 
 from .permissions_query import PermissionsQuery
 from .service_config import ServiceConfig
@@ -265,12 +265,15 @@ class MapViewerConfig(ServiceConfig):
             cpos = entry.find(':')
             hpos = entry.rfind('#')
             type = entry[0:cpos]
-            urlparts = entry[cpos+1:hpos].split("?")
-            url = urlparts[0]
-            try:
-                params = dict(map(lambda x: x.split("="), urlparts[1].split("&")))
-            except:
-                params = {}
+            url = entry[cpos+1:hpos]
+            infoFormat = "text/plain"
+            urlobj = urllib.parse.urlparse(url)
+            params = dict(urllib.parse.parse_qsl(urlobj.query))
+            if "infoFormat" in params:
+                infoFormat = params["infoFormat"]
+                del params["infoFormat"]
+                urlobj = urlobj._replace(query=urllib.parse.urlencode(params))
+                url = urllib.parse.urlunparse(urlobj)
 
             layername = entry[hpos+1:]
             themes["externalLayers"].append({
@@ -278,7 +281,7 @@ class MapViewerConfig(ServiceConfig):
                 "type": type,
                 "url": url,
                 "params": {"LAYERS": layername},
-                "infoFormats": [params.get('infoFormat', "text/plain")]
+                "infoFormats": [infoFormat]
             })
 
         themes['pluginData'] = themes_config_themes.get('pluginData', {})
@@ -538,7 +541,7 @@ class MapViewerConfig(ServiceConfig):
             layers.append(layer['name'])
 
         # WMS GetMap request
-        url = urljoin(self.default_qgis_server_url, service_name)
+        url = urllib.parse.urljoin(self.default_qgis_server_url, service_name)
 
         bboxw = extent[2] - extent[0]
         bboxh = extent[3] - extent[1]
