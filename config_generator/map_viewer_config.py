@@ -265,14 +265,20 @@ class MapViewerConfig(ServiceConfig):
             cpos = entry.find(':')
             hpos = entry.rfind('#')
             type = entry[0:cpos]
-            url = entry[cpos+1:hpos]
+            urlparts = entry[cpos+1:hpos].split("?")
+            url = urlparts[0]
+            try:
+                params = dict(map(lambda x: x.split("="), urlparts[1].split("&")))
+            except:
+                params = {}
+
             layername = entry[hpos+1:]
             themes["externalLayers"].append({
                 "name": entry,
                 "type": type,
                 "url": url,
                 "params": {"LAYERS": layername},
-                "infoFormats": ["text/plain"]
+                "infoFormats": [params.get('infoFormat', "text/plain")]
             })
 
         themes['pluginData'] = themes_config_themes.get('pluginData', {})
