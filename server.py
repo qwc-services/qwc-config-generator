@@ -80,7 +80,7 @@ def maps():
         return jsonify({'error': str(e)}), 500
 
 
-@app.route("/maps/<string:map_name>", methods=['GET'])
+@app.route("/maps/<path:map_name>", methods=['GET'])
 def map_details(map_name):
     """Return details for a map (e.g. its layers) from capabilities."""
     try:
