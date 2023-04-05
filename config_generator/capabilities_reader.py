@@ -453,6 +453,15 @@ class CapabilitiesReader():
                 print_map['width'] = float(composer_map.get('width'))
                 print_map['height'] = float(composer_map.get('height'))
                 print_template['map'] = print_map
+            if template.get('atlasEnabled') == '1':
+                atlasLayer = template.get('atlasCoverageLayer')
+                try:
+                    pk = root.find(".//%sLayer/[%sName = '%s']" % (np, np, atlasLayer), ns).find('./%sPrimaryKey/%sPrimaryKeyAttribute' % (np, np), ns).text
+                    print_template['atlasCoverageLayer'] = atlasLayer
+                    print_template['atlas_pk'] = pk
+                except:
+                    self.logger.warning("Failed to determine primary key for atlas layer %s!" % atlasLayer)
+                    pass
 
             labels = []
             for label in template.findall('%sComposerLabel' % np, ns):
