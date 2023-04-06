@@ -773,11 +773,12 @@ class ConfigGenerator():
         """
         layers = []
 
-        layers.append(layer['name'])
         if 'layers' in layer:
             # group layer
             for sublayer in layer['layers']:
                 layers += self.collect_layer_names(sublayer)
+        else:
+            layers.append(layer['name'])
 
         return layers
 
