@@ -242,15 +242,16 @@ class QGSReader:
 
         editorlayout = maplayer.find('editorlayout')
         formfields = maplayer.find('attributeEditorForm')
-        if editorlayout.text == "tablayout" and formfields is not None:
+        if editorlayout is not None and editorlayout.text == "tablayout" and formfields is not None:
             for formfield in formfields.findall('.//attributeEditorField'):
                 # NOTE: skip missing fields with index="-1"
                 if formfield.get('index') != '-1':
                     fieldnames.append(formfield.get('name'))
         else:
             aliases = maplayer.find('aliases')
-            for alias in aliases.findall('alias'):
-                fieldnames.append(alias.get('field'))
+            if aliases is not None:
+                for alias in aliases.findall('alias'):
+                    fieldnames.append(alias.get('field'))
 
         keyvaltables = {}
         for field in fieldnames:
