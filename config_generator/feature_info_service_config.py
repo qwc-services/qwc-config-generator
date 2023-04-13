@@ -55,8 +55,21 @@ class FeatureInfoServiceConfig(ServiceConfig):
 
         # collect resources from capabilities
         resources['wms_services'] = self.wms_services()
-        # get additional resources
-        resources['wms_services'] += self.additional_wms_services()
+
+        # merge additional resources
+        for add_entry in self.additional_wms_services():
+            result = filter(lambda e: e['name'] == add_entry['name'], resources['wms_services'])
+            if result:
+                base_root_layer = list(result)[0]["root_layer"]
+                add_layers = {}
+                for add_layer in add_entry.get("root_layer", {}).get("layers", []):
+                    add_layers[add_layer["name"]] = add_layer
+                base_root_layer["layers"] = list(map(
+                    lambda layer: layer | add_layers.get(layer["name"], {}),
+                    base_root_layer["layers"]
+                ))
+            else:
+                resources['wms_services']
 
         return config
 
