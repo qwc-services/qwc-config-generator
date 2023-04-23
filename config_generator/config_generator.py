@@ -653,7 +653,7 @@ class ConfigGenerator():
 
         # collect existing item urls
         items = themes_config.get("themes", {}).get(
-            "items", {})
+            "items", [])
         wms_urls = []
         has_default = False
         for item in items:
