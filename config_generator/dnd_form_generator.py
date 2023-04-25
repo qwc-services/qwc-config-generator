@@ -208,7 +208,11 @@ class DnDFormGenerator:
         if referencingLayer is None or fieldRef is None:
             return None
 
-        referencingLayerName = referencingLayer.find("layername").text
+        if referencingLayer.find('shortname') is not None:
+            referencingLayerName = referencingLayer.find("shortname").text
+        else:
+            referencingLayerName = referencingLayer.find("layername").text
+
         fkField = fieldRef.get("referencingField")
 
         aliases = {}
