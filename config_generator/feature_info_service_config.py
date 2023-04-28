@@ -65,8 +65,9 @@ class FeatureInfoServiceConfig(ServiceConfig):
                 for add_layer in add_entry.get("root_layer", {}).get("layers", []):
                     add_layers[add_layer["name"]] = add_layer
                 base_root_layer["layers"] = list(map(
-                    lambda layer: layer | add_layers.get(layer["name"], {}),
-                    base_root_layer["layers"]
+                    lambda layer: collections.OrderedDict(
+                        list(layer.items()) + list(add_layers.get(layer["name"], {}).items())
+                    ), base_root_layer["layers"]
                 ))
             else:
                 resources['wms_services']
