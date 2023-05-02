@@ -18,16 +18,24 @@
     },
     "themesConfig": {
       "title": "QWC2 themes configuration",
-      "description": "Corresponds to contents of standalone QWC2 themesConfig.json",
-      "type": "object",
-      "properties": {
-        "themes": {
-          "type": "object"
+      "oneOf": [
+        {
+          "description": "Corresponds to contents of standalone QWC2 themesConfig.json",
+          "type": "object",
+          "properties": {
+            "themes": {
+              "type": "object"
+            }
+          },
+          "required": [
+            "themes"
+          ]
+        },
+        {
+          "description": "Path to themesConfig.json",
+          "type": "string"
         }
-      },
-      "required": [
-        "themes"
-      ]
+      ],
     },
     "config": {
       "title": "Config options for Config generator",
