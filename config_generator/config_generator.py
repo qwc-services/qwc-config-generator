@@ -122,7 +122,7 @@ class ConfigGenerator():
     from a tenantConfig.json and QWC ConfigDB.
     """
 
-    def __init__(self, config, logger):
+    def __init__(self, config, logger, config_file_dir):
         """Constructor
 
         :param obj config: ConfigGenerator config
@@ -175,7 +175,22 @@ class ConfigGenerator():
             self.logger.error(msg)
             raise Exception(msg)
 
-        themes_config = config.get("themesConfig", {})
+        themes_config = config.get("themesConfig", None)
+
+        if isinstance(themes_config, str):
+            try:
+                if not os.path.isabs(themes_config):
+                    themes_config = os.path.join(config_file_dir, themes_config)
+                with open(themes_config) as f:
+                    themes_config = json.load(f)
+            except:
+                msg = "Failed to read themes configuration %s" % themes_config
+                self.logger.error(msg)
+                raise Exception(msg)
+        elif not isinstance(themes_config, dict):
+            msg = "Missing or invalid themes configuration in tenantConfig.json"
+            self.logger.error(msg)
+            raise Exception(msg)
 
         # Preprocess QGS projects
         self.preprocess_qgs_projects(generator_config, self.tenant)

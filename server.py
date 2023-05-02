@@ -26,9 +26,10 @@ def config_generator(tenant):
         raise Exception(msg)
 
     # read ConfigGenerator config file
+    config_file_dir = os.path.join(config_in_path, tenant)
     try:
         config_file = os.path.join(
-            config_in_path, tenant, 'tenantConfig.json'
+            config_file_dir, 'tenantConfig.json'
         )
         with open(config_file, encoding='utf-8') as f:
             # parse config JSON with original order of keys
@@ -39,7 +40,7 @@ def config_generator(tenant):
         raise Exception(msg)
 
     # create ConfigGenerator
-    return ConfigGenerator(config, app.logger)
+    return ConfigGenerator(config, app.logger, config_file_dir)
 
 
 # routes
