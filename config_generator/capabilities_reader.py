@@ -2,6 +2,7 @@ from collections import OrderedDict
 from urllib.parse import urljoin, urlparse
 from xml.etree import ElementTree
 
+import re
 import requests
 
 
@@ -113,6 +114,8 @@ class CapabilitiesReader():
             service_title = root.find('%sService/%sTitle' % (np, np), ns)
             if service_title is not None:
                 capabilities['title'] = service_title.text
+                if capabilities['title'] == "Untitled":
+                    capabilities['title'] = re.sub('.*/', '', service_name)
 
             # get service abstract
             service_abstract = root.find('%sService/%sAbstract' % (np, np), ns)
