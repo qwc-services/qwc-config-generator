@@ -4,7 +4,7 @@ import os
 import requests
 import urllib.parse
 
-from .external_layer_utils import get_external_wmts_layer, get_external_wms_layer
+from .external_layer_utils import resolve_external_layer
 from .permissions_query import PermissionsQuery
 from .service_config import ServiceConfig
 
@@ -263,28 +263,11 @@ class MapViewerConfig(ServiceConfig):
                     imgPath = "img/mapthumbs/default.jpg"
             backgroundLayer["thumbnail"] = imgPath
 
+        # Resolve external layers
         for entry in autogenExternalLayers:
-            cpos = entry.find(':')
-            hpos = entry.rfind('#')
-            type = entry[0:cpos]
-            url = entry[cpos+1:hpos]
-            infoFormat = "text/plain"
-            urlobj = urllib.parse.urlparse(url)
-            params = dict(urllib.parse.parse_qsl(urlobj.query))
-            if "infoFormat" in params:
-                infoFormat = params["infoFormat"]
-                del params["infoFormat"]
-                urlobj = urlobj._replace(query=urllib.parse.urlencode(params))
-                url = urllib.parse.urlunparse(urlobj)
-
-            layername = entry[hpos+1:]
-            themes["externalLayers"].append({
-                "name": entry,
-                "type": type,
-                "url": url,
-                "params": {"LAYERS": layername},
-                "infoFormats": [infoFormat]
-            })
+            layer = resolve_external_layer(entry, self.logger)
+            if layer:
+                themes["externalLayers"].append(layer)
 
         themes['pluginData'] = themes_config_themes.get('pluginData', {})
         themes['snapping'] = themes_config_themes.get('snapping', {})
@@ -424,13 +407,24 @@ class MapViewerConfig(ServiceConfig):
             'collapseLayerGroupsBelowLevel', -1)
 
         externalLayers = cfg_item.get("externalLayers") if "externalLayers" in cfg_item else []
+        newExternalLayers = []
         for layer in root_layer.get('layers', []):
             layers.append(self.collect_layers(
-                layer, search_layers, 1, collapseLayerGroupsBelowLevel, externalLayers, service_name))
+                layer, search_layers, 1, collapseLayerGroupsBelowLevel, newExternalLayers, service_name))
+
+        # Inject crs in wmts resource string
+        for entry in newExternalLayers:
+            if entry["name"].startswith("wmts:"):
+                urlobj = urllib.parse.urlparse(entry["name"][5:])
+                params = dict(urllib.parse.parse_qsl(urlobj.query))
+                params["crs"] = item['mapCrs']
+                urlobj = urlobj._replace(query=urllib.parse.urlencode(params))
+                entry["name"] = "wmts:" + urllib.parse.urlunparse(urlobj)
+
         item['sublayers'] = layers
         item['expanded'] = True
         item['drawingOrder'] = cap.get('drawing_order', [])
-        item['externalLayers'] = externalLayers
+        item['externalLayers'] = externalLayers + newExternalLayers
 
         self.set_optional_config(cfg_item, 'backgroundLayers', item)
 
@@ -507,7 +501,7 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'printResolutions', item)
         self.set_optional_config(cfg_item, 'printGrid', item)
 
-        autogenExternalLayers += list(map(lambda entry: entry["name"], externalLayers))
+        autogenExternalLayers += list(map(lambda entry: entry["name"], newExternalLayers))
 
         return item
 
@@ -721,9 +715,9 @@ class MapViewerConfig(ServiceConfig):
             # dataUrl
             if 'dataUrl' in layer:
                 item_layer['dataUrl'] = layer.get('dataUrl', '')
-                if item_layer["dataUrl"].startswith("wms:"):
+                if item_layer["dataUrl"].startswith("wms:") or item_layer["dataUrl"].startswith("wmts:"):
                     externalLayers.append({"internalLayer": layer['name'], "name": item_layer["dataUrl"]})
-                    item_layer["dataUrl"] = ""
+                item_layer["dataUrl"] = ""
 
             # metadataUrl
             if 'metadataUrl' in layer:
