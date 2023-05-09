@@ -4,6 +4,7 @@ import os
 import requests
 import urllib.parse
 
+from .external_layer_utils import get_external_wmts_layer, get_external_wms_layer
 from .permissions_query import PermissionsQuery
 from .service_config import ServiceConfig
 
