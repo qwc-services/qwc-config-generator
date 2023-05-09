@@ -227,7 +227,7 @@ class MapViewerConfig(ServiceConfig):
         items = []
         autogenExternalLayers = []
         for item in themes_config_themes.get('items', []):
-            theme_item = self.theme_item(item, autogenExternalLayers)
+            theme_item = self.theme_item(item, themes_config, autogenExternalLayers)
             if theme_item is not None and not theme_item['wmsOnly']:
                 items.append(theme_item)
         themes['items'] = items
@@ -235,7 +235,7 @@ class MapViewerConfig(ServiceConfig):
         # collect theme groups
         groups = []
         for group in themes_config_themes.get('groups', []):
-            groups.append(self.theme_group(group, autogenExternalLayers))
+            groups.append(self.theme_group(group, themes_config, autogenExternalLayers))
         themes['subdirs'] = groups
 
         if not self.default_theme and self.theme_ids:
@@ -275,14 +275,13 @@ class MapViewerConfig(ServiceConfig):
             'themeInfoLinks', []
         )
 
+        themes['defaultMapCrs'] = themes_config.get('defaultMapCrs')
         themes['defaultWMSVersion'] = themes_config.get(
             'defaultWMSVersion', '1.3.0'
         )
         themes['defaultScales'] = themes_config.get('defaultScales')
         themes['defaultPrintScales'] = themes_config.get('defaultPrintScales')
-        themes['defaultPrintResolutions'] = themes_config.get(
-            'defaultPrintResolutions'
-        )
+        themes['defaultPrintResolutions'] = themes_config.get('defaultPrintResolutions')
         themes['defaultPrintGrid'] = themes_config.get('defaultPrintGrid')
         themes['defaultSearchProviders'] = themes_config.get('defaultSearchProviders')
         themes['defaultBackgroundLayers'] = themes_config.get('defaultBackgroundLayers', [])
@@ -291,7 +290,7 @@ class MapViewerConfig(ServiceConfig):
 
         return qwc2_themes
 
-    def theme_group(self, cfg_group, autogenExternalLayers):
+    def theme_group(self, cfg_group, themes_config, autogenExternalLayers):
         """Recursively collect theme item group.
 
         :param obj theme_group: Themes config group
@@ -305,7 +304,7 @@ class MapViewerConfig(ServiceConfig):
         # collect sub theme items
         items = []
         for item in cfg_group.get('items', []):
-            theme_item = self.theme_item(item, autogenExternalLayers)
+            theme_item = self.theme_item(item, themes_config, autogenExternalLayers)
             if theme_item is not None and not theme_item['wmsOnly']:
                 items.append(theme_item)
         group['items'] = items
@@ -313,12 +312,12 @@ class MapViewerConfig(ServiceConfig):
         # recursively collect sub theme groups
         subgroups = []
         for subgroup in cfg_group.get('groups', []):
-            subgroups.append(self.theme_group(subgroup, autogenExternalLayers))
+            subgroups.append(self.theme_group(subgroup, themes_config, autogenExternalLayers))
         group['subdirs'] = subgroups
 
         return group
 
-    def theme_item(self, cfg_item, autogenExternalLayers):
+    def theme_item(self, cfg_item, themes_config, autogenExternalLayers):
         """Collect theme item from capabilities.
 
         :param obj cfg_item: Themes config item
@@ -374,7 +373,7 @@ class MapViewerConfig(ServiceConfig):
         item['contact'] = cap.get('contact', {})
 
 
-        item['mapCrs'] = cfg_item.get('mapCrs', 'EPSG:3857')
+        item['mapCrs'] = cfg_item.get('mapCrs', themes_config.get('defaultMapCrs', 'EPSG:3857'))
         self.set_optional_config(cfg_item, 'additionalMouseCrs', item)
 
         bbox = OrderedDict()
@@ -384,7 +383,7 @@ class MapViewerConfig(ServiceConfig):
 
         if 'extent' in cfg_item:
             initial_bbox = OrderedDict()
-            initial_bbox['crs'] = cfg_item.get('mapCrs', 'EPSG:4326')
+            initial_bbox['crs'] = cfg_item.get('mapCrs', item['mapCrs'])
             initial_bbox['bounds'] = cfg_item.get('extent')
             item['initialBbox'] = initial_bbox
         else:
