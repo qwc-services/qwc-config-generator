@@ -226,8 +226,9 @@ class MapViewerConfig(ServiceConfig):
         # collect theme items
         items = []
         autogenExternalLayers = []
+        bgLayerCrs = {}
         for item in themes_config_themes.get('items', []):
-            theme_item = self.theme_item(item, themes_config, autogenExternalLayers)
+            theme_item = self.theme_item(item, themes_config, autogenExternalLayers, bgLayerCrs)
             if theme_item is not None and not theme_item['wmsOnly']:
                 items.append(theme_item)
         themes['items'] = items
@@ -235,7 +236,7 @@ class MapViewerConfig(ServiceConfig):
         # collect theme groups
         groups = []
         for group in themes_config_themes.get('groups', []):
-            groups.append(self.theme_group(group, themes_config, autogenExternalLayers))
+            groups.append(self.theme_group(group, themes_config, autogenExternalLayers, bgLayerCrs))
         themes['subdirs'] = groups
 
         if not self.default_theme and self.theme_ids:
@@ -262,6 +263,18 @@ class MapViewerConfig(ServiceConfig):
                 if not os.path.isfile(self.qwc_base_dir + "/assets/" + imgPath):
                     imgPath = "img/mapthumbs/default.jpg"
             backgroundLayer["thumbnail"] = imgPath
+
+        # Resolve background layers
+        for entry in themes['backgroundLayers']:
+            if not "name" in entry or not entry["name"] in bgLayerCrs:
+                self.logger.warn("Skipping unused background layer %s" % entry.get("name", ""))
+                continue
+            if "resource" in entry:
+                layer = resolve_external_layer(entry["resource"], self.logger, bgLayerCrs[entry["name"]])
+                if layer:
+                    layer["name"] = entry["name"]
+                    entry.update(layer)
+                    del entry["resource"]
 
         # Resolve external layers
         for entry in autogenExternalLayers:
@@ -290,7 +303,7 @@ class MapViewerConfig(ServiceConfig):
 
         return qwc2_themes
 
-    def theme_group(self, cfg_group, themes_config, autogenExternalLayers):
+    def theme_group(self, cfg_group, themes_config, autogenExternalLayers, bgLayerCrs):
         """Recursively collect theme item group.
 
         :param obj theme_group: Themes config group
@@ -304,7 +317,7 @@ class MapViewerConfig(ServiceConfig):
         # collect sub theme items
         items = []
         for item in cfg_group.get('items', []):
-            theme_item = self.theme_item(item, themes_config, autogenExternalLayers)
+            theme_item = self.theme_item(item, themes_config, autogenExternalLayers, bgLayerCrs)
             if theme_item is not None and not theme_item['wmsOnly']:
                 items.append(theme_item)
         group['items'] = items
@@ -312,12 +325,12 @@ class MapViewerConfig(ServiceConfig):
         # recursively collect sub theme groups
         subgroups = []
         for subgroup in cfg_group.get('groups', []):
-            subgroups.append(self.theme_group(subgroup, themes_config, autogenExternalLayers))
+            subgroups.append(self.theme_group(subgroup, themes_config, autogenExternalLayers, bgLayerCrs))
         group['subdirs'] = subgroups
 
         return group
 
-    def theme_item(self, cfg_item, themes_config, autogenExternalLayers):
+    def theme_item(self, cfg_item, themes_config, autogenExternalLayers, bgLayerCrs):
         """Collect theme item from capabilities.
 
         :param obj cfg_item: Themes config item
@@ -426,6 +439,9 @@ class MapViewerConfig(ServiceConfig):
         item['externalLayers'] = externalLayers + newExternalLayers
 
         self.set_optional_config(cfg_item, 'backgroundLayers', item)
+        # Collect crs of background layers
+        for entry in item.get('backgroundLayers', []):
+            bgLayerCrs[entry['name']] = item['mapCrs']
 
         print_templates = cap.get('print_templates', [])
         if print_templates:
