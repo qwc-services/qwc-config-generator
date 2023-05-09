@@ -57,7 +57,7 @@ except Exception as e:
 logger = Logger()
 
 # create ConfigGenerator
-generator = ConfigGenerator(config, logger, os.path.dirname(config_file))
+generator = ConfigGenerator(config, logger, os.path.dirname(args.config_file))
 if args.command == 'all':
     generator.write_configs()
     generator.write_permissions()
