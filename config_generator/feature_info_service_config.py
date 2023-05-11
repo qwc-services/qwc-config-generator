@@ -30,6 +30,9 @@ class FeatureInfoServiceConfig(ServiceConfig):
         self.default_qgis_server_url = generator_config.get(
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
+        self.permissions_default_allow = generator_config.get(
+            'permissions_default_allow', True
+        )
 
         self.themes_reader = themes_reader
 
@@ -216,6 +219,7 @@ class FeatureInfoServiceConfig(ServiceConfig):
             session = self.config_models.session()
 
             # helper method alias
+            non_public_resources = self.permissions_query.non_public_resources
             permitted_resources = self.permissions_query.permitted_resources
 
             # collect role permissions from ConfigDB
@@ -245,14 +249,25 @@ class FeatureInfoServiceConfig(ServiceConfig):
                 )
             }
 
+            # collect public restrictions from ConfigDB
+            public_restrictions = {
+                'info_services': non_public_resources('feature_info_service', session),
+                'info_layers': non_public_resources('feature_info_layer', session),
+                'attributes': non_public_resources('info_attribute', session)
+            }
+
             is_public_role = (role == self.permissions_query.public_role())
 
             # collect info layer permissions for each info service
             available_info_layers = self.available_info_layers(session)
             for info_service, info_layers in available_info_layers.items():
-                # lookup permissions (info service restricted by default)
-                info_service_restricted_for_public = info_service not in \
-                    public_permissions['info_services']
+                # lookup permissions
+                if self.permissions_default_allow:
+                    info_service_restricted_for_public = info_service in \
+                        public_restrictions['info_services']
+                else:
+                    info_service_restricted_for_public = info_service not in \
+                        public_permissions['info_services']
                 info_service_permitted_for_role = info_service in \
                     role_permissions['info_services']
                 if (
@@ -269,9 +284,13 @@ class FeatureInfoServiceConfig(ServiceConfig):
                 # collect info layers
                 layers = []
                 for info_layer in info_layers:
-                    # lookup permissions (info layer restricted by default)
-                    info_layer_restricted_for_public = info_layer not in \
-                        public_permissions['info_layers'].get(info_service, {})
+                    # lookup permissions
+                    if self.permissions_default_allow:
+                        info_layer_restricted_for_public = info_layer in \
+                            public_restrictions['info_layers'].get(info_service, {})
+                    else:
+                        info_layer_restricted_for_public = info_layer not in \
+                            public_permissions['info_layers'].get(info_service, {})
                     info_layer_permitted_for_role = info_layer in \
                         role_permissions['info_layers'].get(info_service, {})
                     if (
