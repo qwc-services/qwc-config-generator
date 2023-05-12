@@ -5,7 +5,7 @@ ADD . /srv/qwc_service
 ARG DEBIAN_FRONTEND=noninteractive
 
 RUN \
-    echo "deb http://qgis.org/ubuntu-ltr focal main" > /etc/apt/sources.list.d/qgis.org-debian.list && \
+    echo "deb http://qgis.org/ubuntu-ltr jammy main" > /etc/apt/sources.list.d/qgis.org-debian.list && \
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-key D155B8E6A419C5BE && \
     apt-get update && \
     apt-get install -y python3-qgis && \
