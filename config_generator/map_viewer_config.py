@@ -585,13 +585,13 @@ class MapViewerConfig(ServiceConfig):
                     'BBOX': (",".join(map(str, adjustedExtent))),
                     'LAYERS': (",".join(layers).encode('utf-8'))
                 },
-                timeout=60
+                timeout=10
             )
 
             if response.status_code != requests.codes.ok:
                 self.logger.critical(
-                    "Could not get GetMap from %s:\n%s" %
-                    (url, response.content)
+                    "ERROR generating thumbnail for WMS %s:\n%s" %
+                    (service_name, response.content)
                 )
                 return
 
