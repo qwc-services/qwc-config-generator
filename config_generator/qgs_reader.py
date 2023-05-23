@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import io
 import math
 import os
 import re
@@ -7,6 +8,7 @@ import psycopg2
 import shutil
 import time
 from urllib.parse import quote as urlquote
+import zipfile
 
 from sqlalchemy.sql import text as sql_text
 
@@ -32,24 +34,57 @@ class QGSReader:
         self.root = None
         self.qgis_version = 0
 
+        self.qgs_resources_path = qgs_resources_path
         self.map_prefix = qgs_path
-        qgs_file = "%s.qgs" % qgs_path
-        self.qgs_path = os.path.join(qgs_resources_path, qgs_file)
-        if not os.path.exists(self.qgs_path):
-            self.logger.warn("Could not find QGS file '%s'" % self.qgs_path)
 
         self.db_engine = DatabaseEngine()
 
     def read(self):
         """Read QGIS project file and return True on success.
         """
-        self.logger.info("Reading '%s.qgs'" % self.map_prefix)
+
         try:
-            tree = ElementTree.parse(self.qgs_path)
-            self.root = tree.getroot()
-            if self.root.tag != 'qgis':
-                self.logger.warn("'%s' is not a QGS file" % self.qgs_path)
+            if self.map_prefix.startswith("pg/"):
+                parts = self.map_prefix.split("/")
+                self.qgs_path = self.qgs_resources_path
+                project_path = 'postgresql:///?service=qgisprojects&schema=%s&project=%s' % (parts[1], parts[2])
+
+                qgis_projects_db = self.db_engine.db_engine("postgresql:///?service=qgisprojects")
+                self.logger.info("Reading '%s'" % project_path)
+
+                conn = qgis_projects_db.connect()
+                sql = sql_text("""
+                    SELECT content FROM "{schema}"."{table}"
+                    WHERE name = '{project}';
+                """.format(schema=parts[1], table="qgis_projects", project=parts[2]))
+                result = conn.execute(sql)
+                data = result.fetchone()['content']
+                conn.close()
+
+                qgz = zipfile.ZipFile(io.BytesIO(data))
+                for filename in qgz.namelist():
+                    if filename.endswith('.qgs'):
+                        fh = qgz.open(filename)
+                        tree = ElementTree.parse(fh)
+                        fh.close()
+                        break
+
+            else:
+                qgs_file = "%s.qgs" % self.map_prefix
+                self.qgs_path = os.path.join(self.qgs_resources_path, qgs_file)
+                if not os.path.exists(self.qgs_path):
+                    self.logger.warn("Could not find QGS file '%s'" % self.qgs_path)
+                    return False
+
+                project_path = qgs_file
+                self.logger.info("Reading '%s'" % project_path)
+
+                tree = ElementTree.parse(self.qgs_path)
+
+            if tree is None or tree.getroot().tag != 'qgis':
+                self.logger.warn("'%s' is not a QGS file" % project_path)
                 return False
+            self.root = tree.getroot()
 
             # extract QGIS version
             version = self.root.get('version')
@@ -639,7 +674,7 @@ class QGSReader:
         :param str qwc_base_dir: The qwc base dir
         """
         gen = DnDFormGenerator(self.logger, qwc_base_dir, metadata)
-        projectname = os.path.splitext(os.path.basename(self.qgs_path))[0]
+        projectname = os.path.basename(self.map_prefix)
         result = {}
         for maplayer in self.root.findall('.//maplayer'):
 
