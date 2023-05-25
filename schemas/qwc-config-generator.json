@@ -35,7 +35,7 @@
           "description": "Path to themesConfig.json",
           "type": "string"
         }
-      ],
+      ]
     },
     "config": {
       "title": "Config options for Config generator",
