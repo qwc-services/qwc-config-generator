@@ -125,7 +125,7 @@ def get_external_wms_layer(resource, url, layerName, infoFormat, logger):
             break
 
     if not targetLayer:
-        logger.warn("Could not find external layer %s in capabilities" % entry)
+        logger.warn("Could not find external layer %s in capabilities" % resource)
         return None
 
     # Info formats
