@@ -58,10 +58,13 @@ class QGSReader:
                     WHERE name = '{project}';
                 """.format(schema=parts[1], table="qgis_projects", project=parts[2]))
                 result = conn.execute(sql)
-                data = result.fetchone()['content']
+                row = result.fetchone()
                 conn.close()
+                if not row:
+                    self.logger.warn("Could not find QGS project '%s'" % project_path)
+                    return False
 
-                qgz = zipfile.ZipFile(io.BytesIO(data))
+                qgz = zipfile.ZipFile(io.BytesIO(row['content']))
                 for filename in qgz.namelist():
                     if filename.endswith('.qgs'):
                         fh = qgz.open(filename)
@@ -73,7 +76,7 @@ class QGSReader:
                 qgs_file = "%s.qgs" % self.map_prefix
                 self.qgs_path = os.path.join(self.qgs_resources_path, qgs_file)
                 if not os.path.exists(self.qgs_path):
-                    self.logger.warn("Could not find QGS file '%s'" % self.qgs_path)
+                    self.logger.warn("Could not find QGS project '%s'" % self.qgs_path)
                     return False
 
                 project_path = qgs_file
