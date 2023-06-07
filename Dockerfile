@@ -1,4 +1,4 @@
-FROM sourcepole/qwc-uwsgi-base:ubuntu-v2023.06.07
+FROM sourcepole/qwc-uwsgi-base:ubuntu-v2023.06.08
 
 ADD . /srv/qwc_service
 
