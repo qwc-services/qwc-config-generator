@@ -63,19 +63,24 @@ class FeatureInfoServiceConfig(ServiceConfig):
         for add_entry in self.additional_wms_services():
             result = list(filter(lambda e: e['name'] == add_entry['name'], resources['wms_services']))
             if result:
-                base_root_layer = result[0]["root_layer"]
-                add_layers = {}
-                for add_layer in add_entry.get("root_layer", {}).get("layers", []):
-                    add_layers[add_layer["name"]] = add_layer
-                base_root_layer["layers"] = list(map(
-                    lambda layer: OrderedDict(
-                        list(layer.items()) + list(add_layers.get(layer["name"], {}).items())
-                    ), base_root_layer["layers"]
-                ))
-            else:
-                resources['wms_services']
+                self.__merge_resources(result[0]["root_layer"], add_entry.get("root_layer", {}))
 
         return config
+
+    def __merge_resources(self, base_entry, add_entry):
+        """Recursively merge resources collected from capabilitites with additional resources.
+        """
+        add_layers = {}
+        for add_layer in add_entry.get("layers", []):
+            add_layers[add_layer["name"]] = add_layer
+        if "layers" in base_entry:
+            base_entry["layers"] = list(map(
+                lambda layer: OrderedDict(
+                    list(layer.items()) + list(filter(lambda item: item[0] != "layers", add_layers.get(layer["name"], {}).items()))
+                ), base_entry["layers"]
+            ))
+        for layer in base_entry.get("layers", {}):
+            self.__merge_resources(layer, add_layers.get(layer["name"], {}))
 
     def permissions(self, role):
         """Return service permissions for a role.
