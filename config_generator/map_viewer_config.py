@@ -464,6 +464,7 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'printLabelForAttribution', item)
 
         self.set_optional_config(cfg_item, 'extraLegendParameters', item)
+        self.set_optional_config(cfg_item, 'extraDxfParameters', item)
 
         self.set_optional_config(cfg_item, 'skipEmptyFeatureAttributes', item)
 
