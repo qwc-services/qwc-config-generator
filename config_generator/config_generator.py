@@ -139,6 +139,9 @@ class ConfigGenerator():
         self.default_qgis_server_url = generator_config.get(
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
+        self.ows_prefix = generator_config.get(
+            'ows_prefix', urlparse(self.default_qgis_server_url).path
+        ).rstrip('/') + '/'
 
         # Set output config path for the generated configuration files.
         # If `config_path` is not set in the configGeneratorConfig.json,
@@ -698,12 +701,11 @@ class ConfigGenerator():
                     fname = os.path.join(dirpath, filename)
                     relpath = os.path.relpath(dirpath,
                                               qgis_projects_base_dir)
-                    wmspath = os.path.join(relpath, Path(filename).stem)
-                    wmsurlpath = urlparse(urljoin(self.default_qgis_server_url, wmspath)).path
+                    wmspath = os.path.join(self.ows_prefix, relpath, Path(filename).stem)
 
                     # Add to themes items
                     item = OrderedDict()
-                    item["url"] = wmsurlpath
+                    item["url"] = wmspath
                     item["backgroundLayers"] = themes_config.get(
                         "defaultBackgroundLayers", [])
                     item["searchProviders"] = themes_config.get(
