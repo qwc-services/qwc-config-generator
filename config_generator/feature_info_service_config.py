@@ -266,6 +266,8 @@ class FeatureInfoServiceConfig(ServiceConfig):
             # collect info layer permissions for each info service
             available_info_layers = self.available_info_layers(session)
             for info_service, info_layers in available_info_layers.items():
+                queryable = True
+
                 # lookup permissions
                 if self.permissions_default_allow:
                     info_service_restricted_for_public = info_service in \
@@ -279,8 +281,7 @@ class FeatureInfoServiceConfig(ServiceConfig):
                     info_service_restricted_for_public
                     and not info_service_permitted_for_role
                 ):
-                    # info service not permitted
-                    continue
+                    queryable = False
 
                 # NOTE: use ordered keys
                 wms_service = OrderedDict()
@@ -302,8 +303,7 @@ class FeatureInfoServiceConfig(ServiceConfig):
                         info_layer_restricted_for_public
                         and not info_layer_permitted_for_role
                     ):
-                        # info layer not permitted
-                        continue
+                        queryable = False
 
                     # NOTE: use ordered keys
                     wms_layer = OrderedDict()
@@ -315,6 +315,7 @@ class FeatureInfoServiceConfig(ServiceConfig):
                     if attributes:
                         wms_layer['attributes'] = sorted(list(attributes))
 
+                    wms_layer['queryable'] = queryable
                     # info template always permitted
                     wms_layer['info_template'] = True
 
