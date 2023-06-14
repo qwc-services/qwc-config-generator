@@ -348,7 +348,7 @@ class MapViewerConfig(ServiceConfig):
 
         name = service_name
 
-        item['id'] = self.unique_theme_id(name)
+        item['id'] = cfg_item.get('id', self.unique_theme_id(name))
         item['name'] = name
 
         if cfg_item.get('default', False) is True:
