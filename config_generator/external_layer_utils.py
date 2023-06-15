@@ -301,12 +301,27 @@ def get_external_wmts_layer(resource, capabilitiesUrl, layerName, crs, logger):
         attribution["Title"] = getFirstElementValueByTagName(serviceProvider, "ows:ProviderName")
         attribution["OnlineResource"] = getFirstElementByTagName(serviceProvider, "ows:ProviderSite").getAttribute('xlink:href')
 
+    # Format
+    format = getFirstElementValueByTagName(targetLayer, "Format")
+
+    # RequestEncoding
+    requestEncoding = ""
+    operationsMetadata = getFirstElementByTagName(capabilities, "ows:OperationsMetadata")
+    if operationsMetadata is not None:
+        for operation in operationsMetadata.getElementsByTagName("ows:Operation"):
+            if operation.getAttribute("name") == "GetCapabilities":
+                constraint = getFirstElementByTagName(operation, "ows:Constraint")
+                if constraint.getAttribute("name") == "GetEncoding":
+                    requestEncoding = getFirstElementValueByTagName(constraint, "ows:Value")
+
     return {
         "type": "wmts",
         "url": tileUrl,
         "capabilitiesUrl": capabilitiesUrl,
         "title": title,
         "name": resource,
+        "format": format,
+        "requestEncoding": requestEncoding,
         "tileMatrixPrefix": "",
         "tileMatrixSet": tileMatrixName,
         "originX": origin[0],
