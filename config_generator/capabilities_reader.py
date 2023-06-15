@@ -442,12 +442,20 @@ class CapabilitiesReader():
         :param str np: Namespace prefix
         """
         print_templates = []
+        composer_template_map = {}
         for template in root.findall('.//%sComposerTemplate' % np, ns):
+            composer_template_map[template.get('name')] = template
+
+        for template in composer_template_map.values():
             template_name = template.get('name')
+            if template_name.endswith("_legend") and template_name[:-7] in composer_template_map:
+                continue
 
             # NOTE: use ordered keys
             print_template = OrderedDict()
             print_template['name'] = template.get('name')
+            if template_name + "_legend" in composer_template_map:
+                print_template["legendLayout"] = template_name + "_legend";
 
             composer_map = template.find('%sComposerMap' % np, ns)
             if composer_map is not None:

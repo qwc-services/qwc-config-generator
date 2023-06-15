@@ -118,6 +118,8 @@ class OGCServiceConfig(ServiceConfig):
             if 'print_templates' in cap:
                 wms_service['print_templates'] = [
                     template['name'] for template in cap['print_templates']
+                ] + [
+                    template['legendLayout'] for template in cap['print_templates'] if 'legendLayout' in template
                 ]
             if 'internal_print_layers' in cap:
                 wms_service['internal_print_layers'] = \
@@ -279,6 +281,8 @@ class OGCServiceConfig(ServiceConfig):
             if print_templates:
                 wms_permissions['print_templates'] = [
                     template['name'] for template in print_templates
+                ] + [
+                    template['legendLayout'] for template in print_templates if 'legendLayout' in template
                 ]
 
             if layers or print_templates:
@@ -537,7 +541,10 @@ class OGCServiceConfig(ServiceConfig):
                     public_templates = set(
                         template['name'] for template in print_templates
                         if template['name'] not in public_restricted_templates
-                    )
+                    ).union(set(
+                        template['legendLayout'] for template in print_templates
+                        if template['name'] not in public_restricted_templates and 'legendLayout' in template
+                    ))
                     permitted_templates = (
                         role_permitted_templates | public_templates
                     )
