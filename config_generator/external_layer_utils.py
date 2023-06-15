@@ -31,11 +31,11 @@ def getFirstElementValueByTagName(parent, name):
 
 def getWmsRequestUrl(WMS_Capabilities, reqType, urlObj):
     try:
-        reqUrl = getChildElement(contents, "Capability/Request/%s/DCPType/HTTP/Get/OnlineResource" % reqType).getAttribute('xlink:href')
+        reqUrl = getChildElement(WMS_Capabilities, "Capability/Request/%s/DCPType/HTTP/Get/OnlineResource" % reqType).getAttribute('xlink:href')
         reqUrlObj = urllib.parse.urlparse(reqUrl)
         # Clear scheme to ensure same scheme as viewer is used
         reqUrlObj = reqUrlObj._replace(scheme='')
-        params = dict(urllib.parse.parse_qsl(urlobj.query))
+        params = dict(urllib.parse.parse_qsl(urlObj.query))
         params.update(dict(urllib.parse.parse_qsl(reqUrlObj.query)))
         reqUrlObj = reqUrlObj._replace(query=urlObj.scheme)
         return urllib.parse.urlunparse(reqUrlObj)
