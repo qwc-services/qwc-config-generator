@@ -16,6 +16,10 @@
       "type": "string",
       "const": "config-generator"
     },
+    "template": {
+      "title": "Optional, path to a tenantConfig template. If specified, the contents of the file is merged with the contents of tenantConfig.json. Any occurence of $tenant$ in the template will be replaced with the current tenant name.",
+      "type": "string"
+    },
     "themesConfig": {
       "title": "QWC2 themes configuration",
       "oneOf": [

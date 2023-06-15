@@ -1,5 +1,6 @@
 import json
 import jsonschema
+import deepmerge
 import os
 import requests
 import tempfile
@@ -130,10 +131,28 @@ class ConfigGenerator():
         """
         self.logger = Logger(logger)
 
-        self.config = config
         generator_config = config.get('config', {})
         self.tenant = generator_config.get('tenant', 'default')
         self.logger.debug("Using tenant '%s'" % self.tenant)
+
+        if config.get('template', None):
+            config_template_path = config.get('template')
+            if not os.path.isabs(config_template_path):
+                    config_template_path = os.path.join(config_file_dir, config_template_path)
+            try:
+                with open(config_template_path, 'r') as fh:
+                    config_template_data = fh.read().replace('$tenant$', self.tenant)
+                    config_template = json.loads(config_template_data, object_pairs_hook=OrderedDict)
+
+                    config_services = dict(map(lambda entry: (entry["name"], entry), config.get("services", [])))
+                    config_template_services = dict(map(lambda entry: (entry["name"], entry), config_template.get("services", [])))
+
+                    config = deepmerge.always_merger.merge(config_template, config)
+                    config["services"] = list(deepmerge.always_merger.merge(config_template_services, config_services).values())
+            except Exception as e:
+                self.logger.warning("Failed to merge config template %s: %s."  % (config_template_path, str(e)))
+
+        self.config = config
 
         # get default QGIS server URL from ConfigGenerator config
         self.default_qgis_server_url = generator_config.get(
