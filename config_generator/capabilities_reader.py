@@ -194,6 +194,16 @@ class CapabilitiesReader():
             if drawing_order is not None:
                 capabilities['drawing_order'] = drawing_order.text.split(',')
 
+            # GetMap formats
+            capabilities['map_formats'] = list(map(lambda el: el.text, root.findall(
+                '%sCapability/%sRequest/%sGetMap/%sFormat' % (np, np, np, np), ns
+            )))
+
+            # GetFeatureInfo formats
+            capabilities['info_formats'] = list(map(lambda el: el.text, root.findall(
+                '%sCapability/%sRequest/%sGetFeatureInfo/%sFormat' % (np, np, np, np), ns
+            )))
+
             # collect print templates
             print_templates = self.print_templates(root, np, ns)
             if print_templates:
