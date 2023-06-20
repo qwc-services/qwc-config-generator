@@ -182,29 +182,27 @@ class FeatureInfoServiceConfig(ServiceConfig):
     # permissions
 
     def available_info_layers(self, session):
-        """Collect all available info layers from ConfigDB, grouped by
-        info service name.
+        """Collect all available info layers, grouped by info service name.
 
         :param Session session: DB session
         """
         # NOTE: use ordered keys
         available_info_layers = OrderedDict()
 
-        Resource = self.config_models.model('resources')
+        def get_child_layers(entry, result):
+            if 'layers' in entry:
+                # group layer
+                for sublayer in entry['layers']:
+                    get_child_layers(sublayer, result)
+            elif entry.get('queryable', False):
+                result.append(entry['name'])
 
-        query = session.query(Resource) \
-            .filter(Resource.type == 'feature_info_service') \
-            .order_by(Resource.name)
-        for info_service in query.all():
-            # collect unique info layers for each info service resource
-            info_layers_query = session.query(Resource) \
-                .filter(Resource.parent_id == info_service.id) \
-                .filter(Resource.type == 'feature_info_layer') \
-                .distinct(Resource.name) \
-                .order_by(Resource.name)
-            available_info_layers[info_service.name] = [
-                resource.name for resource in info_layers_query.all()
-            ]
+        for service_name in self.themes_reader.wms_service_names():
+            cap = self.themes_reader.wms_capabilities(service_name)
+            if not cap:
+                continue
+            available_info_layers[service_name] = []
+            get_child_layers(cap['root_layer'], available_info_layers[service_name])
 
         return available_info_layers
 
