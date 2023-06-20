@@ -496,22 +496,8 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'format', item)
         self.set_optional_config(cfg_item, 'tiled', item)
 
-        # TODO: availableFormats
-        item['availableFormats'] = [
-            'image/jpeg',
-            'image/png',
-            'image/png; mode=16bit',
-            'image/png; mode=8bit',
-            'image/png; mode=1bit'
-        ]
-        # TODO: infoFormats
-        item['infoFormats'] = [
-            'text/plain',
-            'text/html',
-            'text/xml',
-            'application/vnd.ogc.gml',
-            'application/vnd.ogc.gml/3.1.1'
-        ]
+        item['availableFormats'] = cap['map_formats']
+        item['infoFormats'] = cap['info_formats']
 
         self.set_optional_config(cfg_item, 'scales', item)
         self.set_optional_config(cfg_item, 'printScales', item)
