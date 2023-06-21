@@ -688,7 +688,7 @@ class CapabilitiesReader():
             for complex_type in root.findall('%scomplexType' % np, ns):
                 # extract layer name from complexType by removing "Type" suffix
                 # e.g. "edit_pointsType" -> "edit_points"
-                layer_name = complex_type.get('name').rstrip('Type')
+                layer_name = complex_type.get('name').removesuffix('Type')
 
                 attributes = []
                 for element in complex_type.findall('%scomplexContent/%sextension/%ssequence/%selement' % (np, np, np, np), ns):
