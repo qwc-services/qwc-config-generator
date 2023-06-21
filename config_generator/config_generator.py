@@ -131,8 +131,7 @@ class ConfigGenerator():
         """
         self.logger = Logger(logger)
 
-        generator_config = config.get('config', {})
-        self.tenant = generator_config.get('tenant', 'default')
+        self.tenant = config.get('config', {}).get('tenant', 'default')
         self.logger.debug("Using tenant '%s'" % self.tenant)
 
         if config.get('template', None):
@@ -155,6 +154,7 @@ class ConfigGenerator():
         self.config = config
 
         # get default QGIS server URL from ConfigGenerator config
+        generator_config = self.config.get('config', {})
         self.default_qgis_server_url = generator_config.get(
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
