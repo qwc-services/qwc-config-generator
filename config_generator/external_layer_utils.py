@@ -37,7 +37,7 @@ def getWmsRequestUrl(WMS_Capabilities, reqType, urlObj):
         reqUrlObj = reqUrlObj._replace(scheme='')
         params = dict(urllib.parse.parse_qsl(urlObj.query))
         params.update(dict(urllib.parse.parse_qsl(reqUrlObj.query)))
-        reqUrlObj = reqUrlObj._replace(query=urlObj.scheme)
+        reqUrlObj = reqUrlObj._replace(query=params)
         return urllib.parse.urlunparse(reqUrlObj)
     except:
         return urllib.parse.urlunparse(urlObj)
