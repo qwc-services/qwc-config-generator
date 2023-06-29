@@ -763,23 +763,9 @@ class MapViewerConfig(ServiceConfig):
             .distinct(Resource.name, Resource.type) \
             .order_by(Resource.name)
 
-        edit_datasets = {}
+        edit_datasets = []
         for permission in datasets_query.all():
-            writeable = permission.write
-            creatable = writeable and permission.resource.type in ['data', 'data_create']
-            updatable = writeable and permission.resource.type in ['data', 'data_update']
-            deletable = writeable and permission.resource.type in ['data', 'data_delete']
-
-            if permission.resource.name in edit_datasets :
-                creatable |= edit_datasets[permission.resource.name]['creatable']
-                updatable |= edit_datasets[permission.resource.name]['updatable']
-                deletable |= edit_datasets[permission.resource.name]['deletable']
-
-            edit_datasets[permission.resource.name] = {
-                'creatable' : creatable,
-                'updatable' : updatable,
-                'deletable' : deletable
-            }
+            edit_datasets.append(permission.resource.name)
 
         session.close()
 
@@ -825,7 +811,6 @@ class MapViewerConfig(ServiceConfig):
             dataset['geomType'] = self.EDIT_GEOM_TYPES.get(
                 meta['geometry_type']
             )
-            dataset['permissions'] = edit_datasets[layer_name]
             
             forms = self.themes_reader.collect_ui_forms(map_name, self.qwc_base_dir, layer_name)
 
