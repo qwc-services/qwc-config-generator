@@ -403,7 +403,7 @@ class MapViewerConfig(ServiceConfig):
             item['initialBbox'] = item['bbox']
 
         # get search layers from searchProviders
-        search_providers = cfg_item.get('searchProviders', [])
+        search_providers = cfg_item.get('searchProviders', themes_config.get('defaultSearchProviders', []))
         search_layers = {}
         for search_provider in search_providers:
             if (
