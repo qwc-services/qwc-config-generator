@@ -31,10 +31,6 @@ class DataServiceConfig(ServiceConfig):
         self.generator_config = generator_config
         self.themes_reader = themes_reader
 
-        self.qgis_projects_base_dir = generator_config.get(
-            'qgis_projects_base_dir', '/tmp/'
-        )
-
     def config(self):
         """Return service config.
 

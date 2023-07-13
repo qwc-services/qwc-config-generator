@@ -74,10 +74,6 @@ class MapViewerConfig(ServiceConfig):
         # helper method alias
         self.permitted_resources = self.permissions_query.permitted_resources
 
-        self.qgis_projects_base_dir = generator_config.get(
-            'qgis_projects_base_dir', '/tmp/'
-        )
-
         # get qwc2 directory from ConfigGenerator config
         self.qwc_base_dir = service_config.get('config').get('qwc2_path')
 
