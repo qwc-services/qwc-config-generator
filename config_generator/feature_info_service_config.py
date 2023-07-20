@@ -227,36 +227,43 @@ class FeatureInfoServiceConfig(ServiceConfig):
 
             # collect role permissions from ConfigDB
             role_permissions = {
+                'maps': permitted_resources(
+                    'map', role, session
+                ),
+                'layers': permitted_resources(
+                    'layer', role, session
+                ),
                 'info_services': permitted_resources(
                     'feature_info_service', role, session
                 ),
                 'info_layers': permitted_resources(
                     'feature_info_layer', role, session
-                ),
-                'attributes': permitted_resources(
-                    'info_attribute', role, session
                 )
             }
 
             # collect public permissions from ConfigDB
             public_role = self.permissions_query.public_role()
             public_permissions = {
+                'maps': permitted_resources(
+                    'map', public_role, session
+                ),
+                'layers': permitted_resources(
+                    'layer', public_role, session
+                ),
                 'info_services': permitted_resources(
                     'feature_info_service', public_role, session
                 ),
                 'info_layers': permitted_resources(
                     'feature_info_layer', public_role, session
-                ),
-                'attributes': permitted_resources(
-                    'info_attribute', public_role, session
                 )
             }
 
             # collect public restrictions from ConfigDB
             public_restrictions = {
+                'maps': non_public_resources('map', session),
+                'layers': non_public_resources('layer', session),
                 'info_services': non_public_resources('feature_info_service', session),
-                'info_layers': non_public_resources('feature_info_layer', session),
-                'attributes': non_public_resources('info_attribute', session)
+                'info_layers': non_public_resources('feature_info_layer', session)
             }
 
             is_public_role = (role == self.permissions_query.public_role())
@@ -269,17 +276,29 @@ class FeatureInfoServiceConfig(ServiceConfig):
                 # lookup permissions
                 if self.permissions_default_allow:
                     info_service_restricted_for_public = info_service in \
-                        public_restrictions['info_services']
+                        public_restrictions['info_services'] or \
+                            info_service in public_restrictions['maps']
                 else:
                     info_service_restricted_for_public = info_service not in \
-                        public_permissions['info_services']
+                        public_permissions['info_services'] and \
+                            info_service not in public_permissions['maps']
+
                 info_service_permitted_for_role = info_service in \
                     role_permissions['info_services']
+
+                # Special case: if map is restricted for public and info_service not explicitly permitted,
+                # but info_service is default_allow and map resource is permitted, allow
+                if not info_service_permitted_for_role and \
+                    self.permissions_default_allow and \
+                        info_service not in public_restrictions['info_services'] and \
+                        info_service in role_permissions['maps']:
+                    info_service_permitted_for_role = True
+
                 if (
                     info_service_restricted_for_public
                     and not info_service_permitted_for_role
                 ):
-                    queryable = False
+                    continue
 
                 # NOTE: use ordered keys
                 wms_service = OrderedDict()
@@ -291,40 +310,42 @@ class FeatureInfoServiceConfig(ServiceConfig):
                     # lookup permissions
                     if self.permissions_default_allow:
                         info_layer_restricted_for_public = info_layer in \
-                            public_restrictions['info_layers'].get(info_service, {})
+                            public_restrictions['info_layers'].get(info_service, {}) or \
+                                info_layer in public_restrictions['layers'].get(info_service, {})
                     else:
                         info_layer_restricted_for_public = info_layer not in \
-                            public_permissions['info_layers'].get(info_service, {})
+                            public_permissions['info_layers'].get(info_service, {}) and \
+                                info_layer not in public_permissions['layers'].get(info_service, {})
+
                     info_layer_permitted_for_role = info_layer in \
                         role_permissions['info_layers'].get(info_service, {})
+
+                    # Special case: if layer is restricted for public and info_layer not explicitly permitted,
+                    # but info_layer is default_allow and layer resource is permitted, allow
+                    if not info_layer_permitted_for_role and \
+                        self.permissions_default_allow and \
+                            info_layer not in public_restrictions['info_layers'].get(info_service, {}) and \
+                            info_layer in role_permissions['layers'].get(info_service, {}):
+                        info_layer_permitted_for_role = True
+
                     if (
                         info_layer_restricted_for_public
                         and not info_layer_permitted_for_role
                     ):
-                        queryable = False
+                        continue
 
                     # NOTE: use ordered keys
                     wms_layer = OrderedDict()
                     wms_layer['name'] = info_layer
 
-                    # collect info attribute names (restricted by default)
-                    attributes = role_permissions['attributes'] \
-                        .get(info_service, {}).get(info_layer, {}).keys()
-                    if attributes:
-                        wms_layer['attributes'] = sorted(list(attributes))
-
                     wms_layer['queryable'] = queryable
                     # info template always permitted
                     wms_layer['info_template'] = True
 
+                    # Only append layer if not already appended for public
                     if is_public_role:
-                        # add public dataset
                         layers.append(wms_layer)
-                    elif info_layer_restricted_for_public:
-                        # add dataset permitted for role
-                        layers.append(wms_layer)
-                    elif attributes:
-                        # only add additional permissions
+                    elif info_service_restricted_for_public or info_layer_restricted_for_public:
                         layers.append(wms_layer)
 
                 wms_service['layers'] = layers
