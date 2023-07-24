@@ -671,12 +671,12 @@ class QGSReader:
 
         return result
 
-    def collect_ui_forms(self, qwc_base_dir, edit_dataset, metadata):
+    def collect_ui_forms(self, assets_dir, edit_dataset, metadata):
         """ Collect UI form files from project
 
-        :param str qwc_base_dir: The qwc base dir
+        :param str assets_dir: The assets dir
         """
-        gen = DnDFormGenerator(self.logger, qwc_base_dir, metadata)
+        gen = DnDFormGenerator(self.logger, assets_dir, metadata)
         projectname = os.path.basename(self.map_prefix)
         result = {}
         for maplayer in self.root.findall('.//maplayer'):
@@ -704,7 +704,7 @@ class QGSReader:
                     formpath = editform.text
                     if not os.path.isabs(formpath):
                         formpath = os.path.join(os.path.dirname(self.qgs_path), formpath)
-                    outputdir = os.path.join(qwc_base_dir, 'assets', 'forms', 'autogen')
+                    outputdir = os.path.join(assets_dir, 'forms', 'autogen')
                     dest = os.path.join(outputdir, "%s_%s.ui" % (projectname, layername))
                     try:
                         os.makedirs(outputdir, exist_ok=True)

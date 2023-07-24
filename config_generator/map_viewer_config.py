@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import json
 import os
+from pathlib import Path
 import requests
 import urllib.parse
 
@@ -102,7 +103,11 @@ class MapViewerConfig(ServiceConfig):
 
         # collect resources from QWC2 config, capabilities and ConfigDB
         resources['qwc2_config'] = self.qwc2_config()
-        resources['qwc2_themes'] = self.qwc2_themes()
+        assets_dir = os.path.join(
+            self.qwc_base_dir,
+            resources['qwc2_config']['config'].get('assetsPath', 'assets')
+        )
+        resources['qwc2_themes'] = self.qwc2_themes(assets_dir)
 
         # copy index.html
         self.copy_index_html()
@@ -196,9 +201,12 @@ class MapViewerConfig(ServiceConfig):
 
         return sorted(list(viewer_tasks))
 
-    def qwc2_themes(self):
+    def qwc2_themes(self, assets_dir):
         """Collect QWC2 themes configuration from capabilities,
-        and edit config from ConfigDB."""
+        and edit config from ConfigDB.
+
+        :param str assets_dir: Assets dir
+        """
         # NOTE: use ordered keys
         qwc2_themes = OrderedDict()
 
@@ -224,7 +232,7 @@ class MapViewerConfig(ServiceConfig):
         autogenExternalLayers = []
         bgLayerCrs = {}
         for item in themes_config_themes.get('items', []):
-            theme_item = self.theme_item(item, themes_config, autogenExternalLayers, bgLayerCrs)
+            theme_item = self.theme_item(item, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs)
             if theme_item is not None and not theme_item['wmsOnly']:
                 items.append(theme_item)
         themes['items'] = items
@@ -232,7 +240,7 @@ class MapViewerConfig(ServiceConfig):
         # collect theme groups
         groups = []
         for group in themes_config_themes.get('groups', []):
-            groups.append(self.theme_group(group, themes_config, autogenExternalLayers, bgLayerCrs))
+            groups.append(self.theme_group(group, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs))
         themes['subdirs'] = groups
 
         if not self.default_theme and self.theme_ids:
@@ -254,9 +262,9 @@ class MapViewerConfig(ServiceConfig):
             backgroundLayer.pop("attributionUrl", None)
 
             imgPath = backgroundLayer.get("thumbnail", "")
-            if not os.path.isfile(self.qwc_base_dir + "/assets/" + imgPath):
+            if not os.path.isfile(os.path.join(assets_dir, imgPath)):
                 imgPath = "img/mapthumbs/" + backgroundLayer.get("thumbnail", "default.jpg")
-                if not os.path.isfile(self.qwc_base_dir + "/assets/" + imgPath):
+                if not os.path.isfile(os.path.join(assets_dir, imgPath)):
                     imgPath = "img/mapthumbs/default.jpg"
             backgroundLayer["thumbnail"] = imgPath
 
@@ -299,10 +307,11 @@ class MapViewerConfig(ServiceConfig):
 
         return qwc2_themes
 
-    def theme_group(self, cfg_group, themes_config, autogenExternalLayers, bgLayerCrs):
+    def theme_group(self, cfg_group, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs):
         """Recursively collect theme item group.
 
         :param obj theme_group: Themes config group
+        :param str assets_dir: Assets dir
         """
         # NOTE: use ordered keys
         group = OrderedDict()
@@ -313,7 +322,7 @@ class MapViewerConfig(ServiceConfig):
         # collect sub theme items
         items = []
         for item in cfg_group.get('items', []):
-            theme_item = self.theme_item(item, themes_config, autogenExternalLayers, bgLayerCrs)
+            theme_item = self.theme_item(item, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs)
             if theme_item is not None and not theme_item['wmsOnly']:
                 items.append(theme_item)
         group['items'] = items
@@ -321,15 +330,16 @@ class MapViewerConfig(ServiceConfig):
         # recursively collect sub theme groups
         subgroups = []
         for subgroup in cfg_group.get('groups', []):
-            subgroups.append(self.theme_group(subgroup, themes_config, autogenExternalLayers, bgLayerCrs))
+            subgroups.append(self.theme_group(subgroup, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs))
         group['subdirs'] = subgroups
 
         return group
 
-    def theme_item(self, cfg_item, themes_config, autogenExternalLayers, bgLayerCrs):
+    def theme_item(self, cfg_item, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs):
         """Collect theme item from capabilities.
 
         :param obj cfg_item: Themes config item
+        :param str assets_dir: Assets dir
         """
         # NOTE: use ordered keys
         item = OrderedDict()
@@ -475,7 +485,7 @@ class MapViewerConfig(ServiceConfig):
         item['searchProviders'] = cfg_item.get('searchProviders', [])
 
         # edit config
-        item['editConfig'] = self.edit_config(name, cfg_item)
+        item['editConfig'] = self.edit_config(name, cfg_item, assets_dir)
 
         self.set_optional_config(cfg_item, 'watermark', item)
         self.set_optional_config(cfg_item, 'config', item)
@@ -486,7 +496,7 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'themeInfoLinks', item)
 
         if not cfg_item.get('wmsOnly', False):
-            item['thumbnail'] = self.get_thumbnail(cfg_item, service_name, cap)
+            item['thumbnail'] = self.get_thumbnail(cfg_item, service_name, cap, assets_dir)
 
         self.set_optional_config(cfg_item, 'version', item)
         self.set_optional_config(cfg_item, 'format', item)
@@ -504,18 +514,32 @@ class MapViewerConfig(ServiceConfig):
 
         return item
 
-    def get_thumbnail(self, cfg_item, service_name, capabilities):
+    def get_thumbnail(self, cfg_item, service_name, capabilities, assets_dir):
         """Return thumbnail for item config if present in QWC2 default directory.
         Else new thumbnail is created with GetMap request.
 
         :param obj cfg_item: Themes config item
         :param str service_name: Service name as relative path to default QGIS server URL
         :param obj capabilities: Capabilities for theme item
+        :param str assets_dir: Assets dir
         """
-        thumbnail_directory = os.path.join(self.qwc_base_dir, 'assets/img/mapthumbs')
+        thumbnail_directory = os.path.join(assets_dir, 'img/mapthumbs')
         if 'thumbnail' in cfg_item:
             if os.path.exists(os.path.join(thumbnail_directory, cfg_item['thumbnail'])):
                 return os.path.join('img/mapthumbs', cfg_item['thumbnail'])
+            else:
+                self.logger.warn("Specified thumbnail %s for theme %s does not exist" % (
+                    cfg_item['thumbnail'], service_name))
+
+        # Scanning for thumbnail
+        thumbnail_filename = "%s.png" % Path(service_name).stem
+        thumbnail_path = os.path.join(
+                thumbnail_directory, thumbnail_filename)
+
+        if os.path.exists(thumbnail_path):
+            self.logger.info("Found existing thumbnail %s for theme %s" % (
+                thumbnail_filename, service_name))
+            return os.path.join('img/mapthumbs', thumbnail_filename)
 
         self.logger.info("Using WMS GetMap to generate thumbnail for " + service_name)
 
@@ -529,7 +553,7 @@ class MapViewerConfig(ServiceConfig):
             float(bbox[0]), # minx
             float(bbox[1]), # miny
             float(bbox[2]), # maxx
-            float(bbox[3]) # maxy
+            float(bbox[3])  # maxy
         ]
 
         layers = []
@@ -583,11 +607,11 @@ class MapViewerConfig(ServiceConfig):
 
             basename = cfg_item["url"].rsplit("/")[-1].rstrip("?") + ".png"
             try:
-                os.makedirs(self.qwc_base_dir + "/assets/img/genmapthumbs/")
+                os.makedirs(os.path.join(assets_dir, "img/genmapthumbs/"))
             except Exception as e:
                 if not isinstance(e, FileExistsError):
                     self.logger.error("The directory for auto generated thumbnails could not be created\n %s" % (str(e)))
-            thumbnail = self.qwc_base_dir + "/assets/img/genmapthumbs/" + basename
+            thumbnail = os.path.join(assets_dir, "img/genmapthumbs", basename)
             with open(thumbnail, "wb") as fh:
                 fh.write(document)
             return 'img/genmapthumbs/' + basename
@@ -730,10 +754,12 @@ class MapViewerConfig(ServiceConfig):
 
         return item_layer
 
-    def edit_config(self, map_name, cfg_item):
+    def edit_config(self, map_name, cfg_item, assets_dir):
         """Collect edit config for a map from ConfigDB.
 
         :param str map_name: Map name (matches WMS and QGIS project)
+        :param obj cfg_item: Theme config item
+        :param str assets_dir: Assets dir
         """
         # NOTE: use ordered keys
         edit_config = OrderedDict()
@@ -816,7 +842,7 @@ class MapViewerConfig(ServiceConfig):
                 meta['geometry_type']
             )
             
-            forms = self.themes_reader.collect_ui_forms(map_name, self.qwc_base_dir, layer_name)
+            forms = self.themes_reader.collect_ui_forms(map_name, assets_dir, layer_name)
 
             if layer_name in forms:
                 dataset['form'] = forms[layer_name]

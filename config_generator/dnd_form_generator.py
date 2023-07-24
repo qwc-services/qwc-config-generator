@@ -6,9 +6,9 @@ from sqlalchemy.sql import text as sql_text
 from qwc_services_core.database import DatabaseEngine
 
 class DnDFormGenerator:
-    def __init__(self, logger, qwc_base_dir, metadata):
+    def __init__(self, logger, assets_dir, metadata):
         self.logger = logger
-        self.qwc_base_dir = qwc_base_dir
+        self.assets_dir = assets_dir
         self.db_engine = DatabaseEngine()
         self.metadata = metadata
         
@@ -22,7 +22,7 @@ class DnDFormGenerator:
         ui.append(widget)
 
         text = ElementTree.tostring(ui, 'utf-8')
-        outputdir = os.path.join(self.qwc_base_dir, 'assets', 'forms', 'autogen')
+        outputdir = os.path.join(self.assets_dir, 'forms', 'autogen')
         try:
             os.makedirs(outputdir, exist_ok=True)
             outputfile = os.path.join(outputdir, "%s_%s.ui" % (projectname, layername))
