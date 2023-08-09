@@ -105,20 +105,22 @@ class DataServiceConfig(ServiceConfig):
         autogen_keyvaltable_datasets = self.generator_config.get('autogen_keyvaltable_datasets', False)
 
         for qgs_name, map_datasets in self.available_datasets(session).items():
-            map_datasets = list(map_datasets)
-            for layer_name in self.themes_reader.pg_layers(qgs_name):
-                if layer_name not in map_datasets:
-                    # skip layers not in datasets
-                    continue
-                map_datasets.remove(layer_name)
+            pg_layers = self.themes_reader.pg_layers(qgs_name)
+            invalid_datasets = list()
 
-                meta = self.themes_reader.layer_metadata(qgs_name, layer_name)
+            for map_dataset in map_datasets:
+                if map_dataset not in pg_layers:
+                    # dataset not in layers
+                    invalid_datasets.append(map_dataset)
+                    continue
+
+                meta = self.themes_reader.layer_metadata(qgs_name, map_dataset)
                 if autogen_keyvaltable_datasets:
                     keyvaltables.update(meta.get('keyvaltables', {}))
 
                 # NOTE: use ordered keys
                 dataset = OrderedDict()
-                dataset['name'] = qgs_name + '.' + layer_name
+                dataset['name'] = qgs_name + '.' + map_dataset
                 dataset['db_url'] = meta.get('database')
                 dataset['schema'] = meta.get('schema')
                 dataset['table_name'] = meta.get('table_name')
@@ -152,8 +154,8 @@ class DataServiceConfig(ServiceConfig):
                 added_datasets.add(dataset['name'])
                 datasets.append(dataset)
 
-            if map_datasets:
-                self.logger.warn("The following data resources did not match any layer in the QGS project %s: %s" % (qgs_name, ",".join(map_datasets)))
+            if invalid_datasets:
+                self.logger.warn("The following data resources did not match any layer in the QGS project %s: %s" % (qgs_name, ",".join(invalid_datasets)))
 
         for key, value in keyvaltables.items():
             if not key in added_datasets:
