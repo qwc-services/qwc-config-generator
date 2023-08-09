@@ -105,6 +105,12 @@ class DataServiceConfig(ServiceConfig):
         autogen_keyvaltable_datasets = self.generator_config.get('autogen_keyvaltable_datasets', False)
 
         for qgs_name, map_datasets in self.available_datasets(session).items():
+
+            # In multi-tenant setups with shared config db, some resources may concern themes which
+            # are not available for the current tenant.
+            if qgs_name not in self.themes_reader.wms_service_names():
+                continue
+
             pg_layers = self.themes_reader.pg_layers(qgs_name)
             invalid_datasets = list()
 
