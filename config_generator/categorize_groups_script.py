@@ -1,4 +1,5 @@
 import os
+import shutil
 from qgis.core import *
 
 
@@ -24,15 +25,6 @@ def split_categorized_layers(src_path, dest_path=None):
     :param string src_path: Absolute path to the project file(*.qgs file)
     :param string dest_path: Absolute path to the destination project
     """
-
-    if dest_path is None:
-        file_name, extension = os.path.splitext(src_path)
-        dest_path = file_name + "_categorized" + extension
-
-    return categorize_layers(src_path, dest_path)
-
-
-def categorize_layers(src_path, dest_path):
 
     layer_order = []
     layers = []
@@ -84,7 +76,13 @@ def categorize_layers(src_path, dest_path):
             project_instance, group)
         project_instance.removeMapLayer(base_layer)
 
-    project_instance.write(dest_path)
+    # Create new file name to not overide the old project
+    file_name, extension = os.path.splitext(src_path)
+    categorized_project_path = file_name + "_categorized" + extension
+    project_instance.write(categorized_project_path)
+
+    if dest_path is not None:
+        shutil.move(categorized_project_path, dest_path)
 
     return dest_path
 
