@@ -1,4 +1,5 @@
 import os
+import glob
 import shutil
 from qgis.core import *
 
@@ -82,7 +83,31 @@ def split_categorized_layers(src_path, dest_path=None):
     project_instance.write(categorized_project_path)
 
     if dest_path is not None:
-        shutil.move(categorized_project_path, dest_path)
+
+        # Specify destination directory
+        if os.path.isdir(dest_path):
+            dest_path_dir = dest_path
+        else:
+            dest_path_dir = os.path.dirname(dest_path)
+
+        for file in glob.glob(os.path.splitext(categorized_project_path)[0] + "*"):
+            # Specify destination file name
+            if os.path.isdir(dest_path):
+                # dest_path is only a directory so we don't have to change the file name
+                dest_file_name = os.path.basename(file)
+            else:
+                # dest_path is a file that means we have to rename the project file
+                # This is done by taking the current project file name and replacing
+                # everything before our own "_categorized" infix with the new file name
+                file_name, extension = os.path.splitext(os.path.basename(file))
+                dest_file_name = (
+                    os.path.splitext(os.path.basename(dest_path))[0]
+                    + "_categorized"
+                    + file_name.split("_categorized")[1]
+                    + extension
+                )
+
+            shutil.move(file, os.path.join(dest_path_dir, dest_file_name))
 
     return dest_path
 
