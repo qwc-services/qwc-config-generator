@@ -167,8 +167,9 @@ class CapabilitiesReader():
 
             # collect WMS layers
             default_root_name = urlparse(full_url).path.split('/')[-1]
+            layer_names = []
             capabilities['root_layer'] = self.collect_wms_layers(
-                root_layer, internal_print_layers, ns, np, default_root_name
+                root_layer, layer_names, internal_print_layers, ns, np, default_root_name
             )
             # collect geometryless WMS layers
             geometryless_layers = self.collect_geometryless_layers(
@@ -227,7 +228,7 @@ class CapabilitiesReader():
             )
             return {}
 
-    def collect_wms_layers(self, layer, internal_print_layers, ns, np,
+    def collect_wms_layers(self, layer, layer_names, internal_print_layers, ns, np,
                            fallback_name=""):
         """Recursively collect layer info for layer subtree from
         WMS GetProjectSettings.
@@ -254,6 +255,13 @@ class CapabilitiesReader():
                 "The WMS name of a layer must not contain a comma! "
                 "Either remove the comma or specify 'short_name' in the QGIS project."
             )
+        if layer_name in layer_names:
+            self.logger.warning(
+                f"Duplicate layer name '{layer_name}'! "
+                "Please rename the duplicate occurrences."
+            )
+        else:
+            layer_names.append(layer_name)
 
         wms_layer['name'] = layer_name
 
@@ -286,7 +294,7 @@ class CapabilitiesReader():
                     continue
 
             sub_wms_layer = self.collect_wms_layers(
-                sub_layer, internal_print_layers, ns, np
+                sub_layer, layer_names, internal_print_layers, ns, np
             )
             if sub_wms_layer is not None:
                 group_layers.append(sub_wms_layer)
