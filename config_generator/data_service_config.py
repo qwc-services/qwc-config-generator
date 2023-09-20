@@ -146,7 +146,9 @@ class DataServiceConfig(ServiceConfig):
                     if attr_meta.get('constraints'):
                         # add any constraints
                         field['constraints'] = attr_meta.get('constraints')
+                    field['joinfield'] = attr_meta.get('joinfield')
                     dataset['fields'].append(field)
+                    dataset['jointables'] = meta.get('jointables')
 
                 if meta.get('geometry_column'):
                     # NOTE: use ordered keys

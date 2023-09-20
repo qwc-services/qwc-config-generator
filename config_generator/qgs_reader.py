@@ -291,6 +291,29 @@ class QGSReader:
                 for alias in aliases.findall('alias'):
                     fieldnames.append(alias.get('field'))
 
+        # get joins
+        joinfields = {}
+        jointables = {}
+        vectorjoins = maplayer.find('vectorjoins')
+        if vectorjoins is not None:
+            for join in vectorjoins.findall('join'):
+                joinlayer = self.root.find(".//maplayer[id='%s']" % join.get('joinLayerId'))
+                if joinlayer is not None:
+                    jointable = joinlayer.find('layername').text
+                    for field in joinlayer.find('fieldConfiguration').findall('field'):
+
+                        if not jointable in jointables:
+                            jointables[jointable] = self.__table_metadata(joinlayer.find('datasource').text, joinlayer)
+                            jointables[jointable]['database'] = self.__db_connection(joinlayer.find('datasource').text)
+                            jointables[jointable]['targetField'] = join.get('targetFieldName')
+                            jointables[jointable]['joinField'] = join.get('joinFieldName')
+
+                        joinfieldname = '%s_%s' % (jointable, field.get('name'))
+                        joinfields[joinfieldname] = {
+                            'field': field.get('name'),
+                            'table': jointable
+                        }
+
         keyvaltables = {}
         for field in fieldnames:
 
@@ -323,6 +346,8 @@ class QGSReader:
             if expressionfields_field is not None:
                 fields[field]['expression'] = expressionfields_field.get('expression').lstrip("'").rstrip("'")
 
+            fields[field]['joinfield'] = joinfields.get(field, None)
+
         displayField = None
         previewExpression = maplayer.find('previewExpression')
         if previewExpression is not None and previewExpression.text is not None:
@@ -334,7 +359,8 @@ class QGSReader:
             'attributes': attributes,
             'fields': fields,
             'keyvaltables': keyvaltables,
-            'displayField': displayField
+            'displayField': displayField,
+            'jointables': jointables
         }
 
     def __dimension_metadata(self, maplayer):
@@ -498,6 +524,9 @@ class QGSReader:
             conn = geo_db.connect()
             fields = meta.get('fields')
 
+            # join table connections
+            joinconns = {}
+
             for attr in meta.get('attributes'):
                 # upload field
                 if attr.endswith("__upload"):
@@ -513,9 +542,26 @@ class QGSReader:
                 data_type = None
                 # NOTE: use ordered keys
                 constraints = OrderedDict()
-                result = self.__query_column_metadata(
-                    schema, table_name, attr, conn
-                )
+
+                joinfield = fields.get(attr).get('joinfield')
+                if joinfield:
+                    jointable = joinfield['table']
+                    jointablemeta = meta['jointables']['jointable']
+                    if jointable not in joinconns:
+                        joinconns[jointable] = self.db_engine.db_engine(jointablemeta['database']).connect()
+
+                    join_conn = joinconns[jointable]
+                    join_schema = jointablemeta['schema']
+                    join_table_name = jointablemeta['table_name']
+
+                    result = self.__query_column_metadata(
+                        join_schema, join_table_name, joinfield['field'], join_conn
+                    )
+
+                else:
+                    result = self.__query_column_metadata(
+                        schema, table_name, attr, conn
+                    )
                 for row in result:
                     data_type = row['data_type']
 
@@ -572,6 +618,8 @@ class QGSReader:
 
             # close database connection
             conn.close()
+            for joinconn in joinconns.values():
+                joinconn.close()
 
             attributes = meta.get('attributes')
             for field in upload_fields:
