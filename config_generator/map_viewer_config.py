@@ -287,7 +287,6 @@ class MapViewerConfig(ServiceConfig):
                 themes["externalLayers"].append(layer)
 
         themes['pluginData'] = themes_config_themes.get('pluginData', {})
-        themes['snapping'] = themes_config_themes.get('snapping', {})
         themes['themeInfoLinks'] = themes_config_themes.get(
             'themeInfoLinks', []
         )
