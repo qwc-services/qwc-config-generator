@@ -244,7 +244,7 @@ class DnDFormGenerator:
             displayField = referencingLayer.find("previewExpression").text
             datasource = referencingLayer.find("datasource").text
 
-            displayFieldMatch = re.search(r'"(\w+)"', displayField)
+            displayFieldMatch = re.search(r'^"(\w+)"$', displayField)
             pkMatch = re.search(r"key='(.+?)' \w+=", datasource)
 
             if displayFieldMatch:
