@@ -542,7 +542,7 @@ class QGSReader:
                 joinfield = fields.get(attr).get('joinfield')
                 if joinfield:
                     jointable = joinfield['table']
-                    jointablemeta = meta['jointables']['jointable']
+                    jointablemeta = meta['jointables'][jointable]
                     if jointable not in joinconns:
                         joinconns[jointable] = self.db_engine.db_engine(jointablemeta['database']).connect()
 
