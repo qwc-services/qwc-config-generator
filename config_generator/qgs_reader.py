@@ -291,7 +291,11 @@ class QGSReader:
                 joinlayer = self.root.find(".//maplayer[id='%s']" % join.get('joinLayerId'))
                 if joinlayer is not None:
                     jointable = joinlayer.find('layername').text
-                    for field in joinlayer.find('fieldConfiguration').findall('field'):
+                    if join.find('joinFieldsSubset') is not None:
+                        jointablefields = join.find('joinFieldsSubset').findall('field')
+                    else:
+                        jointablefields = joinlayer.find('fieldConfiguration').findall('field')
+                    for field in jointablefields:
 
                         if not jointable in jointables:
                             jointables[jointable] = self.__table_metadata(joinlayer.find('datasource').text, joinlayer)
