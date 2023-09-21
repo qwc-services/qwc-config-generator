@@ -18,6 +18,7 @@ class ThemeReader():
         :param dict themes_config: themes config
         :param Logger logger: Logger
         """
+        self.config = generator_config
         self.logger = logger
 
         self.themes_config = themes_config
@@ -90,7 +91,7 @@ class ThemeReader():
         if self.generate_wfs_services:
             wfs_capabilities = self.capabilities_reader.read_wfs_service_capabilities(url, service_name, item)
 
-        qgs_reader = QGSReader(self.logger, self.qgis_projects_base_dir, service_name)
+        qgs_reader = QGSReader(self.config, self.logger, self.qgis_projects_base_dir, service_name)
         success = qgs_reader.read()
         if not success:
             self.logger.warning(

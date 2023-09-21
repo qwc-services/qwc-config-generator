@@ -22,14 +22,16 @@ class QGSReader:
     Read QGIS 3.x projects and extract data for QWC config.
     """
 
-    def __init__(self, logger, qgs_resources_path, qgs_path):
+    def __init__(self, config, logger, qgs_resources_path, qgs_path):
         """Constructor
 
+        :param obj config: Config generator config
         :param Logger logger: Application logger
         :param str qgs_resources_path: Path to qgis server data dir
         :param str qgs_path: QGS name with optional path relative to
                              QGIS server data dir
         """
+        self.config = config
         self.logger = logger
         self.root = None
         self.qgis_version = 0
@@ -720,7 +722,7 @@ class QGSReader:
 
         :param str assets_dir: The assets dir
         """
-        gen = DnDFormGenerator(self.logger, assets_dir, metadata)
+        gen = DnDFormGenerator(self.config, self.logger, assets_dir, metadata)
         projectname = os.path.basename(self.map_prefix)
         result = {}
         for maplayer in self.root.findall('.//maplayer'):

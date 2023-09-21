@@ -1,4 +1,5 @@
 import os
+import re
 import time
 from xml.etree import ElementTree
 
@@ -6,7 +7,8 @@ from sqlalchemy.sql import text as sql_text
 from qwc_services_core.database import DatabaseEngine
 
 class DnDFormGenerator:
-    def __init__(self, logger, assets_dir, metadata):
+    def __init__(self, config, logger, assets_dir, metadata):
+        self.config = config
         self.logger = logger
         self.assets_dir = assets_dir
         self.db_engine = DatabaseEngine()
@@ -233,41 +235,72 @@ class DnDFormGenerator:
         layout = ElementTree.Element("layout")
         layout.set("class", "QGridLayout")
 
-        fields = referencingLayer.findall("fieldConfiguration/field")
-        col = 0
-        for field in fields:
-            # Skip expression fields
-            if referencingLayer.find("expressionfields/field[@name='%s']" % field.get("name")) is not None:
-                continue
+        if self.config.get('generate_nested_nrel_forms', False):
 
-            # Skip foreign key field
-            if field.get("name") == fkField:
-                continue
+            # Display field for the button:
+            # - Try the layer displayfield if it is a simple field
+            # - Try the primary key from referencing layer
+            # - Fall back to 'id'
+            displayField = referencingLayer.find("previewExpression").text
+            datasource = referencingLayer.find("datasource").text
 
-            editorWidget = self.__create_editor_widget(referencingLayer, field.get("name"), referencingLayerName + "__")
-            if editorWidget is None:
-                continue
+            displayFieldMatch = re.search(r'"(\w+)"', displayField)
+            pkMatch = re.search(r"key='(.+?)' \w+=", datasource)
 
-            labelWidget = ElementTree.Element("widget")
-            labelWidget.set("class", "QLabel")
-            labelWidget.set("name", "header__" + field.get("name"))
-            label = aliases.get(field.get("name"), field.get("name"))
-            self.__add_widget_property(labelWidget, "text", None, None, label)
+            if displayFieldMatch:
+                buttonLabelField = displayFieldMatch.group(1)
+            elif pkMatch:
+                buttonLabelField = pkMatch.group(1)
+            else:
+                buttonLabelField = 'id'
 
-            labelItem = ElementTree.Element("item")
-            labelItem.set("row", "0")
-            labelItem.set("column", str(col))
-            labelItem.append(labelWidget)
+            buttonWidget = ElementTree.Element("widget")
+            buttonWidget.set("class", "QPushButton")
+            buttonWidget.set("name", "featurelink__%s__%s__%s" % (referencingLayerName, referencingLayerName, buttonLabelField))
 
-            editorItem = ElementTree.Element("item")
-            editorItem.set("row", "1")
-            editorItem.set("column", str(col))
-            editorItem.append(editorWidget)
+            buttonItem = ElementTree.Element("item")
+            buttonItem.set("row", "0")
+            buttonItem.set("column", "0")
+            buttonItem.append(buttonWidget)
 
-            layout.append(labelItem)
-            layout.append(editorItem)
+            layout.append(buttonItem)
 
-            col += 1
+        else:
+            fields = referencingLayer.findall("fieldConfiguration/field")
+            col = 0
+            for field in fields:
+                # Skip expression fields
+                if referencingLayer.find("expressionfields/field[@name='%s']" % field.get("name")) is not None:
+                    continue
+
+                # Skip foreign key field
+                if field.get("name") == fkField:
+                    continue
+
+                editorWidget = self.__create_editor_widget(referencingLayer, field.get("name"), referencingLayerName + "__")
+                if editorWidget is None:
+                    continue
+
+                labelWidget = ElementTree.Element("widget")
+                labelWidget.set("class", "QLabel")
+                labelWidget.set("name", "header__" + field.get("name"))
+                label = aliases.get(field.get("name"), field.get("name"))
+                self.__add_widget_property(labelWidget, "text", None, None, label)
+
+                labelItem = ElementTree.Element("item")
+                labelItem.set("row", "0")
+                labelItem.set("column", str(col))
+                labelItem.append(labelWidget)
+
+                editorItem = ElementTree.Element("item")
+                editorItem.set("row", "1")
+                editorItem.set("column", str(col))
+                editorItem.append(editorWidget)
+
+                layout.append(labelItem)
+                layout.append(editorItem)
+
+                col += 1
 
         groupBox.append(layout)
         return groupBox

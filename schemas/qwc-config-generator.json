@@ -111,6 +111,10 @@
           "description": "Whether to automatically generate data service datasets used for key-value relationships without requiring corresponding data resources to be created. Warning: this will expose the key and value fields of the key-value table as world readable. Default: false",
           "type": "boolean"
         },
+        "generate_nested_nrel_forms": {
+          "description": "Whether to generate nested nrelation forms instead of a tabluar view. Default: false",
+          "type": "boolean"
+        },
         "generate_wfs_services": {
           "description": "Generate WFS service resources and permissions for the OGC service. Default: false",
           "type": "boolean"
