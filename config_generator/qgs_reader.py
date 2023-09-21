@@ -308,7 +308,8 @@ class QGSReader:
                             jointables[jointable]['targetField'] = join.get('targetFieldName')
                             jointables[jointable]['joinField'] = join.get('joinFieldName')
 
-                        joinfieldname = '%s_%s' % (jointable, field.get('name'))
+                        prefix = join.get('customPrefix', jointable + '_')
+                        joinfieldname = '%s%s' % (prefix, field.get('name'))
                         joinfields[joinfieldname] = {
                             'field': field.get('name'),
                             'table': jointable
