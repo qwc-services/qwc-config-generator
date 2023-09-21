@@ -275,21 +275,12 @@ class QGSReader:
         # NOTE: use ordered keys
         fields = OrderedDict()
 
-        # Get fieldnames from attributeEditorForm if possible (to preserve order), otherwise from aliases
+        # Get fieldnames
         fieldnames = []
-
-        editorlayout = maplayer.find('editorlayout')
-        formfields = maplayer.find('attributeEditorForm')
-        if editorlayout is not None and editorlayout.text == "tablayout" and formfields is not None:
-            for formfield in formfields.findall('.//attributeEditorField'):
-                # NOTE: skip missing fields with index="-1"
-                if formfield.get('index') != '-1':
-                    fieldnames.append(formfield.get('name'))
-        else:
-            aliases = maplayer.find('aliases')
-            if aliases is not None:
-                for alias in aliases.findall('alias'):
-                    fieldnames.append(alias.get('field'))
+        aliases = maplayer.find('aliases')
+        if aliases is not None:
+            for alias in aliases.findall('alias'):
+                fieldnames.append(alias.get('field'))
 
         # get joins
         joinfields = {}
