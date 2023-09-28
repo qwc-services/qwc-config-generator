@@ -105,7 +105,7 @@ class MapViewerConfig(ServiceConfig):
         resources['qwc2_config'] = self.qwc2_config()
         assets_dir = os.path.join(
             self.qwc_base_dir,
-            resources['qwc2_config']['config'].get('assetsPath', 'assets')
+            resources['qwc2_config']['config'].get('assetsPath', 'assets').lstrip('/')
         )
         resources['qwc2_themes'] = self.qwc2_themes(assets_dir)
 
