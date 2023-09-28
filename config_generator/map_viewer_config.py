@@ -556,7 +556,7 @@ class MapViewerConfig(ServiceConfig):
         ]
 
         layers = []
-        for layer in root_layer['layers']:
+        for layer in root_layer.get('layers', []):
             layers.append(layer['name'])
 
         # WMS GetMap request
