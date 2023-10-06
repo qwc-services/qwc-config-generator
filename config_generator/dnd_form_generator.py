@@ -80,8 +80,10 @@ class DnDFormGenerator:
         if (
             editWidget is None
             or editWidget.get("type") == "Hidden" or editWidget.get("type") == "RelationReference"
-            or not editWidget.get("type")
         ):
+            return None
+        if not editWidget.get("type"):
+            self.logger.warning("Warning: field %s has empty widget type" % field)
             return None
         editableField = maplayer.find("editable/field[@name='%s']" % field)
         editable = editableField is None or editableField.get("editable") == "1"
@@ -198,7 +200,7 @@ class DnDFormGenerator:
             self.__add_widget_property(widget, "text", filterOpt, "value")
             return widget
         else:
-            self.logger.warning("Warning: unhandled widget type %s" % editWidget.get("type"))
+            self.logger.warning("Warning: field %s has unhandled widget type %s" % (field, editWidget.get("type")))
             return None
 
     def __create_relation_widget(self, project, relation, showlabel, label=""):
