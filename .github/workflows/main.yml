@@ -6,6 +6,7 @@ jobs:
 
     build:
       runs-on: ubuntu-latest
+      if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
       steps:
 
       - uses: actions/checkout@master
@@ -13,19 +14,15 @@ jobs:
       - name: Get version tag
         id: get_tag
         run: |
-          if [ ${{ startsWith(github.ref, 'refs/tags/') }} = true ]; then
+          if [ ${{ endsWith(github.ref, '-lts') }} = true ]; then
+            echo "tag=latest-lts,${GITHUB_REF:10}" >>$GITHUB_OUTPUT
+            # Branch of JSON schema files to include
+            TAG=${GITHUB_REF:11}
+            echo "branch=${TAG/.[0-9]-lts/-lts}" >>$GITHUB_OUTPUT
+          else
             echo "tag=latest,${GITHUB_REF:10}" >>$GITHUB_OUTPUT
             # Branch of JSON schema files to include
-            if [ ${{ contains(github.ref, '-lts') }} = true ]; then
-              # tag v2023.0-lts -> branch 2023-lts
-              TAG=${GITHUB_REF:11}
-              echo "branch=${TAG/.[0-9]-lts/-lts}" >>$GITHUB_OUTPUT          
-            else
-              echo "branch=master" >>$GITHUB_OUTPUT          
-            fi
-          else
-            echo "tag=latest" >>$GITHUB_OUTPUT
-            echo "branch=master" >>$GITHUB_OUTPUT          
+            echo "branch=master" >>$GITHUB_OUTPUT
           fi
 
       - name: Build and publish docker image without qgis
