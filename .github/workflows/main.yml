@@ -14,13 +14,14 @@ jobs:
       - name: Get version tag
         id: get_tag
         run: |
+          echo "tag=${GITHUB_REF:10}" >>$GITHUB_OUTPUT
           if [ ${{ endsWith(github.ref, '-lts') }} = true ]; then
-            echo "tag=latest-lts,${GITHUB_REF:10}" >>$GITHUB_OUTPUT
+            echo "tag_latest=latest-lts" >>$GITHUB_OUTPUT
             # Branch of JSON schema files to include
             TAG=${GITHUB_REF:11}
             echo "branch=${TAG/.[0-9]-lts/-lts}" >>$GITHUB_OUTPUT
           else
-            echo "tag=latest,${GITHUB_REF:10}" >>$GITHUB_OUTPUT
+            echo "tag_latest=latest" >>$GITHUB_OUTPUT
             # Branch of JSON schema files to include
             echo "branch=master" >>$GITHUB_OUTPUT
           fi
@@ -36,7 +37,7 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
           dockerfile: Dockerfile-noqgis
           buildargs: BRANCH
-          tags: "${{ steps.get_tag.outputs.tag }}-noqgis"
+          tags: "${{ steps.get_tag.outputs.tag }}-noqgis,${{ steps.get_tag.outputs.tag_latest }}-noqgis"
 
       - name: Build and publish docker image
         uses: elgohr/Publish-Docker-Github-Action@v5
@@ -48,4 +49,4 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
           buildargs: BRANCH
-          tags: "${{ steps.get_tag.outputs.tag }}"
+          tags: "${{ steps.get_tag.outputs.tag }},${{ steps.get_tag.outputs.tag_latest }}"
