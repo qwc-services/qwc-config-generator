@@ -500,6 +500,7 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'version', item)
         self.set_optional_config(cfg_item, 'format', item)
         self.set_optional_config(cfg_item, 'tiled', item)
+        self.set_optional_config(cfg_item, 'tileSize', item)
 
         item['availableFormats'] = cap['map_formats']
         item['infoFormats'] = cap['info_formats']
