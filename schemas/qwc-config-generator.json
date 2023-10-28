@@ -118,6 +118,9 @@
         "generate_wfs_services": {
           "description": "Generate WFS service resources and permissions for the OGC service. Default: false",
           "type": "boolean"
+        },
+        "use_default_map_thumbnail": {
+          "description": "Whether to use the default mapthumb (mapthumbs/default.jpg) instead of generating the thumbnail via GetMap if no custom thumbnail is provided. Default: false"
         }
       },
       "required": [

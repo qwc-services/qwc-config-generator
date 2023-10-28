@@ -83,6 +83,11 @@ class MapViewerConfig(ServiceConfig):
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
 
+        # Use default map thumbnail instead of generating via GetMap
+        self.use_default_map_thumbnail = generator_config.get(
+            'use_default_map_thumbnail', False
+        )
+
         # keep track of theme IDs for uniqueness
         self.theme_ids = []
 
@@ -540,6 +545,10 @@ class MapViewerConfig(ServiceConfig):
             self.logger.info("Found existing thumbnail %s for theme %s" % (
                 thumbnail_filename, service_name))
             return os.path.join('img/mapthumbs', thumbnail_filename)
+
+        if self.use_default_map_thumbnail:
+            self.logger.info("Using default map thumbnail for " + service_name)
+            return os.path.join('img/mapthumbs', 'default.jpg')
 
         self.logger.info("Using WMS GetMap to generate thumbnail for " + service_name)
 
