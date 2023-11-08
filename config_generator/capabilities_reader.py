@@ -155,7 +155,7 @@ class CapabilitiesReader():
             }
 
             # collect internal print layers
-            internal_print_layers = []
+            internal_print_layers = item.get('extraPrintLayers', [])
             for bg_layer in item.get('backgroundLayers', []):
                 printLayer = bg_layer.get('printLayer', None)
                 if printLayer:
