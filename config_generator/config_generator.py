@@ -619,6 +619,8 @@ class ConfigGenerator():
                 "The specified path does not exist: " + config_in_path)
             return
 
+        qgis_project_extension = generator_config.get(
+            'qgis_project_extension', '.qgs')
         qgs_projects_dir = os.path.join(
             config_in_path, tenant, "qgis_projects")
         if os.path.exists(qgs_projects_dir):
@@ -642,7 +644,7 @@ class ConfigGenerator():
         for dirpath, dirs, files in os.walk(qgs_projects_dir,
                                             followlinks=True):
             for filename in files:
-                if Path(filename).suffix in [".qgs", ".qgz"]:
+                if Path(filename).suffix == self.qgis_project_extension:
                     fname = os.path.join(dirpath, filename)
                     relpath = os.path.relpath(fname, qgs_projects_dir)
                     self.logger.info("Processing " + fname)
@@ -672,6 +674,8 @@ class ConfigGenerator():
         qgis_projects_scan_base_dir = generator_config.get(
             'qgis_projects_scan_base_dir')
         qwc_base_dir = generator_config.get("qwc2_base_dir")
+        qgis_project_extension = generator_config.get(
+            'qgis_project_extension', '.qgs')
 
         if not qgis_projects_scan_base_dir:
             self.logger.info(
@@ -702,7 +706,7 @@ class ConfigGenerator():
         for dirpath, dirs, files in os.walk(qgis_projects_scan_base_dir,
                                             followlinks=True):
             for filename in files:
-                if Path(filename).suffix in [".qgs", ".qgz"]:
+                if Path(filename).suffix == qgis_project_extension:
                     fname = os.path.join(dirpath, filename)
                     relpath = os.path.relpath(dirpath,
                                               qgis_projects_base_dir)

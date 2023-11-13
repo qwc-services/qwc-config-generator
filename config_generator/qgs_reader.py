@@ -22,13 +22,14 @@ class QGSReader:
     Read QGIS 3.x projects and extract data for QWC config.
     """
 
-    def __init__(self, config, logger, qgs_resources_path, qgs_path):
+    def __init__(self, config, logger, qgs_resources_path, qgs_ext, map_prefix):
         """Constructor
 
         :param obj config: Config generator config
         :param Logger logger: Application logger
         :param str qgs_resources_path: Path to qgis server data dir
-        :param str qgs_path: QGS name with optional path relative to
+        :param str qgs_ext The QGS project file extension
+        :param str map_prefix: QGS basename with the path component relative to
                              QGIS server data dir
         """
         self.config = config
@@ -37,7 +38,8 @@ class QGSReader:
         self.qgis_version = 0
 
         self.qgs_resources_path = qgs_resources_path
-        self.map_prefix = qgs_path
+        self.qgs_ext = qgs_ext
+        self.map_prefix = map_prefix
 
         self.db_engine = DatabaseEngine()
 
@@ -49,10 +51,10 @@ class QGSReader:
             if self.map_prefix.startswith("pg/"):
                 parts = self.map_prefix.split("/")
                 self.qgs_path = self.qgs_resources_path
-                project_path = 'postgresql:///?service=qgisprojects&schema=%s&project=%s' % (parts[1], parts[2])
+                qgs_filename = 'postgresql:///?service=qgisprojects&schema=%s&project=%s' % (parts[1], parts[2])
 
                 qgis_projects_db = self.db_engine.db_engine("postgresql:///?service=qgisprojects")
-                self.logger.info("Reading '%s'" % project_path)
+                self.logger.info("Reading '%s'" % qgs_filename)
 
                 conn = qgis_projects_db.connect()
                 sql = sql_text("""
@@ -63,7 +65,7 @@ class QGSReader:
                 row = result.fetchone()
                 conn.close()
                 if not row:
-                    self.logger.warn("Could not find QGS project '%s'" % project_path)
+                    self.logger.warn("Could not find QGS project '%s'" % qgs_filename)
                     return False
 
                 qgz = zipfile.ZipFile(io.BytesIO(row['content']))
@@ -75,19 +77,28 @@ class QGSReader:
                         break
 
             else:
-                qgs_file = "%s.qgs" % self.map_prefix
-                self.qgs_path = os.path.join(self.qgs_resources_path, qgs_file)
+                qgs_filename = self.map_prefix + self.qgs_ext
+                self.qgs_path = os.path.join(self.qgs_resources_path, qgs_filename)
                 if not os.path.exists(self.qgs_path):
-                    self.logger.warn("Could not find QGS project '%s'" % self.qgs_path)
+                    self.logger.warn("Could not find QGS project '%s'" % qgs_filename)
                     return False
+                self.logger.info("Reading '%s'" % qgs_filename)
 
-                project_path = qgs_file
-                self.logger.info("Reading '%s'" % project_path)
+                if self.qgs_ext == ".qgz":
 
-                tree = ElementTree.parse(self.qgs_path)
+                    with zipfile.ZipFile(self.qgs_path, 'r') as qgz:
+                        for filename in qgz.namelist():
+                            if filename.endswith('.qgs'):
+                                fh = qgz.open(filename)
+                                tree = ElementTree.parse(fh)
+                                fh.close()
+                                break
+                else:
+
+                    tree = ElementTree.parse(self.qgs_path)
 
             if tree is None or tree.getroot().tag != 'qgis':
-                self.logger.warn("'%s' is not a QGS file" % project_path)
+                self.logger.warn("'%s' is not a QGS file" % qgs_filename)
                 return False
             self.root = tree.getroot()
 

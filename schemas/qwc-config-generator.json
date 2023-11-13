@@ -63,6 +63,10 @@
           "description": "OWS service path prefix. Defaults to the path component of default_qgis_server_url. Used to form the urls of autodetected projects below qgis_projects_scan_base_dir. Example: /ows",
           "type": "string"
         },
+        "qgis_project_extension": {
+          "description": "The QGIS project file extension to look for. Default: '.qgs'",
+          "type": "string"
+        },
         "qgis_projects_base_dir": {
           "description": "Base path for QGIS projects. Example: /data",
           "type": "string"

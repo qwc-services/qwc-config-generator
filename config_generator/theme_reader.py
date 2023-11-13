@@ -31,6 +31,9 @@ class ThemeReader():
 
         self.capabilities_reader = CapabilitiesReader(generator_config, logger)
 
+        self.qgis_project_extension = generator_config.get(
+            'qgis_project_extension', '.qgs')
+
         self.qgis_projects_base_dir = generator_config.get(
             'qgis_projects_base_dir', '/tmp/'
         )
@@ -91,7 +94,9 @@ class ThemeReader():
         if self.generate_wfs_services:
             wfs_capabilities = self.capabilities_reader.read_wfs_service_capabilities(url, service_name, item)
 
-        qgs_reader = QGSReader(self.config, self.logger, self.qgis_projects_base_dir, service_name)
+        qgs_reader = QGSReader(
+            self.config, self.logger, self.qgis_projects_base_dir,
+            self.qgis_project_extension, service_name)
         success = qgs_reader.read()
         if not success:
             self.logger.warning(
