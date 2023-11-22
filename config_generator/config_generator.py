@@ -234,7 +234,9 @@ class ConfigGenerator():
         schema_versions = {}
         schema_versions_path = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
-            '../schemas/schema-versions.json'
+            '..',
+            'schemas',
+            'schema-versions.json'
         )
         try:
             with open(schema_versions_path) as f:
