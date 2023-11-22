@@ -8,18 +8,17 @@ from urllib.parse import urlparse
 
 # get target path
 json_schemas_path = os.environ.get('JSON_SCHEMAS_PATH', '/tmp/')
-branch = sys.argv[1] if len(sys.argv) > 1 else 'master'
 
 print(
     "Downloading JSON schemas for all QWC service configs to %s" %
     json_schemas_path
 )
 
-# load schema-versions-[branch].json
+# load schema-versions.json
 schema_versions = {}
 schema_versions_path = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
-    f'schemas/schema-versions-{branch}.json'
+    f'schemas/schema-versions.json'
 )
 try:
     with open(schema_versions_path) as f:
@@ -28,21 +27,6 @@ except Exception as e:
     print(
         "Error: Could not load JSON schema versions from %s:\n%s" %
         (schema_versions_path, e)
-    )
-    exit(1)
-
-# create symlink for schema-versions.json used in ConfigGenerator
-try:
-    symlink_schema_versions_path = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)),
-        f'schemas/schema-versions.json'
-    )
-    if os.path.exists(symlink_schema_versions_path):
-        os.remove(symlink_schema_versions_path)
-    os.symlink(schema_versions_path, symlink_schema_versions_path)
-except Exception as e:
-    print(
-        "Error: Could not create symlink for schema-versions.json:\n%s" % e
     )
     exit(1)
 
