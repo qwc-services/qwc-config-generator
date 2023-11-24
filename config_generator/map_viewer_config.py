@@ -486,7 +486,7 @@ class MapViewerConfig(ServiceConfig):
 
         self.set_optional_config(cfg_item, "visibility", item)
 
-        item['searchProviders'] = cfg_item.get('searchProviders', [])
+        item['searchProviders'] = search_providers
 
         # edit config
         item['editConfig'] = self.edit_config(name, cfg_item, assets_dir)
