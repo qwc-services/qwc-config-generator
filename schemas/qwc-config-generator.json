@@ -71,6 +71,10 @@
           "description": "Base path for QGIS projects. Example: /data",
           "type": "string"
         },
+        "qgis_print_layouts_dir": {
+          "description": "Directory containing print layouts. Example: /layouts",
+          "type": "string"
+        },
         "qgis_projects_scan_base_dir": {
           "description": "Path for QGIS projects, which should be automatically detected. Must be a subdir qgis_projects_base_dir. Example: /data/scan",
           "type": "string"

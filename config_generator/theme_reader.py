@@ -11,15 +11,17 @@ class ThemeReader():
     Reads project metadata for all theme items in the QWC2 theme configuration.
     """
 
-    def __init__(self, generator_config, themes_config, logger):
+    def __init__(self, generator_config, themes_config, logger, print_layouts):
         """Constructor
 
         :param obj generator_config: ConfigGenerator config
         :param dict themes_config: themes config
         :param Logger logger: Logger
+        :param list print_layouts Found print layouts
         """
         self.config = generator_config
         self.logger = logger
+        self.print_layouts = print_layouts
 
         self.themes_config = themes_config
 
@@ -89,6 +91,7 @@ class ThemeReader():
             self.logger.warning(
                 "Could not get WMS capabilities for %s" % url
             )
+        wms_capabilities["print_templates"] = wms_capabilities.get('print_templates', []) + self.print_layouts
 
         wfs_capabilities = {}
         if self.generate_wfs_services:

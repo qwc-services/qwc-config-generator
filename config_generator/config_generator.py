@@ -10,6 +10,7 @@ from datetime import datetime
 from pathlib import Path
 from shutil import move, copyfile, rmtree
 from urllib.parse import urljoin, urlparse
+from xml.etree import ElementTree
 
 from qwc_services_core.config_models import ConfigModels
 from qwc_services_core.database import DatabaseEngine
@@ -220,9 +221,12 @@ class ConfigGenerator():
         # Search for QGS projects in scan dir and automatically generate theme items
         self.search_qgs_projects(generator_config, themes_config)
 
+        # Search for QGS print layouts
+        print_layouts = self.search_print_layouts(generator_config)
+
         # load metadata for all QWC2 theme items
         self.theme_reader = ThemeReader(
-            generator_config, themes_config, self.logger
+            generator_config, themes_config, self.logger, print_layouts
         )
 
         # lookup for additional service configs by name
@@ -732,6 +736,41 @@ class ConfigGenerator():
                         items.append(item)
                     else:
                         self.logger.info("Skipping project " + fname)
+
+    def search_print_layouts(self, generator_config):
+        qgis_print_layouts_dir = generator_config.get(
+            'qgis_print_layouts_dir', '/layouts')
+
+        print_layouts = []
+        for dirpath, dirs, files in os.walk(qgis_print_layouts_dir,
+                                        followlinks=True):
+            for filename in files:
+                if Path(filename).suffix != ".qpt":
+                    continue
+
+                path = os.path.join(qgis_print_layouts_dir, dirpath, filename)
+                with open(path) as fh:
+                    doc = ElementTree.parse(fh)
+
+                layout = doc.getroot()
+                composer_map = doc.find(".//LayoutItem[@type='65639']")
+                if layout.tag != "Layout" or composer_map is None:
+                    self.logger.info("Skipping invalid print template " + filename)
+                    continue
+
+                size = composer_map.get('size').split(',')
+                print_template = OrderedDict()
+                print_template['name'] = layout.get('name')
+                print_map = OrderedDict()
+                print_map['name'] = "map0"
+                print_map['width'] = float(size[0])
+                print_map['height'] = float(size[1])
+                print_template['map'] = print_map
+
+                self.logger.info("Found print template " + filename + " (" + layout.get('name') + ")")
+                print_layouts.append(print_template)
+
+        return print_layouts
 
     def get_logger(self):
         return self.logger
