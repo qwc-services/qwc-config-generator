@@ -741,7 +741,8 @@ class ConfigGenerator():
         qgis_print_layouts_dir = generator_config.get(
             'qgis_print_layouts_dir', '/layouts')
 
-        print_layouts = []
+        print_layouts = {}
+        legend_layout_names = []
         for dirpath, dirs, files in os.walk(qgis_print_layouts_dir,
                                         followlinks=True):
             for filename in files:
@@ -768,9 +769,17 @@ class ConfigGenerator():
                 print_template['map'] = print_map
 
                 self.logger.info("Found print template " + filename + " (" + layout.get('name') + ")")
-                print_layouts.append(print_template)
+                print_layouts[print_template['name']] = print_template
+                if print_template['name'].endswith("_legend"):
+                    legend_layout_names.append(print_template['name'])
 
-        return print_layouts
+        for legend_layout_name in legend_layout_names:
+            base = legend_layout_name[:-7] # strip _legend suffix
+            if base in print_layouts:
+                print_layouts[base]["legendLayout"] = legend_layout_name
+                del print_layouts[legend_layout_name]
+
+        return list(print_layouts.values())
 
     def get_logger(self):
         return self.logger
