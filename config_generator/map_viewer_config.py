@@ -899,7 +899,7 @@ class MapViewerConfig(ServiceConfig):
         # Preserve manually specified edit configs
         if 'editConfig' in cfg_item:
             for layer_name in cfg_item['editConfig']:
-                edit_config[layer_name] = cfg_item['editConfig'][layer_name]
+                edit_config[layer_name].update(cfg_item['editConfig'][layer_name])
 
         return edit_config
 
