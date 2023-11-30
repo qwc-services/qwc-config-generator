@@ -650,7 +650,7 @@ class ConfigGenerator():
         for dirpath, dirs, files in os.walk(qgs_projects_dir,
                                             followlinks=True):
             for filename in files:
-                if Path(filename).suffix == self.qgis_project_extension:
+                if Path(filename).suffix == qgis_project_extension:
                     fname = os.path.join(dirpath, filename)
                     relpath = os.path.relpath(fname, qgs_projects_dir)
                     self.logger.info("Processing " + fname)
