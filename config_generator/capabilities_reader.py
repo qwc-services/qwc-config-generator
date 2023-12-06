@@ -287,6 +287,11 @@ class CapabilitiesReader():
             sub_layer_name = sub_layer.find('%sName' % np, ns).text
 
             if sub_layer_name in internal_print_layers:
+                sublayer_names = []
+                self.collect_wms_layers(
+                    sub_layer, sublayer_names, internal_print_layers, ns, np
+                )
+                internal_print_layers += sublayer_names
                 # skip internal print layers
                 if self.skip_print_layer_groups:
                     return None
