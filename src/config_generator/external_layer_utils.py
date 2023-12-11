@@ -45,8 +45,13 @@ def getWmsRequestUrl(WMS_Capabilities, reqType, urlObj):
 def resolve_external_layer(resource, logger, crs=None):
     cpos = resource.find(':')
     hpos = resource.rfind('#')
+    if hpos == -1:
+        hpos = len(resource) - 1
+        urlend = hpos + 1
+    else:
+        urlend = hpos
     type = resource[0:cpos]
-    url = resource[cpos+1:hpos]
+    url = resource[cpos+1:urlend]
     layername = resource[hpos+1:]
     if type == "wms":
         infoFormat = ""
@@ -65,6 +70,8 @@ def resolve_external_layer(resource, logger, crs=None):
             params = dict(urllib.parse.parse_qsl(urlobj.query))
             crs = params.get('crs', 'EPSG:3857')
         return get_external_wmts_layer(resource, url, layername, crs, logger)
+    elif type == "mvt":
+        return get_extermal_mvt_layer(resource, url, layername)
     else:
         logger.warn("Unknown external layer: %s" % resource)
         return None
@@ -336,4 +343,14 @@ def get_external_wmts_layer(resource, capabilitiesUrl, layerName, crs, logger):
         "resolutions": resolutions,
         "abstract": abstract,
         "attribution": attribution
+    }
+
+def get_extermal_mvt_layer(resource, urls, tilegridname):
+    url, styleurl = urls.split("|")
+    return {
+        "name": resource,
+        "type": "mvt",
+        "url": url,
+        "style": styleurl,
+        "tileGridName": tilegridname
     }

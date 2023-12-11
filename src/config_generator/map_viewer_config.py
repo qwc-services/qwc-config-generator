@@ -747,7 +747,7 @@ class MapViewerConfig(ServiceConfig):
             # dataUrl
             if 'dataUrl' in layer:
                 item_layer['dataUrl'] = layer.get('dataUrl', '')
-                if item_layer["dataUrl"].startswith("wms:") or item_layer["dataUrl"].startswith("wmts:"):
+                if item_layer["dataUrl"].startswith("wms:") or item_layer["dataUrl"].startswith("wmts:") or item_layer["dataUrl"].startswith("mvt:"):
                     externalLayers.append({"internalLayer": layer['name'], "name": item_layer["dataUrl"]})
                 item_layer["dataUrl"] = ""
 
