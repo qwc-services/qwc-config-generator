@@ -62,7 +62,7 @@ class QGSReader:
                     WHERE name = '{project}';
                 """.format(schema=parts[1], table="qgis_projects", project=parts[2]))
                 result = conn.execute(sql)
-                row = result.fetchone()
+                row = result.mappings().fetchone()
                 conn.close()
                 if not row:
                     self.logger.warn("Could not find QGS project '%s'" % qgs_filename)
@@ -724,9 +724,9 @@ class QGSReader:
                 ORDER BY nspname, relname, attnum
             """.format(schema=schema, table=table, column=column))
             # execute query
-            result = conn.execute(sql)
-
-        return result
+            return conn.execute(sql).mappings()
+        else:
+            return result.mappings()
 
     def collect_ui_forms(self, assets_dir, edit_dataset, metadata):
         """ Collect UI form files from project
