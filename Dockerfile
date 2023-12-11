@@ -1,6 +1,6 @@
 FROM sourcepole/qwc-uwsgi-base:ubuntu-v2023.10.26
 
-ADD . /srv/qwc_service
+ADD requirements.txt /srv/qwc_service/requirements.txt
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -16,6 +16,9 @@ RUN \
     apt-get install -y python3-qgis && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+
+ADD src /srv/qwc_service/
+ADD schemas /srv/qwc_service/schemas
 
 # This is needed because the qgis.core library is not capable of running in multiple threads
 ENV UWSGI_THREADS=1
