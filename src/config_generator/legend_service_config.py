@@ -90,7 +90,7 @@ class LegendServiceConfig(ServiceConfig):
 
         for service_name in self.themes_reader.wms_service_names():
             cap = self.themes_reader.wms_capabilities(service_name)
-            if not cap:
+            if not cap or not 'name' in cap:
                 continue
 
             # NOTE: use ordered keys

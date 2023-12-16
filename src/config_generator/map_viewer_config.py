@@ -357,7 +357,7 @@ class MapViewerConfig(ServiceConfig):
         # get capabilities
         service_name = self.themes_reader.service_name(cfg_item['url'])
         cap = self.themes_reader.wms_capabilities(service_name)
-        if not cap:
+        if not cap or not 'name' in cap:
             return None
 
         root_layer = cap.get('root_layer', {})

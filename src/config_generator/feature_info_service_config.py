@@ -104,7 +104,7 @@ class FeatureInfoServiceConfig(ServiceConfig):
 
         for service_name in self.themes_reader.wms_service_names():
             cap = self.themes_reader.wms_capabilities(service_name)
-            if not cap:
+            if not cap or not 'name' in cap:
                 continue
 
             # NOTE: use ordered keys
@@ -199,7 +199,7 @@ class FeatureInfoServiceConfig(ServiceConfig):
 
         for service_name in self.themes_reader.wms_service_names():
             cap = self.themes_reader.wms_capabilities(service_name)
-            if not cap:
+            if not cap or not 'name' in cap:
                 continue
             available_info_layers[service_name] = []
             get_child_layers(cap['root_layer'], available_info_layers[service_name])

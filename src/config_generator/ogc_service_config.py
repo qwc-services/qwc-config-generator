@@ -91,7 +91,7 @@ class OGCServiceConfig(ServiceConfig):
 
         for service_name in self.themes_reader.wms_service_names():
             cap = self.themes_reader.wms_capabilities(service_name)
-            if not cap:
+            if not cap or not 'name' in cap:
                 continue
 
             # NOTE: use ordered keys
@@ -166,7 +166,7 @@ class OGCServiceConfig(ServiceConfig):
 
         for service_name in self.themes_reader.wfs_service_names():
             cap = self.themes_reader.wfs_capabilities(service_name)
-            if not cap:
+            if not cap or not 'name' in cap:
                 continue
 
             # NOTE: use ordered keys
@@ -252,7 +252,7 @@ class OGCServiceConfig(ServiceConfig):
                 continue
 
             cap = self.themes_reader.wms_capabilities(service_name)
-            if not cap:
+            if not cap or not 'name' in cap:
                 continue
 
             # NOTE: use ordered keys
@@ -622,7 +622,7 @@ class OGCServiceConfig(ServiceConfig):
                 continue
 
             cap = self.themes_reader.wfs_capabilities(service_name)
-            if not cap:
+            if not cap or not 'name' in cap:
                 continue
 
             # NOTE: use ordered keys
