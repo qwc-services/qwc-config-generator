@@ -277,6 +277,8 @@ class QGSReader:
             if srid is not None:
                 metadata['srid'] = int(srid.text)
 
+        if not metadata or not metadata.get('table_name') or not metadata.get('schema'):
+            self.logger.warning("Failed to parse schema and/or table from datasource %s" % datasource)
         return metadata
 
     def __attributes_metadata(self, maplayer):
@@ -525,7 +527,6 @@ class QGSReader:
             table_name = meta.get('table_name')
 
             if not schema or not table_name:
-                self.logger.warn("Skipping attribute lookup for dataset with unknown table and/or schema name")
                 return
 
             # connect to GeoDB

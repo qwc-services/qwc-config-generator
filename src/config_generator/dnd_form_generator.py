@@ -15,6 +15,7 @@ class DnDFormGenerator:
         self.metadata = metadata
         
     def generate_form(self, maplayer, projectname, layername, project):
+        self.logger.info("Generating edit form for layer %s of project %s" % (layername, projectname))
         widget = self.__generate_form_widget(maplayer, project)
         if not widget:
             return None
