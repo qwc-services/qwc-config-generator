@@ -91,7 +91,10 @@ class ThemeReader():
             self.logger.warning(
                 "Could not get WMS capabilities for %s" % url
             )
-        wms_capabilities["print_templates"] = wms_capabilities.get('print_templates', []) + self.print_layouts
+        project_layouts = wms_capabilities.get('print_templates', [])
+        project_layouts_names = [layout['name'] for layout in project_layouts]
+        wms_capabilities["print_templates"] = project_layouts + \
+            [layout for layout in self.print_layouts if layout["name"] not in project_layouts_names]
 
         wfs_capabilities = {}
         if self.generate_wfs_services:
