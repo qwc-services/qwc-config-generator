@@ -45,19 +45,19 @@ Usage
 
 Show command options:
 
-    python config_generator_cli.py --help
+    python src/config_generator_cli.py --help
 
 Generate both service configs and permissions:
 
-    python config_generator_cli.py ./tenantConfig.json all
+    python src/config_generator_cli.py ./tenantConfig.json all
 
 Generate service config files:
 
-    python config_generator_cli.py ./tenantConfig.json service_configs
+    python src/config_generator_cli.py ./tenantConfig.json service_configs
 
 Generate permissions file:
 
-    python config_generator_cli.py ./tenantConfig.json permissions
+    python src/config_generator_cli.py ./tenantConfig.json permissions
 
 ### Service
 
@@ -79,7 +79,7 @@ You can change the versions of the schemas that the ConfigGenerator uses for ver
 
 Download JSON schemas:
 
-    python download_json_schemas.py master
+    python src/download_json_schemas.py master
 
 
 Development
@@ -103,4 +103,4 @@ Run Demo-DB and QGIS Server:
 
 Generate service configs and permissions for Docker:
 
-    python config_generator_cli.py ./tenantConfig-example.json all
+    python src/config_generator_cli.py ./tenantConfig-example.json all
