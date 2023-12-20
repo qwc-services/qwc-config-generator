@@ -171,7 +171,7 @@ class MapViewerConfig(ServiceConfig):
             config_file = cfg_qwc2_config.get(
                 'qwc2_config_file', 'config.json'
             )
-            with open(config_file) as f:
+            with open(config_file, encoding='utf-8') as f:
                 # parse config JSON with original order of keys
                 config = json.load(f, object_pairs_hook=OrderedDict)
         except Exception as e:
