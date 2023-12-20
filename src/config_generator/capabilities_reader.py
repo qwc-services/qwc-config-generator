@@ -49,9 +49,6 @@ class CapabilitiesReader():
         try:
             # get GetProjectSettings
             full_url = urljoin(self.default_qgis_server_url, url)
-            self.logger.info(
-                "Downloading WMS GetProjectSettings from %s" % full_url
-            )
 
             if len(full_url) > 2000:
                 self.logger.warning(
@@ -74,6 +71,10 @@ class CapabilitiesReader():
                     (full_url, response.content)
                 )
                 return {}
+
+            self.logger.info(
+                "Downloaded WMS GetProjectSettings from %s" % full_url
+            )
 
             document = response.content
 
@@ -223,7 +224,7 @@ class CapabilitiesReader():
             return capabilities
         except Exception as e:
             self.logger.critical(
-                "Could not get WMS GetProjectSettings from %s:\n%s" %
+                "Could not parse WMS GetProjectSettings from %s:\n%s" %
                 (full_url, e)
             )
             return {}
@@ -521,9 +522,6 @@ class CapabilitiesReader():
         try:
             # get GetProjectSettings
             full_url = urljoin(self.default_qgis_server_url, url)
-            self.logger.info(
-                "Downloading WFS GetCapabilities from %s" % full_url
-            )
 
             if len(full_url) > 2000:
                 self.logger.warning(
@@ -541,11 +539,15 @@ class CapabilitiesReader():
             )
 
             if response.status_code != requests.codes.ok:
-                self.logger.error(
+                self.logger.critical(
                     "Could not get WFS GetCapabilities from %s:\n%s" %
                     (full_url, response.content)
                 )
                 return {}
+
+            self.logger.info(
+                "Downloaded WFS GetCapabilities from %s" % full_url
+            )
 
             document = response.content
 
@@ -643,7 +645,7 @@ class CapabilitiesReader():
             return capabilities
         except Exception as e:
             self.logger.error(
-                "Could not get WFS GetCapabilities from %s:\n%s" %
+                "Could not parse WFS GetCapabilities from %s:\n%s" %
                 (full_url, e)
             )
             return {}
@@ -656,10 +658,6 @@ class CapabilitiesReader():
         :param str full_url: WFS URL
         """
         try:
-            self.logger.info(
-                "Downloading WFS DescribeFeatureType from %s" % full_url
-            )
-
             response = requests.get(
                 full_url,
                 params={
@@ -676,6 +674,10 @@ class CapabilitiesReader():
                     (full_url, response.content)
                 )
                 return {}
+
+            self.logger.info(
+                "Downloaded WFS DescribeFeatureType from %s" % full_url
+            )
 
             document = response.content
 
@@ -712,7 +714,7 @@ class CapabilitiesReader():
             return layers_attributes
         except Exception as e:
             self.logger.error(
-                "Could not get WFS DescribeFeatureType from %s:\n%s" %
+                "Could not parse WFS DescribeFeatureType from %s:\n%s" %
                 (full_url, e)
             )
             return {}

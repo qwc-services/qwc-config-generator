@@ -86,11 +86,9 @@ class ThemeReader():
             # skip service already in cache
             return
 
+        self.logger.info("<b>Reading theme %s</b>" % url)
+
         wms_capabilities = self.capabilities_reader.read_wms_service_capabilities(url, service_name, item)
-        if not wms_capabilities:
-            self.logger.warning(
-                "Could not get WMS capabilities for %s" % url
-            )
         project_layouts = wms_capabilities.get('print_templates', [])
         project_layouts_names = [layout['name'] for layout in project_layouts]
         wms_capabilities["print_templates"] = project_layouts + \
@@ -103,18 +101,14 @@ class ThemeReader():
         qgs_reader = QGSReader(
             self.config, self.logger, self.qgis_projects_base_dir,
             self.qgis_project_extension, service_name)
-        success = qgs_reader.read()
-        if not success:
-            self.logger.warning(
-                    "Failed to read project file for %s." % service_name
-                )
+        project_read = qgs_reader.read()
 
         self.theme_metadata[service_name] = {
             'service_name': service_name,
             'url': url,
             'wms_capabilities': wms_capabilities,
             'wfs_capabilities': wfs_capabilities,
-            'project': qgs_reader if success else None,
+            'project': qgs_reader if project_read else None,
             'pg_layers': None,
             'layer_metadata': {}
         }

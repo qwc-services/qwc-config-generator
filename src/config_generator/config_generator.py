@@ -362,8 +362,7 @@ class ConfigGenerator():
         for log in self.logger.log_entries():
             if log["level"] == self.logger.LEVEL_CRITICAL:
                 self.logger.critical(
-                    "The generation of the configuration"
-                    " files resulted in a failure")
+                    "A critical error occurred while processing the configuration.")
                 self.logger.critical(
                     "The configuration files were not updated!")
                 return False
@@ -374,10 +373,11 @@ class ConfigGenerator():
                 copyfile(
                     file_path, os.path.join(self.tenant_path, file_name)
                 )
+                self.logger.info("Wrote '%s' service config file" % file_name)
 
         self.logger.info(
-            "The generation of the configuration files was successful")
-        self.logger.info("Configuration files were updated!")
+            '<b style="color: green">The generation of the configuration files was successful</b>')
+        self.logger.info('<b style="color: green">Configuration files were updated!</b>')
         return True
 
     def write_service_config(self, service):
@@ -387,7 +387,7 @@ class ConfigGenerator():
         """
         config_handler = self.config_handler.get(service)
         if config_handler:
-            self.logger.debug("Collecting '%s' service config" % service)
+            self.logger.info("<b>Generating '%s' service config</b>" % service)
 
             # generate service config
             config = config_handler.config()
@@ -404,7 +404,6 @@ class ConfigGenerator():
 
             # write service config file
             filename = '%sConfig.json' % config_handler.service_name
-            self.logger.info("Writing '%s' service config file" % filename)
             self.write_json_file(config, filename)
         else:
             self.logger.warning("Service '%s' not found" % service)
@@ -427,7 +426,7 @@ class ConfigGenerator():
             config_handler = self.config_handler.get(service)
             if config_handler:
                 self.logger.info(
-                    "Collecting '%s' service permissions" % service
+                    "<b>Generating '%s' service permissions</b>" % service
                 )
                 for role in permissions['roles']:
                     permissions_config.merge_service_permissions(
@@ -459,14 +458,12 @@ class ConfigGenerator():
         else:
             self.logger.error("Service permissions failed schema validation")
 
-        self.logger.info("Writing 'permissions.json' permissions file")
         self.write_json_file(permissions, 'permissions.json')
 
         for log in self.logger.log_entries():
             if log["level"] == self.logger.LEVEL_CRITICAL:
                 self.logger.critical(
-                    "The generation of the permission"
-                    " files resulted in a failure.")
+                    "A critical error occurred while processing the configuration.")
                 self.logger.critical(
                     "The permission files were not updated!")
                 return False
@@ -475,9 +472,10 @@ class ConfigGenerator():
             os.path.join(self.temp_tenant_path, 'permissions.json'),
             os.path.join(self.tenant_path, 'permissions.json')
         )
+        self.logger.info("Wrote 'permissions.json' permissions file")
         self.logger.info(
-            "The generation of the permission files was successful")
-        self.logger.info("permission files were updated!")
+            '<b style="color: green">The generation of the permission files was successful</b>')
+        self.logger.info('<b style="color: green">Permission files were updated!</b>')
         return True
 
     def write_json_file(self, config, filename):
@@ -691,7 +689,7 @@ class ConfigGenerator():
 
         if os.path.exists(qgis_projects_scan_base_dir):
             self.logger.info(
-                "Searching for projects files in " + qgis_projects_scan_base_dir)
+                "<b>Searching for projects files in %s</b>" % qgis_projects_scan_base_dir)
         else:
             self.logger.error(
                 "The qgis_projects_scan_base_dir sub directory" +
@@ -740,6 +738,9 @@ class ConfigGenerator():
     def search_print_layouts(self, generator_config):
         qgis_print_layouts_dir = generator_config.get(
             'qgis_print_layouts_dir', '/layouts')
+
+        self.logger.info(
+            "<b>Searching for print layouts %s</b>" % qgis_print_layouts_dir)
 
         print_layouts = {}
         legend_layout_names = []

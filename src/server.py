@@ -58,8 +58,13 @@ def generate_configs():
         logger = generator.get_logger()
 
         for entry in logger.log_entries():
-            log_output += entry["level"].upper() + ": " + \
-                          str(entry["msg"]) + "\n"
+            level = entry["level"].upper()
+            if level == "CRITICAL":
+                log_output += '<b style="color: red">CRITICAL: %s</b>\n' % str(entry["msg"])
+            elif level == "WARNING":
+                log_output += '<span style="color: orange">WARNING: %s</span>\n' % str(entry["msg"])
+            else:
+                log_output += level + ": " + str(entry["msg"]) + "\n"
 
         return (log_output, 200)
     except Exception as e:

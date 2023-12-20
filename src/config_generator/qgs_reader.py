@@ -54,7 +54,6 @@ class QGSReader:
                 qgs_filename = 'postgresql:///?service=qgisprojects&schema=%s&project=%s' % (parts[1], parts[2])
 
                 qgis_projects_db = self.db_engine.db_engine("postgresql:///?service=qgisprojects")
-                self.logger.info("Reading '%s'" % qgs_filename)
 
                 conn = qgis_projects_db.connect()
                 sql = sql_text("""
@@ -65,7 +64,7 @@ class QGSReader:
                 row = result.mappings().fetchone()
                 conn.close()
                 if not row:
-                    self.logger.warn("Could not find QGS project '%s'" % qgs_filename)
+                    self.logger.critical("Could not find QGS project '%s'" % qgs_filename)
                     return False
 
                 qgz = zipfile.ZipFile(io.BytesIO(row['content']))
@@ -80,9 +79,8 @@ class QGSReader:
                 qgs_filename = self.map_prefix + self.qgs_ext
                 self.qgs_path = os.path.join(self.qgs_resources_path, qgs_filename)
                 if not os.path.exists(self.qgs_path):
-                    self.logger.warn("Could not find QGS project '%s'" % qgs_filename)
+                    self.logger.critical("Could not find QGS project '%s'" % qgs_filename)
                     return False
-                self.logger.info("Reading '%s'" % qgs_filename)
 
                 if self.qgs_ext == ".qgz":
 
@@ -98,9 +96,10 @@ class QGSReader:
                     tree = ElementTree.parse(self.qgs_path)
 
             if tree is None or tree.getroot().tag != 'qgis':
-                self.logger.warn("'%s' is not a QGS file" % qgs_filename)
+                self.logger.critical("'%s' is not a QGS file" % qgs_filename)
                 return False
             self.root = tree.getroot()
+            self.logger.info("Read '%s'" % qgs_filename)
 
             # extract QGIS version
             version = self.root.get('version')
