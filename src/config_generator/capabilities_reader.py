@@ -360,6 +360,13 @@ class CapabilitiesReader():
         except:
             pass
 
+        # styles
+        styles = {}
+        for style in layer.findall('%sStyle' % np, ns):
+            style_name = style.find('%sName' % np, ns).text
+            style_title = style.find('%sTitle' % np, ns).text
+            styles[style_name] = style_title
+        wms_layer["styles"] = styles
 
         if layer.get('transparency'):
             wms_layer['opacity'] = 255 - int(float(

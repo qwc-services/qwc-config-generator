@@ -701,6 +701,13 @@ class MapViewerConfig(ServiceConfig):
             item_layer['visibility'] = layer['visible']
             item_layer['geometryType'] = layer['geometryType']
             item_layer['queryable'] = layer['queryable']
+            item_layer['styles'] = layer['styles']
+            if 'default' in item_layer['styles']:
+                item_layer['style'] = 'default'
+            elif len(item_layer['styles']) > 0:
+                item_layer['style'] = list(item_layer['styles'])[0]
+            else:
+                item_layer['style'] = ''
             if 'display_field' in layer:
                 item_layer['displayField'] = layer.get('display_field')
             item_layer['opacity'] = layer['opacity']
