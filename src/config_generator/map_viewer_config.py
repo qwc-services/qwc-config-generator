@@ -916,7 +916,7 @@ class MapViewerConfig(ServiceConfig):
             # read index.html
             index_file = cfg_qwc2_config.get('qwc2_index_file', 'index.html')
             index_contents = None
-            with open(index_file) as f:
+            with open(index_file, encoding='utf-8') as f:
                 index_contents = f.read()
 
             # write to tenant dir

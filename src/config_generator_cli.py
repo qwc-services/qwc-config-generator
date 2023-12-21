@@ -46,7 +46,7 @@ args = parser.parse_args()
 
 # read ConfigGenerator config file
 try:
-    with open(args.config_file) as f:
+    with open(args.config_file, encoding='utf-8') as f:
         # parse config JSON with original order of keys
         config = json.load(f, object_pairs_hook=OrderedDict)
 except Exception as e:

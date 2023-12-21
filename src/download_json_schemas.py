@@ -21,7 +21,7 @@ schema_versions_path = os.path.join(
     f'schemas/schema-versions.json'
 )
 try:
-    with open(schema_versions_path) as f:
+    with open(schema_versions_path, encoding='utf-8') as f:
         schema_versions = json.load(f)
 except Exception as e:
     print(

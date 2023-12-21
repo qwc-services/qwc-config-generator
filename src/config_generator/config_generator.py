@@ -140,7 +140,7 @@ class ConfigGenerator():
             if not os.path.isabs(config_template_path):
                     config_template_path = os.path.join(config_file_dir, config_template_path)
             try:
-                with open(config_template_path, 'r') as fh:
+                with open(config_template_path, 'r', encoding='utf-8') as fh:
                     config_template_data = fh.read().replace('$tenant$', self.tenant)
                     config_template = json.loads(config_template_data, object_pairs_hook=OrderedDict)
 
@@ -204,7 +204,7 @@ class ConfigGenerator():
             try:
                 if not os.path.isabs(themes_config):
                     themes_config = os.path.join(config_file_dir, themes_config)
-                with open(themes_config) as f:
+                with open(themes_config, encoding='utf-8') as f:
                     themes_config = json.load(f)
             except:
                 msg = "Failed to read themes configuration %s" % themes_config
@@ -243,7 +243,7 @@ class ConfigGenerator():
             'schema-versions.json'
         )
         try:
-            with open(schema_versions_path) as f:
+            with open(schema_versions_path, encoding='utf-8') as f:
                 schema_versions = json.load(f)
         except Exception as e:
             msg = (
@@ -522,7 +522,7 @@ class ConfigGenerator():
             # parse schema URL
             file_name = os.path.basename(urlparse(schema_url).path)
             file_path = os.path.join(self.json_schemas_path, file_name)
-            with open(file_path) as f:
+            with open(file_path, encoding='utf-8') as f:
                 schema = json.load(f)
         except Exception as e:
             self.logger.warning(
@@ -751,7 +751,7 @@ class ConfigGenerator():
                     continue
 
                 path = os.path.join(qgis_print_layouts_dir, dirpath, filename)
-                with open(path) as fh:
+                with open(path, encoding='utf-8') as fh:
                     doc = ElementTree.parse(fh)
 
                 layout = doc.getroot()
