@@ -175,7 +175,7 @@ class DataServiceConfig(ServiceConfig):
                 dataset['primary_key'] = value.get('primary_key')
                 dataset['fields'] = []
 
-                meta = self.themes_reader.layer_metadata(qgs_name, value.get('layername'))
+                meta = self.themes_reader.layer_metadata(value.get('qgs_name'), value.get('layername'))
                 for key, attr_meta in meta.get('fields', {}).items():
                     if attr_meta.get('expression'):
                         # Skip expression field

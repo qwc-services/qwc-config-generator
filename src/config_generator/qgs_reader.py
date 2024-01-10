@@ -462,6 +462,7 @@ class QGSReader:
             constraints['keyvalrel'] = self.map_prefix + "." + layerName + ":" + key + ":" + value
 
             keyvaltables[self.map_prefix + "." + layerName] = self.__table_metadata(layerSource)
+            keyvaltables[self.map_prefix + "." + layerName]['qgs_name'] = self.map_prefix
             keyvaltables[self.map_prefix + "." + layerName]['layername'] = layerName
             keyvaltables[self.map_prefix + "." + layerName]['database'] = self.__db_connection(layerSource)
             keyvaltables[self.map_prefix + "." + layerName]['fields'] = {
