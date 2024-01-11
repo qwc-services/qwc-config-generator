@@ -193,7 +193,7 @@ class QGSReader:
 
         if 'service=' in datasource:
             # PostgreSQL connection service
-            m = re.search(r"service='([\w ]+)'", datasource)
+            m = re.search(r"service='([^']+)'", datasource)
             if m is not None:
                 connection_string = 'postgresql:///?service=%s' % m.group(1)
 
