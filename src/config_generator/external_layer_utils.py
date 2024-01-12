@@ -123,6 +123,8 @@ def get_external_wms_layer(resource, url, layerName, infoFormat, logger):
 
     capabilities = parseString(capabilitiesXml)
     contents = getFirstElementByTagName(capabilities, "WMS_Capabilities")
+    if not contents:
+        contents = getFirstElementByTagName(capabilities, "WMT_MS_Capabilities")
 
     targetLayer = None
     for layer in contents.getElementsByTagName("Layer"):
@@ -165,7 +167,7 @@ def get_external_wms_layer(resource, url, layerName, infoFormat, logger):
     boundingBox = getFirstElementByTagName(targetLayer, "BoundingBox")
     if boundingBox is not None:
         bbox = {
-            "crs": boundingBox.getAttribute("CRS"),
+            "crs": boundingBox.getAttribute("CRS") or boundingBox.getAttribute("SRS"),
             "bounds": [
                 float(boundingBox.getAttribute("minx")),
                 float(boundingBox.getAttribute("miny")),
@@ -245,7 +247,7 @@ def get_external_wmts_layer(resource, capabilitiesUrl, layerName, crs, logger):
             tileMatrixSet = child
             tileMatrixName = getFirstElementValueByTagName(tileMatrixSet, "ows:Identifier")
             supportedCrs = getFirstElementValueByTagName(tileMatrixSet, "ows:SupportedCRS")
-            crsMatch = re.search('(EPSG).*:(\d+)', supportedCrs)
+            crsMatch = re.search(r'(EPSG).*:(\d+)', supportedCrs)
             if crsMatch and crs == "EPSG:" + crsMatch.group(2) and tileMatrixName in layerTileMatrixSet:
                 tileMatrix = tileMatrixSet.getElementsByTagName("TileMatrix")
                 break
