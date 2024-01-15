@@ -312,6 +312,10 @@ class ConfigGenerator():
                 'dbAuth', self.schema_urls.get('dbAuth'),
                 self.service_config('dbAuth'), self.logger, 'db-auth'
             ),
+            'ldapAuth': ServiceConfig(
+                'ldapAuth', self.schema_urls.get('ldapAuth'),
+                self.service_config('ldapAuth'), self.logger, 'ldap-auth'
+            ),
             'elevation': ServiceConfig(
                 'elevation', self.schema_urls.get('elevation'),
                 self.service_config('elevation'), self.logger

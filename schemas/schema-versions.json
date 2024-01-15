@@ -25,6 +25,10 @@
       "schema_url": "https://github.com/qwc-services/qwc-feature-info-service/raw/master/schemas/qwc-feature-info-service.json"
     },
     {
+      "service": "ldapAuth",
+      "schema_url": "https://github.com/qwc-services/qwc-ldap-auth/raw/master/schemas/qwc-ldap-auth.json"
+    },
+    {
       "service": "legend",
       "schema_url": "https://github.com/qwc-services/qwc-legend-service/raw/master/schemas/qwc-legend-service.json"
     },
