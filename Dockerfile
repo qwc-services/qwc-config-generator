@@ -1,4 +1,4 @@
-FROM sourcepole/qwc-uwsgi-base:ubuntu-v2023.10.26
+FROM sourcepole/qwc-uwsgi-base:ubuntu-v2024.01.16
 
 ADD requirements.txt /srv/qwc_service/requirements.txt
 
