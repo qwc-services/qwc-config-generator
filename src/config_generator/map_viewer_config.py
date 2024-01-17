@@ -455,18 +455,20 @@ class MapViewerConfig(ServiceConfig):
 
         print_templates = cap.get('print_templates', [])
         if print_templates:
-            if 'printLabelBlacklist' in cfg_item:
-                # NOTE: copy print templates to not overwrite original config
-                print_templates = [
-                    template.copy() for template in print_templates
-                ]
-                for print_template in print_templates:
+            # NOTE: copy print templates to not overwrite original config
+            print_templates = [
+                template.copy() for template in print_templates
+            ]
+            for print_template in print_templates:
+                if 'printLabelBlacklist' in cfg_item:
                     # filter print labels
                     labels = [
                         label for label in print_template.get('labels', [])
                         if label not in cfg_item['printLabelBlacklist']
                     ]
                     print_template['labels'] = labels
+
+                print_template['default'] = print_template['name'] == cfg_item.get('defaultPrintLayout')
             item['print'] = print_templates
 
         self.set_optional_config(cfg_item, 'printLabelConfig', item)
