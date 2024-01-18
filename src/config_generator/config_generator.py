@@ -773,6 +773,13 @@ class ConfigGenerator():
                 print_map['height'] = float(size[1])
                 print_template['map'] = print_map
 
+                labels = []
+                for label in doc.findall(".//LayoutItem[@type='65641']"):
+                    if label.get('visibility') == '1':
+                        labels.append(label.get('id'))
+                if labels:
+                    print_template['labels'] = labels
+
                 self.logger.info("Found print template " + filename + " (" + layout.get('name') + ")")
                 print_layouts[print_template['name']] = print_template
                 if print_template['name'].endswith("_legend"):
