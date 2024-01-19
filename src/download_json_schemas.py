@@ -18,8 +18,7 @@ print(
 schema_versions = {}
 schema_versions_path = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
-    '..',
-    f'schemas/schema-versions.json'
+    f'schema-versions.json'
 )
 try:
     with open(schema_versions_path, encoding='utf-8') as f:

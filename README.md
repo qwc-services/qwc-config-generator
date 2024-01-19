@@ -75,7 +75,7 @@ Generate both service configs and permissions for `default` tenant:
 ### Update JSON schemas
 
 You can change the directory from where the ConfigGenerator reads its schemas via the `JSON_SCHEMAS_PATH` environment variable (default `/tmp/`).
-You can change the versions of the schemas that the ConfigGenerator uses for verification inside [schema-versions.json](schemas/schema-versions.json).
+You can change the versions of the schemas that the ConfigGenerator uses for verification inside [schema-versions.json](src/schema-versions.json).
 
 Download JSON schemas:
 
