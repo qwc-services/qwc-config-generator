@@ -75,6 +75,10 @@
           "description": "Directory containing print layouts. Example: /layouts",
           "type": "string"
         },
+        "qgis_print_layouts_tenant_subdir": {
+          "description": "Subdirectory path relative to qgis_print_layouts_dir. If specified, only layouts within this subdir will be processed. Useful to specify separate print layouts per tenant.",
+          "type": "string"
+        },
         "qgis_projects_scan_base_dir": {
           "description": "Path for QGIS projects, which should be automatically detected. Must be a subdir qgis_projects_base_dir. Example: /data/scan",
           "type": "string"
