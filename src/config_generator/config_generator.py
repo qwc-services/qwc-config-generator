@@ -742,19 +742,33 @@ class ConfigGenerator():
     def search_print_layouts(self, generator_config):
         qgis_print_layouts_dir = generator_config.get(
             'qgis_print_layouts_dir', '/layouts')
-
-        self.logger.info(
-            "<b>Searching for print layouts %s</b>" % qgis_print_layouts_dir)
+        qgis_print_layouts_tenant_subdir = generator_config.get(
+            'qgis_print_layouts_tenant_subdir', None)
+        subdirpath = None
+        if qgis_print_layouts_tenant_subdir:
+            subdirpath = os.path.join(
+                qgis_print_layouts_dir,
+                qgis_print_layouts_tenant_subdir.lstrip('/')
+            ).rstrip('/')
+            self.logger.info(
+                "<b>Searching for print layouts in %s</b>" % subdirpath)
+        else:
+            self.logger.info(
+                "<b>Searching for print layouts in %s</b>" % qgis_print_layouts_dir)
 
         print_layouts = {}
         legend_layout_names = []
         for dirpath, dirs, files in os.walk(qgis_print_layouts_dir,
                                         followlinks=True):
+            if subdirpath and not dirpath.startswith(subdirpath):
+                continue
+            relpath = dirpath[len(qgis_print_layouts_dir.rstrip('/')) + 1:]
+
             for filename in files:
                 if Path(filename).suffix != ".qpt":
                     continue
 
-                path = os.path.join(qgis_print_layouts_dir, dirpath, filename)
+                path = os.path.join(dirpath, filename)
                 with open(path, encoding='utf-8') as fh:
                     doc = ElementTree.parse(fh)
 
@@ -766,7 +780,7 @@ class ConfigGenerator():
 
                 size = composer_map.get('size').split(',')
                 print_template = OrderedDict()
-                print_template['name'] = layout.get('name')
+                print_template['name'] = os.path.join(relpath, layout.get('name'))
                 print_map = OrderedDict()
                 print_map['name'] = "map0"
                 print_map['width'] = float(size[0])
