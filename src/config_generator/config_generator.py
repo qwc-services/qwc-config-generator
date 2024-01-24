@@ -788,7 +788,7 @@ class ConfigGenerator():
 
                 labels = []
                 for label in doc.findall(".//LayoutItem[@type='65641']"):
-                    if label.get('visibility') == '1':
+                    if label.get('visibility') == '1' and label.get('id'):
                         labels.append(label.get('id'))
                 if labels:
                     print_template['labels'] = labels
