@@ -495,6 +495,7 @@ class MapViewerConfig(ServiceConfig):
 
         self.set_optional_config(cfg_item, 'watermark', item)
         self.set_optional_config(cfg_item, 'config', item)
+        self.set_optional_config(cfg_item, 'flags', item)
         self.set_optional_config(cfg_item, 'mapTips', item)
         self.set_optional_config(cfg_item, 'userMap', item)
         self.set_optional_config(cfg_item, 'pluginData', item)
