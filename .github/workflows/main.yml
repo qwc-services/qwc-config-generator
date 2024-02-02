@@ -28,4 +28,4 @@ jobs:
           name: sourcepole/${{ github.event.repository.name }}
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_PASSWORD }}
-          tags: "${{ steps.get_tag.outputs.tag }},${{ steps.get_tag.outputs.tag_latest }},${{ steps.get_tag.outputs.tag }}-noqgis,${{ steps.get_tag.outputs.tag_latest }}-noqgis"
+          tags: "${{ steps.get_tag.outputs.tag }},${{ steps.get_tag.outputs.tag_latest }}"
