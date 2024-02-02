@@ -639,41 +639,6 @@ class ConfigGenerator():
                 qgs_projects_dir)
             return
 
-        # Output directory for processed projects
-        qgis_projects_gen_base_dir = generator_config.get(
-            'qgis_projects_gen_base_dir')
-        if not qgis_projects_gen_base_dir:
-            self.logger.warning("Skipping preprocessing qgis projects in " +
-                                qgs_projects_dir +
-                                ": qgis_projects_gen_base_dir is not set")
-            return
-
-        for dirpath, dirs, files in os.walk(qgs_projects_dir,
-                                            followlinks=True):
-            for filename in files:
-                if Path(filename).suffix == qgis_project_extension:
-                    fname = os.path.join(dirpath, filename)
-                    relpath = os.path.relpath(fname, qgs_projects_dir)
-                    self.logger.info("Processing " + fname)
-
-                    # convert project
-                    dest_path = os.path.join(
-                        qgis_projects_gen_base_dir, relpath)
-
-                    if generator_config.get('split_categorized_layers', False) is True:
-                        from .categorize_groups_script import split_categorized_layers
-                        split_categorized_layers(fname, dest_path)
-                    else:
-                        copyfile(fname, dest_path)
-                    if not os.path.exists(dest_path):
-                        self.logger.warning(
-                            "The project: " + dest_path +
-                            " could not be generated.\n"
-                            "Please check if needed permissions to create the"
-                            " file are granted.")
-                        continue
-                    self.logger.info("Written to " + dest_path)
-
     def search_qgs_projects(self, generator_config, themes_config):
 
         qgis_projects_base_dir = generator_config.get(

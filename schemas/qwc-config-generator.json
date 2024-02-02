@@ -83,10 +83,6 @@
           "description": "Path for QGIS projects, which should be automatically detected. Must be a subdir qgis_projects_base_dir. Example: /data/scan",
           "type": "string"
         },
-        "qgis_projects_gen_base_dir": {
-          "description": "Path for generated QGIS projects, result of preprocessing. Must be a subdir of qgis_projects_base_dir. Can be the same as qgis_projects_scan_base_dir, in which case the theme autodetection will apply to generated QGIS projects. Example: /data/gen",
-          "type": "string"
-        },
         "permissions_default_allow": {
           "description": "Set whether resources are permitted or restricted by default. Example: true",
           "type": "boolean"
@@ -110,10 +106,6 @@
         "layer_opacities": {
           "description": "Layer opacity values for QGIS <= 3.10",
           "type": "object"
-        },
-        "split_categorized_layers": {
-          "description": "Set to true to activate the categorize groups functionality",
-          "type": "boolean"
         },
         "project_settings_read_timeout": {
           "description": "Timeout for GetProjectSettings, GetCapabilities and DescribeFeatureType requests. Default: 60sec",

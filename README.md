@@ -93,7 +93,7 @@ Activate virtual environment:
 
     source .venv/bin/activate
 
-Install requirements (*NOTE:* additionally requires modules from `python-qgis`):
+Install requirements:
 
     pip install -r requirements.txt
 
