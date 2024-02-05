@@ -315,6 +315,10 @@ class ConfigGenerator():
                 'ldapAuth', self.schema_urls.get('ldapAuth'),
                 self.service_config('ldapAuth'), self.logger, 'ldap-auth'
             ),
+            'oidcAuth': ServiceConfig(
+                'oidcAuth', self.schema_urls.get('oidcAuth'),
+                self.service_config('oidcAuth'), self.logger, 'oidc-auth'
+            ),
             'elevation': ServiceConfig(
                 'elevation', self.schema_urls.get('elevation'),
                 self.service_config('elevation'), self.logger
