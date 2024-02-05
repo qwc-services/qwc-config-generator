@@ -45,6 +45,10 @@
       "schema_url": "https://github.com/qwc-services/qwc-ogc-service/raw/master/schemas/qwc-ogc-service.json"
     },
     {
+      "service": "oidcAuth",
+      "schema_url": "https://github.com/qwc-services/qwc-oidc-auth/raw/main/schemas/qwc-oidc-auth.json"
+    },
+    {
       "service": "permalink",
       "schema_url": "https://github.com/qwc-services/qwc-permalink-service/raw/master/schemas/qwc-permalink-service.json"
     },
