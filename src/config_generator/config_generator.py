@@ -4,6 +4,7 @@ import deepmerge
 import os
 import requests
 import tempfile
+import re
 
 from collections import OrderedDict
 from datetime import datetime
@@ -301,37 +302,19 @@ class ConfigGenerator():
                 self.config_models, self.schema_urls.get('ext'),
                 self.service_config('ext'), self.logger
             ),
-
-            # config-only services
-            'adminGui': ServiceConfig(
-                'adminGui', self.schema_urls.get('adminGui'),
-                self.service_config('adminGui'), self.logger, 'admin-gui'
-            ),
-            'dbAuth': ServiceConfig(
-                'dbAuth', self.schema_urls.get('dbAuth'),
-                self.service_config('dbAuth'), self.logger, 'db-auth'
-            ),
-            'ldapAuth': ServiceConfig(
-                'ldapAuth', self.schema_urls.get('ldapAuth'),
-                self.service_config('ldapAuth'), self.logger, 'ldap-auth'
-            ),
-            'oidcAuth': ServiceConfig(
-                'oidcAuth', self.schema_urls.get('oidcAuth'),
-                self.service_config('oidcAuth'), self.logger, 'oidc-auth'
-            ),
-            'elevation': ServiceConfig(
-                'elevation', self.schema_urls.get('elevation'),
-                self.service_config('elevation'), self.logger
-            ),
-            'mapinfo': ServiceConfig(
-                'mapinfo', self.schema_urls.get('mapinfo'),
-                self.service_config('mapinfo'), self.logger
-            ),
-            'permalink': ServiceConfig(
-                'permalink', self.schema_urls.get('permalink'),
-                self.service_config('permalink'), self.logger
-            )
         }
+
+        for service_name, service_config in self.service_configs.items():
+            # config-only services
+            if service_name not in self.config_handler:
+                # if service is not yet in config handler, it has not a specific service configuration, it is a config-only service
+                schema_url = self.schema_urls.get(service_name, service_config.get('schema_url', ''))
+                config = ServiceConfig(service_name, schema_url,
+                    self.service_config(service_name), self.logger, 
+                    re.sub(r'(?=[A-Z])', '-', service_name).lower())
+                self.config_handler[service_name] = config
+                self.logger.debug(f"Add configuration for service {service_name}")
+            else: self.logger.debug(f"Specific configuration for service {service_name} already exists")
 
         try:
             # check tenant dirs
