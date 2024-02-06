@@ -51,6 +51,8 @@ Add the following configuration and adapt it to your service in `tenantConfig.js
 }
 ```
 
+*Note*: `service_name` is expected to be camel case (i.e. `adminGui`), and the service name in the generated config will lowercase and hyphenated (i.e. `admin-gui`).
+
 Usage
 -----
 
