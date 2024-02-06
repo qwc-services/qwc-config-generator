@@ -37,6 +37,19 @@ If you want to define custom resource types for a custom service, you can add a 
 
 and then add it to the `custom_resource_types` setting.
 
+### Additional services
+
+For any additional service (without specific resources), ConfigGenerator generates the configuration in `OUTPUT_CONFIG_PATH` directory.
+
+Add the following configuration and adapt it to your service in `tenantConfig.json`:
+
+```json
+{
+    "name": "<service_name>",
+    "schema_url": "<service_schema_url>",
+    "config": {...}
+}
+```
 
 Usage
 -----
