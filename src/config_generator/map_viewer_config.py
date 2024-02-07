@@ -702,6 +702,7 @@ class MapViewerConfig(ServiceConfig):
             # layer
             item_layer['visibility'] = layer['visible']
             item_layer['geometryType'] = layer['geometryType']
+            item_layer['category_sublayer'] = layer['category_sublayer']
             item_layer['queryable'] = layer['queryable']
             item_layer['styles'] = layer['styles']
             if 'default' in item_layer['styles']:
