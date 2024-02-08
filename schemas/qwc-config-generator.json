@@ -83,6 +83,10 @@
           "description": "Path for QGIS projects, which should be automatically detected. Must be a subdir qgis_projects_base_dir. Example: /data/scan",
           "type": "string"
         },
+        "group_scanned_projects_by_dir": {
+          "description": "Option to group scanned projects by directory in themes configuration. Default: false",
+          "type": "boolean"
+        },
         "permissions_default_allow": {
           "description": "Set whether resources are permitted or restricted by default. Example: true",
           "type": "boolean"
