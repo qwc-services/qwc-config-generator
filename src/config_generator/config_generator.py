@@ -632,6 +632,7 @@ class ConfigGenerator():
             'qgis_projects_base_dir')
         qgis_projects_scan_base_dir = generator_config.get(
             'qgis_projects_scan_base_dir')
+        group_scanned_projects_by_dir = generator_config.get('group_scanned_projects_by_dir', False)
         qwc_base_dir = generator_config.get("qwc2_base_dir")
         qgis_project_extension = generator_config.get(
             'qgis_project_extension', '.qgs')
@@ -651,8 +652,9 @@ class ConfigGenerator():
                 " does not exist: " + qgis_projects_scan_base_dir)
             return
 
+        themes = themes_config.get("themes", {})
         # collect existing item urls
-        items = themes_config.get("themes", {}).get(
+        items = themes.get(
             "items", [])
         wms_urls = []
         has_default = False
@@ -662,33 +664,73 @@ class ConfigGenerator():
             if item.get("default", False):
                 has_default = True
 
-        for dirpath, dirs, files in os.walk(qgis_projects_scan_base_dir,
-                                            followlinks=True):
-            for filename in files:
-                if Path(filename).suffix == qgis_project_extension:
-                    fname = os.path.join(dirpath, filename)
-                    relpath = os.path.relpath(dirpath,
-                                              qgis_projects_base_dir)
-                    wmspath = os.path.join(self.ows_prefix, relpath, Path(filename).stem)
+        # collect existing groups
+        groups = themes.get("groups", [])
 
-                    # Add to themes items
-                    item = OrderedDict()
-                    item["url"] = wmspath
-                    item["backgroundLayers"] = themes_config.get(
-                        "defaultBackgroundLayers", [])
-                    item["searchProviders"] = themes_config.get(
-                        "defaultSearchProviders", [])
-                    item["mapCrs"] = themes_config.get(
-                        "defaultMapCrs")
-
-                    if item["url"] not in wms_urls:
-                        self.logger.info("Adding project " + fname)
-                        if not has_default:
-                            item["default"] = True
-                            has_default = True
-                        items.append(item)
+        base_path = Path(qgis_projects_scan_base_dir)
+        for item in base_path.glob('**/*'):
+            if group_scanned_projects_by_dir and item.is_dir():
+                if item.parent == base_path:
+                    # Search if dir is already a group
+                    if not list(filter(lambda group: group["title"] == item.name, groups)):
+                        self.logger.info(f"Create group {item.name} in themes configuration")
+                        group = OrderedDict()
+                        group["title"] = item.name
+                        group["items"] = []
+                        group["groups"] = []
+                        groups.append(group)
                     else:
-                        self.logger.info("Skipping project " + fname)
+                        self.logger.info(f"Group {item.name} already exists in themes configuration")
+                else:
+                    # Get group parent
+                    group_parent = list(filter(lambda group: group["title"] == item.parent.name, groups))[0]
+                    # Search if dir is already a group in group parent
+                    if not list(filter(lambda group: group["title"] == item.name, group_parent["groups"])):
+                        self.logger.info(f"Create group {item.name} in themes configuration group {group_parent['title']}")
+                        group = OrderedDict()
+                        group["title"] = item.name
+                        group["items"] = []
+                        group["groups"] = []
+                        group_parent["groups"].append(group)
+                    else:
+                        self.logger.info(f"Group {item.name} already exists in themes configuration group {group_parent['title']}")            
+            elif item.is_file() and item.suffix == qgis_project_extension:
+                relpath = item.parent.relative_to(qgis_projects_base_dir)
+                wmspath = os.path.join(self.ows_prefix, relpath, item.stem)
+
+                # Add to themes items
+                theme_item = OrderedDict()
+                theme_item["url"] = wmspath
+                theme_item["backgroundLayers"] = themes_config.get(
+                    "defaultBackgroundLayers", [])
+                theme_item["searchProviders"] = themes_config.get(
+                    "defaultSearchProviders", [])
+                theme_item["mapCrs"] = themes_config.get(
+                    "defaultMapCrs")
+
+                if theme_item["url"] not in wms_urls:
+                    if not has_default:
+                        theme_item["default"] = True
+                        has_default = True
+                    # Add theme to items or group
+                    if group_scanned_projects_by_dir and (item.parent != base_path):
+                        if list(filter(lambda group: group["title"] == item.parent.name, groups)):
+                            item_group = list(filter(lambda group: group["title"] == item.parent.name, groups))[0]
+                        else:
+                            for group in groups:
+                                if list(filter(lambda g: g["title"] == item.parent.name, group["groups"])):
+                                    item_group = list(filter(lambda g: g["title"] == item.parent.name, group["groups"]))[0]
+                        if not list(filter(lambda item: item["url"] == wmspath, item_group["items"])):
+                            self.logger.info(f"Adding project {item.stem} to group {item.parent.name}")
+                            item_group["items"].append(theme_item)
+                        else: self.logger.info(f"Project {item.stem} already exists in group {item.parent.name}")
+                    else:
+                        self.logger.info(f"Adding project {item.stem}")
+                        items.append(theme_item)
+                else:
+                    self.logger.info(f"Skipping project {item.name}")
+        themes["groups"] = groups
+        themes["items"] = items
 
     def search_print_layouts(self, generator_config):
         qgis_print_layouts_dir = generator_config.get(
