@@ -7,7 +7,7 @@ import tempfile
 import re
 
 from collections import OrderedDict
-from datetime import datetime
+from datetime import datetime, UTC
 from pathlib import Path
 from shutil import move, copyfile, rmtree
 from urllib.parse import urljoin, urlparse
@@ -633,6 +633,7 @@ class ConfigGenerator():
         qgis_projects_scan_base_dir = generator_config.get(
             'qgis_projects_scan_base_dir')
         group_scanned_projects_by_dir = generator_config.get('group_scanned_projects_by_dir', False)
+        save_scanned_projects_in_config = generator_config.get('save_scanned_projects_in_config', False)
         qwc_base_dir = generator_config.get("qwc2_base_dir")
         qgis_project_extension = generator_config.get(
             'qgis_project_extension', '.qgs')
@@ -731,6 +732,62 @@ class ConfigGenerator():
                     self.logger.info(f"Skipping project {item.name}")
         themes["groups"] = groups
         themes["items"] = items
+
+        if save_scanned_projects_in_config:
+            # Save themes_config in file to save scanned themes and groups
+            base_themes_config = self.config.get("themesConfig", None)
+            config_in_path = os.environ.get(
+                'INPUT_CONFIG_PATH', 'config-in/'
+            )
+            config_file_dir = os.path.join(config_in_path, self.tenant)
+            baksuffix = "%s.bak" % datetime.now(UTC).strftime("-%Y%m%d-%H%M%S")
+            if isinstance(base_themes_config, str):
+                themes_config_path = base_themes_config
+                try:
+                    if not os.path.isabs(themes_config_path):
+                        themes_config_path = os.path.join(config_file_dir, themes_config_path)
+                    with open(themes_config_path) as f:
+                        base_themes_config = json.load(f)
+
+                    if base_themes_config != themes_config:
+                        with open(themes_config_path + baksuffix, "w", encoding="utf-8") as fh:
+                            json.dump(base_themes_config, fh, indent=2, separators=(',', ': '))
+
+                        with open(themes_config_path, "w", encoding="utf-8") as fh:
+                            json.dump(themes_config, fh, indent=2, separators=(',', ': '))
+                        self.logger.info("Themes configuration has been updated.")
+                    else: self.logger.info("Themes configuration did not change.")
+                except IOError as e:
+                    msg = "Failed to backup/save themes configuration %s: %s" % (themes_config_path, e.strerror)
+                    self.logger.error(msg)
+            elif isinstance(base_themes_config, dict):
+                tenant_config_path = os.path.join(
+                    config_file_dir, 'tenantConfig.json'
+                )
+                # Read ConfigGenerator config file
+                try:
+                    with open(tenant_config_path, encoding='utf-8') as fh:
+                        tenant_config = json.load(fh, object_pairs_hook=OrderedDict)
+                except IOError as e:
+                    self.logger.error("Error reading tenantConfig.json: {}".format(
+                        e.strerror))
+                if tenant_config["themesConfig"] != themes_config:
+                    # Backup and save config file with new themes_config
+                    try:
+                        with open(tenant_config_path + baksuffix, "w", encoding="utf-8") as fh:
+                            json.dump(tenant_config, fh, indent=2, separators=(',', ': '))
+
+                        tenant_config["themesConfig"] = themes_config
+                        with open(tenant_config_path, "w", encoding="utf-8") as fh:
+                            json.dump(tenant_config, fh, indent=2, separators=(',', ': '))
+                        self.logger.info("Themes configuration has been updated.")
+                    except IOError as e:
+                        msg = "Failed to backup/save themes configuration %s: %s" % (tenant_config_path, e.strerror)
+                        self.logger.error(msg)
+                else: self.logger.info("Themes configuration did not change.")
+            else:
+                msg = "Missing or invalid themes configuration in tenantConfig.json"
+                self.logger.error(msg)
 
     def search_print_layouts(self, generator_config):
         qgis_print_layouts_dir = generator_config.get(

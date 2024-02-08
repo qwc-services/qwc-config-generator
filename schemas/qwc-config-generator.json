@@ -87,6 +87,10 @@
           "description": "Option to group scanned projects by directory in themes configuration. Default: false",
           "type": "boolean"
         },
+        "save_scanned_projects_in_config": {
+          "description": "Option to save scanned projects and groups in themes configuration. Requires write access to INPUT_CONFIG_PATH for config generator service. Default: false",
+          "type": "boolean"
+        },
         "permissions_default_allow": {
           "description": "Set whether resources are permitted or restricted by default. Example: true",
           "type": "boolean"
