@@ -657,11 +657,8 @@ class ConfigGenerator():
         # collect existing item urls
         items = themes.get(
             "items", [])
-        wms_urls = []
         has_default = False
         for item in items:
-            if item.get("url"):
-                wms_urls.append(item["url"])
             if item.get("default", False):
                 has_default = True
 
@@ -709,27 +706,28 @@ class ConfigGenerator():
                 theme_item["mapCrs"] = themes_config.get(
                     "defaultMapCrs")
 
-                if theme_item["url"] not in wms_urls:
-                    if not has_default:
-                        theme_item["default"] = True
-                        has_default = True
-                    # Add theme to items or group
-                    if group_scanned_projects_by_dir and (item.parent != base_path):
-                        if list(filter(lambda group: group["title"] == item.parent.name, groups)):
-                            item_group = list(filter(lambda group: group["title"] == item.parent.name, groups))[0]
-                        else:
-                            for group in groups:
-                                if list(filter(lambda g: g["title"] == item.parent.name, group["groups"])):
-                                    item_group = list(filter(lambda g: g["title"] == item.parent.name, group["groups"]))[0]
-                        if not list(filter(lambda item: item["url"] == wmspath, item_group["items"])):
-                            self.logger.info(f"Adding project {item.stem} to group {item.parent.name}")
-                            item_group["items"].append(theme_item)
-                        else: self.logger.info(f"Project {item.stem} already exists in group {item.parent.name}")
+                if not has_default:
+                    theme_item["default"] = True
+                    has_default = True
+                # Add theme to items or group
+                if group_scanned_projects_by_dir and (item.parent != base_path):
+                    if list(filter(lambda group: group["title"] == item.parent.name, groups)):
+                        item_group = list(filter(lambda group: group["title"] == item.parent.name, groups))[0]
                     else:
+                        for group in groups:
+                            if list(filter(lambda g: g["title"] == item.parent.name, group["groups"])):
+                                item_group = list(filter(lambda g: g["title"] == item.parent.name, group["groups"]))[0]
+                    if not list(filter(lambda item: item["url"] == wmspath, item_group["items"])):
+                        self.logger.info(f"Adding project {item.stem} to group {item.parent.name}")
+                        item_group["items"].append(theme_item)
+                    else: self.logger.info(f"Project {item.stem} already exists in group {item.parent.name}")
+                else:
+                    # Search for theme if it already exists in items
+                    if not list(filter(lambda item: item["url"] == wmspath, items)):
                         self.logger.info(f"Adding project {item.stem}")
                         items.append(theme_item)
-                else:
-                    self.logger.info(f"Skipping project {item.name}")
+                    else:
+                        self.logger.info(f"Skipping project {item.name}")
         themes["groups"] = groups
         themes["items"] = items
 
