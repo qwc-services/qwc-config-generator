@@ -145,6 +145,40 @@ class ConfigGenerator():
                     config_template_data = fh.read().replace('$tenant$', self.tenant)
                     config_template = json.loads(config_template_data, object_pairs_hook=OrderedDict)
 
+                    # Handle themesConfig if it has also been templated
+                    themes_config_template = config_template.get("themesConfig", None)
+                    if isinstance(themes_config_template, str):
+                        try:
+                            if not os.path.isabs(themes_config_template):
+                                themes_config_template_path = os.path.join(os.path.dirname(config_template_path), themes_config_template)
+                            with open(themes_config_template_path, encoding='utf-8') as f:
+                                config_template["themesConfig"] = json.load(f)
+                        except:
+                            msg = "Failed to read themes configuration %s" % themes_config_template_path
+                            self.logger.error(msg)
+                            raise Exception(msg)
+                    elif not isinstance(themes_config_template, dict):
+                        msg = "No themes configuration in templated tenantConfig.json"
+                        self.logger.debug(msg)
+                        raise Exception(msg)
+
+                    # Handle themesConfig in tenantConfig.json
+                    themes_config = config.get("themesConfig", None)
+                    if isinstance(themes_config, str):
+                        try:
+                            if not os.path.isabs(themes_config):
+                                themes_config = os.path.join(config_file_dir, themes_config)
+                            with open(themes_config, encoding='utf-8') as f:
+                                config["themesConfig"] = json.load(f)
+                        except:
+                            msg = "Failed to read themes configuration %s" % themes_config
+                            self.logger.error(msg)
+                            raise Exception(msg)
+                    elif not isinstance(themes_config, dict):
+                        msg = "Missing or invalid themes configuration in tenantConfig.json"
+                        self.logger.error(msg)
+                        raise Exception(msg)
+
                     config_services = dict(map(lambda entry: (entry["name"], entry), config.get("services", [])))
                     config_template_services = dict(map(lambda entry: (entry["name"], entry), config_template.get("services", [])))
 
