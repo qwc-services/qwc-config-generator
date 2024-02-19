@@ -136,6 +136,23 @@ class ConfigGenerator():
         self.tenant = config.get('config', {}).get('tenant', 'default')
         self.logger.debug("Using tenant '%s'" % self.tenant)
 
+        # Handle themesConfig in tenantConfig.json
+        themes_config = config.get("themesConfig", None)
+        if isinstance(themes_config, str):
+            try:
+                if not os.path.isabs(themes_config):
+                    themes_config = os.path.join(config_file_dir, themes_config)
+                with open(themes_config, encoding='utf-8') as f:
+                    config["themesConfig"] = json.load(f)
+            except:
+                msg = "Failed to read themes configuration %s" % themes_config
+                self.logger.error(msg)
+                raise Exception(msg)
+        elif not isinstance(themes_config, dict):
+            msg = "Missing or invalid themes configuration in tenantConfig.json"
+            self.logger.error(msg)
+            raise Exception(msg)
+
         if config.get('template', None):
             config_template_path = config.get('template')
             if not os.path.isabs(config_template_path):
@@ -162,28 +179,14 @@ class ConfigGenerator():
                         self.logger.debug(msg)
                         raise Exception(msg)
 
-                    # Handle themesConfig in tenantConfig.json
-                    themes_config = config.get("themesConfig", None)
-                    if isinstance(themes_config, str):
-                        try:
-                            if not os.path.isabs(themes_config):
-                                themes_config = os.path.join(config_file_dir, themes_config)
-                            with open(themes_config, encoding='utf-8') as f:
-                                config["themesConfig"] = json.load(f)
-                        except:
-                            msg = "Failed to read themes configuration %s" % themes_config
-                            self.logger.error(msg)
-                            raise Exception(msg)
-                    elif not isinstance(themes_config, dict):
-                        msg = "Missing or invalid themes configuration in tenantConfig.json"
-                        self.logger.error(msg)
-                        raise Exception(msg)
-
                     config_services = dict(map(lambda entry: (entry["name"], entry), config.get("services", [])))
                     config_template_services = dict(map(lambda entry: (entry["name"], entry), config_template.get("services", [])))
 
                     config = deepmerge.always_merger.merge(config_template, config)
                     config["services"] = list(deepmerge.always_merger.merge(config_template_services, config_services).values())
+
+                    # Get themesConfig from config because it could have been merged with a template
+                    themes_config = config.get("themesConfig")
             except Exception as e:
                 self.logger.warning("Failed to merge config template %s: %s."  % (config_template_path, str(e)))
 
@@ -230,23 +233,6 @@ class ConfigGenerator():
                 "Could not load ConfigModels for ConfigDB at '%s':\n%s" %
                 (config_db_url, e)
             )
-            self.logger.error(msg)
-            raise Exception(msg)
-
-        themes_config = config.get("themesConfig", None)
-
-        if isinstance(themes_config, str):
-            try:
-                if not os.path.isabs(themes_config):
-                    themes_config = os.path.join(config_file_dir, themes_config)
-                with open(themes_config, encoding='utf-8') as f:
-                    themes_config = json.load(f)
-            except:
-                msg = "Failed to read themes configuration %s" % themes_config
-                self.logger.error(msg)
-                raise Exception(msg)
-        elif not isinstance(themes_config, dict):
-            msg = "Missing or invalid themes configuration in tenantConfig.json"
             self.logger.error(msg)
             raise Exception(msg)
 
