@@ -146,11 +146,11 @@ class ConfigGenerator():
                     config["themesConfig"] = json.load(f)
             except:
                 msg = "Failed to read themes configuration %s" % themes_config
-                self.logger.error(msg)
+                self.logger.critical(msg)
                 raise Exception(msg)
         elif not isinstance(themes_config, dict):
             msg = "Missing or invalid themes configuration in tenantConfig.json"
-            self.logger.error(msg)
+            self.logger.critical(msg)
             raise Exception(msg)
 
         if config.get('template', None):
@@ -172,11 +172,11 @@ class ConfigGenerator():
                                 config_template["themesConfig"] = json.load(f)
                         except:
                             msg = "Failed to read themes configuration %s" % themes_config_template_path
-                            self.logger.error(msg)
+                            self.logger.critical(msg)
                             raise Exception(msg)
                     elif not isinstance(themes_config_template, dict):
                         msg = "No themes configuration in templated tenantConfig.json"
-                        self.logger.debug(msg)
+                        self.logger.critical(msg)
                         raise Exception(msg)
 
                     config_services = dict(map(lambda entry: (entry["name"], entry), config.get("services", [])))
@@ -270,8 +270,7 @@ class ConfigGenerator():
                 "Could not load JSON schema versions from %s:\n%s" %
                 (schema_versions_path, e)
             )
-            self.logger.error(msg)
-            raise Exception(msg)
+            self.logger.warn(msg)
 
         # lookup for JSON schema URLs by service name
         self.schema_urls = {}
@@ -352,7 +351,7 @@ class ConfigGenerator():
                 )
                 os.mkdir(self.tenant_path)
         except Exception as e:
-            self.logger.error("Could not create tenant dir:\n%s" % e)
+            self.logger.critical("Could not create tenant dir:\n%s" % e)
 
     def service_config(self, service):
         """Return any additional service config for service.
@@ -505,7 +504,7 @@ class ConfigGenerator():
                     config, sort_keys=False, ensure_ascii=False, indent=2
                 ).encode('utf8'))
         except Exception as e:
-            self.logger.error(
+            self.logger.critical(
                 "Could not write '%s' config file:\n%s" % (filename, e)
             )
 
@@ -518,7 +517,7 @@ class ConfigGenerator():
                 )
                 rmtree(self.temp_config_path)
         except Exception as e:
-            self.logger.error("Could not remove temp config dir:\n%s" % e)
+            self.logger.warn("Could not remove temp config dir:\n%s" % e)
 
     def validate_schema(self, config, schema_url):
         """Validate config against its JSON schema.
@@ -549,14 +548,14 @@ class ConfigGenerator():
             try:
                 response = requests.get(schema_url)
             except Exception as e:
-                self.logger.error(
+                self.logger.warn(
                     "Could not download JSON schema from %s:\n%s" %
                     (schema_url, str(e))
                 )
                 return False
 
             if response.status_code != requests.codes.ok:
-                self.logger.error(
+                self.logger.warn(
                     "Could not download JSON schema from %s:\n%s" %
                     (schema_url, response.text)
                 )
@@ -566,7 +565,7 @@ class ConfigGenerator():
             try:
                 schema = json.loads(response.text)
             except Exception as e:
-                self.logger.error("Could not parse JSON schema:\n%s" % e)
+                self.logger.warn("Could not parse JSON schema:\n%s" % e)
                 return False
 
         # validate against schema
@@ -672,7 +671,7 @@ class ConfigGenerator():
             self.logger.info(
                 "<b>Searching for projects files in %s</b>" % qgis_projects_scan_base_dir)
         else:
-            self.logger.error(
+            self.logger.warn(
                 "The qgis_projects_scan_base_dir sub directory" +
                 " does not exist: " + qgis_projects_scan_base_dir)
             return

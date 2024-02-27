@@ -66,7 +66,7 @@ class CapabilitiesReader():
             )
 
             if response.status_code != requests.codes.ok:
-                self.logger.critical(
+                self.logger.error(
                     "Could not get WMS GetProjectSettings from %s:\n%s" %
                     (full_url, response.content)
                 )
@@ -223,7 +223,7 @@ class CapabilitiesReader():
 
             return capabilities
         except Exception as e:
-            self.logger.critical(
+            self.logger.error(
                 "Could not parse WMS GetProjectSettings from %s:\n%s" %
                 (full_url, e)
             )
@@ -547,7 +547,7 @@ class CapabilitiesReader():
             )
 
             if response.status_code != requests.codes.ok:
-                self.logger.critical(
+                self.logger.error(
                     "Could not get WFS GetCapabilities from %s:\n%s" %
                     (full_url, response.content)
                 )
