@@ -61,6 +61,8 @@ def generate_configs():
             level = entry["level"].upper()
             if level == "CRITICAL":
                 log_output += '<b style="color: red">CRITICAL: %s</b>\n' % str(entry["msg"])
+            elif level == "ERROR":
+                log_output += '<span style="color: red">ERROR: %s</span>\n' % str(entry["msg"])
             elif level == "WARNING":
                 log_output += '<span style="color: orange">WARNING: %s</span>\n' % str(entry["msg"])
             else:
