@@ -369,13 +369,13 @@ class ConfigGenerator():
         for service_config in self.config.get('services', []):
             self.write_service_config(service_config['name'])
 
-        for log in self.logger.log_entries():
-            if log["level"] == self.logger.LEVEL_CRITICAL:
-                self.logger.critical(
-                    "A critical error occurred while processing the configuration.")
-                self.logger.critical(
-                    "The configuration files were not updated!")
-                return False
+        criticals, errors = self.check_for_errors()
+        if criticals or (not self.config.get("config").get("ignore_errors", False) and errors):
+            self.logger.critical(
+                "A critical error occurred while processing the configuration.")
+            self.logger.critical(
+                "The configuration files were not updated!")
+            return False
 
         for file_name in os.listdir(os.path.join(self.temp_tenant_path)):
             file_path = os.path.join(self.temp_tenant_path, file_name)
@@ -388,6 +388,8 @@ class ConfigGenerator():
         self.logger.info(
             '<b style="color: green">The generation of the configuration files was successful</b>')
         self.logger.info('<b style="color: green">Configuration files were updated!</b>')
+        if errors:
+            self.logger.warn('Some errors occured and have been ignored, please check the logs to resolve some problems in configuration or projects.')
         return True
 
     def write_service_config(self, service):
@@ -470,13 +472,13 @@ class ConfigGenerator():
 
         self.write_json_file(permissions, 'permissions.json')
 
-        for log in self.logger.log_entries():
-            if log["level"] == self.logger.LEVEL_CRITICAL:
-                self.logger.critical(
-                    "A critical error occurred while processing the configuration.")
-                self.logger.critical(
-                    "The permission files were not updated!")
-                return False
+        criticals, errors = self.check_for_errors()
+        if criticals or (not self.config.get("config").get("ignore_errors", False) and errors):
+            self.logger.critical(
+                "A critical error occurred while processing the configuration.")
+            self.logger.critical(
+                "The permission files were not updated!")
+            return False
 
         copyfile(
             os.path.join(self.temp_tenant_path, 'permissions.json'),
@@ -486,6 +488,8 @@ class ConfigGenerator():
         self.logger.info(
             '<b style="color: green">The generation of the permission files was successful</b>')
         self.logger.info('<b style="color: green">Permission files were updated!</b>')
+        if errors:
+            self.logger.warn('Some errors occured and have been ignored, please check the logs to resolve some problems in configuration or projects.')
         return True
 
     def write_json_file(self, config, filename):
@@ -944,3 +948,12 @@ class ConfigGenerator():
                 layers += self.collect_layers(sublayer)
 
         return layers
+
+    def check_for_errors(self):
+        """Check if logs contain CRITICAL or ERROR level messages
+
+        Return number of CRITICAL and ERROR messages.
+        """
+        criticals = [log_entry for log_entry in self.logger.log_entries() if log_entry.get('level', self.logger.LEVEL_INFO) == self.logger.LEVEL_CRITICAL]
+        errors = [log_entry for log_entry in self.logger.log_entries() if log_entry.get('level', self.logger.LEVEL_INFO) == self.logger.LEVEL_ERROR]
+        return (len(criticals), len(errors))
