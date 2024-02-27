@@ -609,11 +609,11 @@ class MapViewerConfig(ServiceConfig):
             )
 
             if response.status_code != requests.codes.ok:
-                self.logger.critical(
+                self.logger.error(
                     "ERROR generating thumbnail for WMS %s:\n%s" %
                     (service_name, response.content)
                 )
-                return
+                return 'img/mapthumbs/default.jpg'
 
             document = response.content
 

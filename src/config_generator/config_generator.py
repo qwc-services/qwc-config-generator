@@ -146,11 +146,11 @@ class ConfigGenerator():
                     config["themesConfig"] = json.load(f)
             except:
                 msg = "Failed to read themes configuration %s" % themes_config
-                self.logger.error(msg)
+                self.logger.critical(msg)
                 raise Exception(msg)
         elif not isinstance(themes_config, dict):
             msg = "Missing or invalid themes configuration in tenantConfig.json"
-            self.logger.error(msg)
+            self.logger.critical(msg)
             raise Exception(msg)
 
         if config.get('template', None):
@@ -172,11 +172,11 @@ class ConfigGenerator():
                                 config_template["themesConfig"] = json.load(f)
                         except:
                             msg = "Failed to read themes configuration %s" % themes_config_template_path
-                            self.logger.error(msg)
+                            self.logger.critical(msg)
                             raise Exception(msg)
                     elif not isinstance(themes_config_template, dict):
                         msg = "No themes configuration in templated tenantConfig.json"
-                        self.logger.debug(msg)
+                        self.logger.critical(msg)
                         raise Exception(msg)
 
                     config_services = dict(map(lambda entry: (entry["name"], entry), config.get("services", [])))
@@ -270,8 +270,7 @@ class ConfigGenerator():
                 "Could not load JSON schema versions from %s:\n%s" %
                 (schema_versions_path, e)
             )
-            self.logger.error(msg)
-            raise Exception(msg)
+            self.logger.warn(msg)
 
         # lookup for JSON schema URLs by service name
         self.schema_urls = {}
@@ -352,7 +351,7 @@ class ConfigGenerator():
                 )
                 os.mkdir(self.tenant_path)
         except Exception as e:
-            self.logger.error("Could not create tenant dir:\n%s" % e)
+            self.logger.critical("Could not create tenant dir:\n%s" % e)
 
     def service_config(self, service):
         """Return any additional service config for service.
@@ -369,13 +368,13 @@ class ConfigGenerator():
         for service_config in self.config.get('services', []):
             self.write_service_config(service_config['name'])
 
-        for log in self.logger.log_entries():
-            if log["level"] == self.logger.LEVEL_CRITICAL:
-                self.logger.critical(
-                    "A critical error occurred while processing the configuration.")
-                self.logger.critical(
-                    "The configuration files were not updated!")
-                return False
+        criticals, errors = self.check_for_errors()
+        if criticals or (not self.config.get("config").get("ignore_errors", False) and errors):
+            self.logger.critical(
+                "A critical error occurred while processing the configuration.")
+            self.logger.critical(
+                "The configuration files were not updated!")
+            return False
 
         for file_name in os.listdir(os.path.join(self.temp_tenant_path)):
             file_path = os.path.join(self.temp_tenant_path, file_name)
@@ -388,6 +387,8 @@ class ConfigGenerator():
         self.logger.info(
             '<b style="color: green">The generation of the configuration files was successful</b>')
         self.logger.info('<b style="color: green">Configuration files were updated!</b>')
+        if errors:
+            self.logger.warn('Some errors occured and have been ignored, please check the logs to resolve some problems in configuration or projects.')
         return True
 
     def write_service_config(self, service):
@@ -470,13 +471,13 @@ class ConfigGenerator():
 
         self.write_json_file(permissions, 'permissions.json')
 
-        for log in self.logger.log_entries():
-            if log["level"] == self.logger.LEVEL_CRITICAL:
-                self.logger.critical(
-                    "A critical error occurred while processing the configuration.")
-                self.logger.critical(
-                    "The permission files were not updated!")
-                return False
+        criticals, errors = self.check_for_errors()
+        if criticals or (not self.config.get("config").get("ignore_errors", False) and errors):
+            self.logger.critical(
+                "A critical error occurred while processing the configuration.")
+            self.logger.critical(
+                "The permission files were not updated!")
+            return False
 
         copyfile(
             os.path.join(self.temp_tenant_path, 'permissions.json'),
@@ -486,6 +487,8 @@ class ConfigGenerator():
         self.logger.info(
             '<b style="color: green">The generation of the permission files was successful</b>')
         self.logger.info('<b style="color: green">Permission files were updated!</b>')
+        if errors:
+            self.logger.warn('Some errors occured and have been ignored, please check the logs to resolve some problems in configuration or projects.')
         return True
 
     def write_json_file(self, config, filename):
@@ -501,7 +504,7 @@ class ConfigGenerator():
                     config, sort_keys=False, ensure_ascii=False, indent=2
                 ).encode('utf8'))
         except Exception as e:
-            self.logger.error(
+            self.logger.critical(
                 "Could not write '%s' config file:\n%s" % (filename, e)
             )
 
@@ -514,7 +517,7 @@ class ConfigGenerator():
                 )
                 rmtree(self.temp_config_path)
         except Exception as e:
-            self.logger.error("Could not remove temp config dir:\n%s" % e)
+            self.logger.warn("Could not remove temp config dir:\n%s" % e)
 
     def validate_schema(self, config, schema_url):
         """Validate config against its JSON schema.
@@ -545,14 +548,14 @@ class ConfigGenerator():
             try:
                 response = requests.get(schema_url)
             except Exception as e:
-                self.logger.error(
+                self.logger.warn(
                     "Could not download JSON schema from %s:\n%s" %
                     (schema_url, str(e))
                 )
                 return False
 
             if response.status_code != requests.codes.ok:
-                self.logger.error(
+                self.logger.warn(
                     "Could not download JSON schema from %s:\n%s" %
                     (schema_url, response.text)
                 )
@@ -562,7 +565,7 @@ class ConfigGenerator():
             try:
                 schema = json.loads(response.text)
             except Exception as e:
-                self.logger.error("Could not parse JSON schema:\n%s" % e)
+                self.logger.warn("Could not parse JSON schema:\n%s" % e)
                 return False
 
         # validate against schema
@@ -668,7 +671,7 @@ class ConfigGenerator():
             self.logger.info(
                 "<b>Searching for projects files in %s</b>" % qgis_projects_scan_base_dir)
         else:
-            self.logger.error(
+            self.logger.warn(
                 "The qgis_projects_scan_base_dir sub directory" +
                 " does not exist: " + qgis_projects_scan_base_dir)
             return
@@ -944,3 +947,12 @@ class ConfigGenerator():
                 layers += self.collect_layers(sublayer)
 
         return layers
+
+    def check_for_errors(self):
+        """Check if logs contain CRITICAL or ERROR level messages
+
+        Return number of CRITICAL and ERROR messages.
+        """
+        criticals = [log_entry for log_entry in self.logger.log_entries() if log_entry.get('level', self.logger.LEVEL_INFO) == self.logger.LEVEL_CRITICAL]
+        errors = [log_entry for log_entry in self.logger.log_entries() if log_entry.get('level', self.logger.LEVEL_INFO) == self.logger.LEVEL_ERROR]
+        return (len(criticals), len(errors))
