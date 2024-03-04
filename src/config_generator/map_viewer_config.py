@@ -501,6 +501,7 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'pluginData', item)
         self.set_optional_config(cfg_item, 'snapping', item)
         self.set_optional_config(cfg_item, 'themeInfoLinks', item)
+        self.set_optional_config(cfg_item, 'layerTreeHiddenSublayers', item)
 
         if not cfg_item.get('wmsOnly', False):
             item['thumbnail'] = self.get_thumbnail(cfg_item, service_name, cap, assets_dir)
