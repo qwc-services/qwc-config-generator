@@ -174,10 +174,6 @@ class ConfigGenerator():
                             msg = "Failed to read themes configuration %s" % themes_config_template_path
                             self.logger.critical(msg)
                             raise Exception(msg)
-                    elif not isinstance(themes_config_template, dict):
-                        msg = "No themes configuration in templated tenantConfig.json"
-                        self.logger.critical(msg)
-                        raise Exception(msg)
 
                     config_services = dict(map(lambda entry: (entry["name"], entry), config.get("services", [])))
                     config_template_services = dict(map(lambda entry: (entry["name"], entry), config_template.get("services", [])))
