@@ -1,6 +1,10 @@
 {
   "schemas": [
     {
+      "service": "configGenerator",
+      "schema_url": "https://github.com/qwc-services/qwc-config-generator/raw/master/schemas/qwc-config-generator.json"
+    },
+    {
       "service": "adminGui",
       "schema_url": "https://github.com/qwc-services/qwc-admin-gui/raw/master/schemas/qwc-admin-gui.json"
     },

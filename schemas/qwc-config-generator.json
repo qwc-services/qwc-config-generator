@@ -147,7 +147,7 @@
       "type": "array",
       "items": {
         "description": "Generator config for a service",
-        "oneOf": [
+        "anyOf": [
           {"$ref": "#/definitions/common_service"},
           {"$ref": "#/definitions/mapViewer"},
           {"$ref": "#/definitions/ogc"}
@@ -156,7 +156,6 @@
     }
   },
   "required": [
-    "service",
     "themesConfig",
     "config",
     "services"

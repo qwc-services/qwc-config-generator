@@ -277,14 +277,14 @@ class ConfigGenerator():
         self.json_schemas_path = os.environ.get('JSON_SCHEMAS_PATH', '/tmp/')
 
         # validate config-generator JSON schema
-        self.logger.debug(f"Validate qwc-config-generator schema URL: {self.config.get('$schema', '')}")
-        if self.validate_schema(self.config, self.config.get('$schema', '')):
+        self.logger.debug("Validate qwc-config-generator schema URL")
+        if self.validate_schema(self.config, self.schema_urls["configGenerator"]):
             self.logger.debug(
-                "'%s' service config validates against schema" % self.config.get('service', '')
+                "qwc-config-generator config validates against schema"
             )
         else:
             self.logger.error(
-                "'%s' service config failed schema validation" % self.config.get('service', '')
+                "qwc-config-generator config failed schema validation"
             )
 
         # create service config handlers
