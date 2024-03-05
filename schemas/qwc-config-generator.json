@@ -11,11 +11,6 @@
       "format": "uri",
       "default": "https://github.com/qwc-services/qwc-config-generator/raw/master/schemas/qwc-config-generator.json"
     },
-    "service": {
-      "title": "Service name",
-      "type": "string",
-      "const": "config-generator"
-    },
     "template": {
       "title": "Optional, path to a tenantConfig template. If specified, the contents of the file is merged with the contents of tenantConfig.json. Any occurence of $tenant$ in the template will be replaced with the current tenant name.",
       "type": "string"
@@ -173,19 +168,7 @@
       "properties": {
         "name": {
           "description": "Service name",
-          "type": "string",
-          "enum": [
-            "adminGui",
-            "data",
-            "dbAuth",
-            "elevation",
-            "featureInfo",
-            "mapinfo",
-            "permalink",
-            "print",
-            "search",
-            "legend"
-          ]
+          "type": "string"
         },
         "config": {
           "description": "QWC service config options (cf. its JSON schema). This is copied unmodified to the service config.",
