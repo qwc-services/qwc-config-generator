@@ -236,14 +236,14 @@ class ConfigGenerator():
         self.preprocess_qgs_projects(generator_config, self.tenant)
 
         # Search for QGS projects in scan dir and automatically generate theme items
-        self.search_qgs_projects(generator_config, themes_config)
+        self.search_qgs_projects(generator_config, config["themesConfig"])
 
         # Search for QGS print layouts
         print_layouts = self.search_print_layouts(generator_config)
 
         # load metadata for all QWC2 theme items
         self.theme_reader = ThemeReader(
-            generator_config, themes_config, self.logger, print_layouts
+            generator_config, config["themesConfig"], self.logger, print_layouts
         )
 
         # lookup for additional service configs by name
