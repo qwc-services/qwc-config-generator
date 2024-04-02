@@ -337,6 +337,7 @@ class DnDFormGenerator:
 
                     widget = ElementTree.Element("widget")
                     widget.set("class", "QWidget")
+                    self.__add_widget_property(widget, "visibilityExpression", None, None, child.get("visibilityExpression"))
                     self.__add_widget_property(widget, "title", child, "name", "", "attribute")
                     tabWidget.append(widget)
 
@@ -350,6 +351,7 @@ class DnDFormGenerator:
                         self.__add_widget_property(widget, "title", child, "name")
                     else:
                         widget.set("class", "QFrame")
+                    self.__add_widget_property(widget, "visibilityExpression", None, None, child.get("visibilityExpression"))
                     item.append(widget)
 
                     self.__add_tablayout_fields(maplayer, project, widget, child, aliases)
