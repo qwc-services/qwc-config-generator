@@ -345,6 +345,11 @@ class QGSReader:
                 else:
                     fields[field]['defaultValue'] = "expr:%s" % default.get('expression').strip()
 
+            # any any filter expression
+            filterExpression = maplayer.find("fieldConfiguration/field[@name='%s']/editWidget[@type='ValueRelation']/config/Option/Option[@name='FilterExpression']" % field)
+            if filterExpression is not None and filterExpression.get('value'):
+                fields[field]['filterExpression'] = filterExpression.get('value')
+
             # get any constraints from edit widgets
             constraints = self.__edit_widget_constraints(maplayer, field, keyvaltables)
             if constraints:

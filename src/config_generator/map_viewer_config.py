@@ -893,6 +893,9 @@ class MapViewerConfig(ServiceConfig):
                 if 'defaultValue' in field:
                     edit_field['defaultValue'] = field['defaultValue']
 
+                if 'filterExpression' in field:
+                    edit_field['filterExpression'] = field['filterExpression']
+
                 if 'constraints' in field:
                     # add any constraints
                     edit_field['constraints'] = field['constraints']
