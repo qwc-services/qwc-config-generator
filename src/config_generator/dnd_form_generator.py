@@ -320,12 +320,14 @@ class DnDFormGenerator:
         ncols = int(container.get('columnCount', '1'))
 
         for child in container:
+            added = False
             if child.tag == "attributeEditorContainer":
                 item = ElementTree.Element("item")
                 item.set("row", str(row))
                 item.set("column", str(col))
                 item.set("colspan", "2")
                 layout.append(item)
+                added = True
 
                 if child.get('groupBox') == "0":
                     if not tabWidget:
@@ -363,6 +365,7 @@ class DnDFormGenerator:
                 editorItem.set("column", str(col + 1))
                 editorItem.append(editorWidget)
                 layout.append(editorItem)
+                added = True
 
                 if child.get("showLabel") == "1":
                     labelItem = ElementTree.Element("item")
@@ -375,6 +378,9 @@ class DnDFormGenerator:
                     label = aliases.get(child.get("name"), child.get("name"))
                     self.__add_widget_property(labelWidget, "text", None, None, label)
                     labelItem.append(labelWidget)
+                else:
+                    editorItem.set("column", str(col))
+                    editorItem.set("colspan", "2")
             elif child.tag == "attributeEditorRelation":
                 tabWidget = None
 
@@ -389,11 +395,13 @@ class DnDFormGenerator:
                 relationItem.set("colspan", "2")
                 relationItem.append(relationWidget)
                 layout.append(relationItem)
+                added = True
 
-            col += 2
-            if col >= 2 * ncols:
-                col = 0
-                row += 1
+            if added:
+                col += 2
+                if col >= 2 * ncols:
+                    col = 0
+                    row += 1
 
         item = ElementTree.Element("item")
         item.set("row", str(row + 1))
