@@ -332,7 +332,7 @@ class FeatureInfoServiceConfig(ServiceConfig):
                         info_layer_restricted_for_public
                         and not info_layer_permitted_for_role
                     ):
-                        continue
+                        queryable = False
 
                     # NOTE: use ordered keys
                     wms_layer = OrderedDict()
@@ -340,7 +340,7 @@ class FeatureInfoServiceConfig(ServiceConfig):
 
                     wms_layer['queryable'] = queryable
                     # info template always permitted
-                    wms_layer['info_template'] = True
+                    wms_layer['info_template'] = True and queryable
 
                     # Only append layer if not already appended for public
                     if is_public_role:
