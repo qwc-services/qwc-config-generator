@@ -90,9 +90,11 @@ class FeatureInfoServiceConfig(ServiceConfig):
         # NOTE: use ordered keys
         permissions = OrderedDict()
 
-        # NOTE: basic WMS service permissions collected by OGC service config
-        # get additional permissions
-        permissions['wms_services'] = self.additional_wms_permissions(role)
+        # collect permissions from ConfigDB
+        with self.config_models.session() as session:
+            # NOTE: basic WMS service permissions collected by OGC service config
+            # get additional permissions
+            permissions['wms_services'] = self.additional_wms_permissions(role, session)
 
         return permissions
 
@@ -206,7 +208,7 @@ class FeatureInfoServiceConfig(ServiceConfig):
 
         return available_info_layers
 
-    def additional_wms_permissions(self, role):
+    def additional_wms_permissions(self, role, session):
         """Collect additional WMS Service permissions from ConfigDB
         or service config.
 
@@ -214,13 +216,11 @@ class FeatureInfoServiceConfig(ServiceConfig):
         collected from capabilities.
 
         :param str role: Role name
+        :param Session session: DB session
         """
         wms_services = []
 
         if 'permissions' not in self.service_config:
-            # collect permissions from ConfigDB
-            session = self.config_models.session()
-
             # helper method alias
             non_public_resources = self.permissions_query.non_public_resources
             permitted_resources = self.permissions_query.permitted_resources
@@ -396,8 +396,6 @@ class FeatureInfoServiceConfig(ServiceConfig):
 
                 if layers:
                     wms_services.append(wms_service)
-
-            session.close()
         else:
             # use permissions from additional service config if present
             self.logger.debug("Reading permissions from tenantConfig")

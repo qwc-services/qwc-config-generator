@@ -55,25 +55,24 @@ class QGSReader:
 
                 qgis_projects_db = self.db_engine.db_engine("postgresql:///?service=qgisprojects")
 
-                conn = qgis_projects_db.connect()
-                sql = sql_text("""
-                    SELECT content FROM "{schema}"."{table}"
-                    WHERE name = '{project}';
-                """.format(schema=parts[1], table="qgis_projects", project=parts[2]))
-                result = conn.execute(sql)
-                row = result.mappings().fetchone()
-                conn.close()
-                if not row:
-                    self.logger.error("Could not find QGS project '%s'" % qgs_filename)
-                    return False
+                with qgis_projects_db.connect() as conn:
+                    sql = sql_text("""
+                        SELECT content FROM "{schema}"."{table}"
+                        WHERE name = '{project}';
+                    """.format(schema=parts[1], table="qgis_projects", project=parts[2]))
+                    result = conn.execute(sql)
+                    row = result.mappings().fetchone()
+                    if not row:
+                        self.logger.error("Could not find QGS project '%s'" % qgs_filename)
+                        return False
 
-                qgz = zipfile.ZipFile(io.BytesIO(row['content']))
-                for filename in qgz.namelist():
-                    if filename.endswith('.qgs'):
-                        fh = qgz.open(filename)
-                        tree = ElementTree.parse(fh)
-                        fh.close()
-                        break
+                    qgz = zipfile.ZipFile(io.BytesIO(row['content']))
+                    for filename in qgz.namelist():
+                        if filename.endswith('.qgs'):
+                            fh = qgz.open(filename)
+                            tree = ElementTree.parse(fh)
+                            fh.close()
+                            break
 
             else:
                 qgs_filename = self.map_prefix + self.qgs_ext
@@ -534,13 +533,12 @@ class QGSReader:
             if not schema or not table_name:
                 return
 
-            # connect to GeoDB
+            # get GeoDB engine
             geo_db = self.db_engine.db_engine(connection_string)
-            conn = geo_db.connect()
             fields = meta.get('fields')
 
-            # join table connections
-            joinconns = {}
+            # join table DB engines
+            joindbs = {}
 
             for attr in meta.get('attributes'):
                 # upload field
@@ -562,20 +560,20 @@ class QGSReader:
                 if joinfield:
                     jointable = joinfield['table']
                     jointablemeta = meta['jointables'][jointable]
-                    if jointable not in joinconns:
-                        joinconns[jointable] = self.db_engine.db_engine(jointablemeta['database']).connect()
+                    if jointable not in joindbs:
+                        joindbs[jointable] = self.db_engine.db_engine(jointablemeta['database'])
 
-                    join_conn = joinconns[jointable]
+                    join_db = joindbs[jointable]
                     join_schema = jointablemeta['schema']
                     join_table_name = jointablemeta['table_name']
 
                     result = self.__query_column_metadata(
-                        join_schema, join_table_name, joinfield['field'], join_conn
+                        join_schema, join_table_name, joinfield['field'], join_db
                     )
 
                 else:
                     result = self.__query_column_metadata(
-                        schema, table_name, attr, conn
+                        schema, table_name, attr, geo_db
                     )
                 for row in result:
                     data_type = row['data_type']
@@ -631,11 +629,6 @@ class QGSReader:
                     # add constraints
                     meta['fields'][attr]['constraints'] = constraints
 
-            # close database connection
-            conn.close()
-            for joinconn in joinconns.values():
-                joinconn.close()
-
             attributes = meta.get('attributes')
             for field in upload_fields:
                 target_field = field[0:len(field) - 8]
@@ -649,17 +642,15 @@ class QGSReader:
             self.logger.error(
                 "Error while querying attribute data types:\n\n%s" % e
             )
-            if conn:
-                conn.close()
             raise
 
-    def __query_column_metadata(self, schema, table, column, conn):
+    def __query_column_metadata(self, schema, table, column, db_engine):
         """Get column metadata from GeoDB.
 
         :param str schema: Schema name
         :param str table: Table name
         :param str column: Column name
-        :param Connection conn: DB connection
+        :param Engine db_engine: DB engine
         """
         # build query SQL for tables and views
         sql = sql_text("""
@@ -670,69 +661,70 @@ class QGSReader:
                 AND column_name = '{column}'
             ORDER BY ordinal_position;
         """.format(schema=schema, table=table, column=column))
-        # execute query
-        result = conn.execute(sql)
-
-        if result.rowcount == 0:
-            # fallback to query SQL for materialized views
-
-            # SQL partially based on definition of information_schema.columns:
-            #   https://github.com/postgres/postgres/tree/master/src/backendsrc/backend/catalog/information_schema.sql#L674
-            sql = sql_text("""
-                SELECT
-                    ns.nspname AS table_schema,
-                    c.relname AS table_name,
-                    a.attname AS column_name,
-                    format_type(a.atttypid, null) AS data_type,
-                    CASE
-                        WHEN a.atttypmod = -1 /* default typmod */
-                            THEN NULL
-                        WHEN a.atttypid IN (1042, 1043) /* char, varchar */
-                            THEN a.atttypmod - 4
-                        WHEN a.atttypid IN (1560, 1562) /* bit, varbit */
-                            THEN a.atttypmod
-                        ELSE
-                            NULL
-                    END AS character_maximum_length,
-                    CASE a.atttypid
-                        WHEN 21 /*int2*/ THEN 16
-                        WHEN 23 /*int4*/ THEN 32
-                        WHEN 20 /*int8*/ THEN 64
-                        WHEN 1700 /*numeric*/ THEN
-                            CASE
-                                WHEN a.atttypmod = -1
-                                    THEN NULL
-                                ELSE ((a.atttypmod - 4) >> 16) & 65535
-                            END
-                        WHEN 700 /*float4*/ THEN 24 /*FLT_MANT_DIG*/
-                        WHEN 701 /*float8*/ THEN 53 /*DBL_MANT_DIG*/
-                        ELSE NULL
-                    END AS numeric_precision,
-                    CASE
-                        WHEN a.atttypid IN (21, 23, 20) /* int */ THEN 0
-                        WHEN a.atttypid IN (1700) /* numeric */ THEN
-                            CASE
-                                WHEN a.atttypmod = -1
-                                    THEN NULL
-                                ELSE (a.atttypmod - 4) & 65535
-                            END
-                        ELSE NULL
-                    END AS numeric_scale
-                FROM pg_catalog.pg_class c
-                    JOIN pg_catalog.pg_namespace ns ON ns.oid = c.relnamespace
-                    JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
-                WHERE
-                    /* tables, views, materialized views */
-                    c.relkind in ('r', 'v', 'm')
-                    AND ns.nspname = '{schema}'
-                    AND c.relname = '{table}'
-                    AND a.attname = '{column}'
-                ORDER BY nspname, relname, attnum
-            """.format(schema=schema, table=table, column=column))
+        with db_engine.connect() as conn:
             # execute query
-            return conn.execute(sql).mappings()
-        else:
-            return result.mappings()
+            result = conn.execute(sql)
+
+            if result.rowcount == 0:
+                # fallback to query SQL for materialized views
+
+                # SQL partially based on definition of information_schema.columns:
+                #   https://github.com/postgres/postgres/tree/master/src/backendsrc/backend/catalog/information_schema.sql#L674
+                sql = sql_text("""
+                    SELECT
+                        ns.nspname AS table_schema,
+                        c.relname AS table_name,
+                        a.attname AS column_name,
+                        format_type(a.atttypid, null) AS data_type,
+                        CASE
+                            WHEN a.atttypmod = -1 /* default typmod */
+                                THEN NULL
+                            WHEN a.atttypid IN (1042, 1043) /* char, varchar */
+                                THEN a.atttypmod - 4
+                            WHEN a.atttypid IN (1560, 1562) /* bit, varbit */
+                                THEN a.atttypmod
+                            ELSE
+                                NULL
+                        END AS character_maximum_length,
+                        CASE a.atttypid
+                            WHEN 21 /*int2*/ THEN 16
+                            WHEN 23 /*int4*/ THEN 32
+                            WHEN 20 /*int8*/ THEN 64
+                            WHEN 1700 /*numeric*/ THEN
+                                CASE
+                                    WHEN a.atttypmod = -1
+                                        THEN NULL
+                                    ELSE ((a.atttypmod - 4) >> 16) & 65535
+                                END
+                            WHEN 700 /*float4*/ THEN 24 /*FLT_MANT_DIG*/
+                            WHEN 701 /*float8*/ THEN 53 /*DBL_MANT_DIG*/
+                            ELSE NULL
+                        END AS numeric_precision,
+                        CASE
+                            WHEN a.atttypid IN (21, 23, 20) /* int */ THEN 0
+                            WHEN a.atttypid IN (1700) /* numeric */ THEN
+                                CASE
+                                    WHEN a.atttypmod = -1
+                                        THEN NULL
+                                    ELSE (a.atttypmod - 4) & 65535
+                                END
+                            ELSE NULL
+                        END AS numeric_scale
+                    FROM pg_catalog.pg_class c
+                        JOIN pg_catalog.pg_namespace ns ON ns.oid = c.relnamespace
+                        JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
+                    WHERE
+                        /* tables, views, materialized views */
+                        c.relkind in ('r', 'v', 'm')
+                        AND ns.nspname = '{schema}'
+                        AND c.relname = '{table}'
+                        AND a.attname = '{column}'
+                    ORDER BY nspname, relname, attnum
+                """.format(schema=schema, table=table, column=column))
+                # execute query
+                return conn.execute(sql).mappings()
+            else:
+                return result.mappings()
 
     def collect_ui_forms(self, assets_dir, edit_dataset, metadata):
         """ Collect UI form files from project

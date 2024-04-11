@@ -70,13 +70,10 @@ class LegendServiceConfig(ServiceConfig):
         permissions = OrderedDict()
 
         # collect permissions from ConfigDB
-        session = self.config_models.session()
-
-        # TODO: Collect permissions
-        # permissions['wms_services'] = self.wms_permissions(role, session)
-        permissions['wms_services'] = []
-
-        session.close()
+        with self.config_models.session() as session:
+            # TODO: Collect permissions
+            # permissions['wms_services'] = self.wms_permissions(role, session)
+            permissions['wms_services'] = []
 
         return permissions
 

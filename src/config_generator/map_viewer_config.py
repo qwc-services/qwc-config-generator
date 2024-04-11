@@ -128,26 +128,23 @@ class MapViewerConfig(ServiceConfig):
         permissions = OrderedDict()
 
         # collect permissions from ConfigDB
-        session = self.config_models.session()
-
-        # NOTE: WMS service permissions collected by OGC service config
-        permissions['wms_services'] = []
-        permissions['background_layers'] = self.permitted_background_layers(
-            role
-        )
-        # NOTE: Data permissions collected by Data service config
-        permissions['data_datasets'] = []
-        permissions['viewer_tasks'] = self.permitted_viewer_tasks(
-            role, session
-        )
-        permissions['theme_info_links'] = self.permitted_theme_info_links(
-            role, session
-        )
-        permissions['plugin_data'] = self.permitted_plugin_data_resources(
-            role, session
-        )
-
-        session.close()
+        with self.config_models.session() as session:
+            # NOTE: WMS service permissions collected by OGC service config
+            permissions['wms_services'] = []
+            permissions['background_layers'] = self.permitted_background_layers(
+                role
+            )
+            # NOTE: Data permissions collected by Data service config
+            permissions['data_datasets'] = []
+            permissions['viewer_tasks'] = self.permitted_viewer_tasks(
+                role, session
+            )
+            permissions['theme_info_links'] = self.permitted_theme_info_links(
+                role, session
+            )
+            permissions['plugin_data'] = self.permitted_plugin_data_resources(
+                role, session
+            )
 
         return permissions
 
@@ -198,11 +195,10 @@ class MapViewerConfig(ServiceConfig):
 
     def restricted_viewer_tasks(self):
         """Collect restricted viewer tasks from ConfigDB."""
-        session = self.config_models.session()
-        viewer_tasks = self.permissions_query.non_public_resources(
-            'viewer_task', session
-        )
-        session.close()
+        with self.config_models.session() as session:
+            viewer_tasks = self.permissions_query.non_public_resources(
+                'viewer_task', session
+            )
 
         return sorted(list(viewer_tasks))
 
@@ -789,37 +785,34 @@ class MapViewerConfig(ServiceConfig):
         Permission = self.config_models.model('permissions')
         Resource = self.config_models.model('resources')
 
-        session = self.config_models.session()
+        with self.config_models.session() as session:
+            # find map resource
+            query = session.query(Resource) \
+                .filter(Resource.type == 'map') \
+                .filter(Resource.name == map_name)
+            map_id = None
+            for map_obj in query.all():
+                map_id = map_obj.id
 
-        # find map resource
-        query = session.query(Resource) \
-            .filter(Resource.type == 'map') \
-            .filter(Resource.name == map_name)
-        map_id = None
-        for map_obj in query.all():
-            map_id = map_obj.id
+            if map_id is None:
+                # map not found
+                return edit_config
 
-        if map_id is None:
-            # map not found
-            return edit_config
+            # query writable data permissions
+            resource_types = [
+                'data',
+                'data_create', 'data_read', 'data_update', 'data_delete'
+            ]
+            datasets_query = session.query(Permission) \
+                .join(Permission.resource) \
+                .filter(Resource.parent_id == map_obj.id) \
+                .filter(Resource.type.in_(resource_types)) \
+                .distinct(Resource.name, Resource.type) \
+                .order_by(Resource.name)
 
-        # query writable data permissions
-        resource_types = [
-            'data',
-            'data_create', 'data_read', 'data_update', 'data_delete'
-        ]
-        datasets_query = session.query(Permission) \
-            .join(Permission.resource) \
-            .filter(Resource.parent_id == map_obj.id) \
-            .filter(Resource.type.in_(resource_types)) \
-            .distinct(Resource.name, Resource.type) \
-            .order_by(Resource.name)
-
-        edit_datasets = []
-        for permission in datasets_query.all():
-            edit_datasets.append(permission.resource.name)
-
-        session.close()
+            edit_datasets = []
+            for permission in datasets_query.all():
+                edit_datasets.append(permission.resource.name)
 
         if not edit_datasets:
             # no edit datasets for this map

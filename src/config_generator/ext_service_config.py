@@ -47,17 +47,14 @@ class ExtServiceConfig(ServiceConfig):
         permissions = OrderedDict()
 
         # collect permissions from ConfigDB
-        session = self.config_models.session()
+        with self.config_models.session() as session:
+            # helper method alias
+            permitted_resources = self.permissions_query.permitted_resources
 
-        # helper method alias
-        permitted_resources = self.permissions_query.permitted_resources
-
-        # collect role permissions from ConfigDB
-        external_links = permitted_resources(
-            'external_links', role, session
-        ).keys()
-        permissions['external_links'] = sorted(list(external_links))
-
-        session.close()
+            # collect role permissions from ConfigDB
+            external_links = permitted_resources(
+                'external_links', role, session
+            ).keys()
+            permissions['external_links'] = sorted(list(external_links))
 
         return permissions
