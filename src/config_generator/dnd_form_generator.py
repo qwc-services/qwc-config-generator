@@ -93,7 +93,6 @@ class DnDFormGenerator:
         if editWidget.get("type") == "CheckBox":
             # Don't translate NOT NULL constraint into required for checkboxes
             required = False
-        conn = self.db_engine.db_engine(self.metadata['database']).connect()
 
         widget = ElementTree.Element("widget")
         widget.set("name", prefix + field)
@@ -166,24 +165,25 @@ class DnDFormGenerator:
             GROUP BY defined_type
             LIMIT 1;
         """).format(schema = self.metadata['schema'], table = self.metadata['table_name'], column = field))
-            result = conn.execute(sql)
-            for row in result:
-                defined_type = row['defined_type']
-            try : 
-                widget.set("class", "QComboBox")
-                sql = sql_text("SELECT unnest(enum_range(NULL:: %s))::text as values ;" % defined_type)
+            with self.db_engine.db_engine(self.metadata['database']).connect() as conn:
                 result = conn.execute(sql)
-                for row in result : 
-                    values['value'] = row['values']
-                    values['name'] = row['values']
-                    item = ElementTree.Element("item")
-                    self.__add_widget_property(item, "value", values, "value")
-                    self.__add_widget_property(item, "text", values, "name")
-                    widget.append(item)
-            except Exception: 
-                widget.set("class", "QLineEdit")
-                self.logger.warning("Failed to add Enumeration widget in %s for %s" % (self.metadata['table_name'], field))
-                pass
+                for row in result:
+                    defined_type = row['defined_type']
+                try : 
+                    widget.set("class", "QComboBox")
+                    sql = sql_text("SELECT unnest(enum_range(NULL:: %s))::text as values ;" % defined_type)
+                    result = conn.execute(sql)
+                    for row in result : 
+                        values['value'] = row['values']
+                        values['name'] = row['values']
+                        item = ElementTree.Element("item")
+                        self.__add_widget_property(item, "value", values, "value")
+                        self.__add_widget_property(item, "text", values, "name")
+                        widget.append(item)
+                except Exception: 
+                    widget.set("class", "QLineEdit")
+                    self.logger.warning("Failed to add Enumeration widget in %s for %s" % (self.metadata['table_name'], field))
+                    pass
             return widget
         elif editWidget.get("type") == "ValueRelation":
             widget.set("class", "QComboBox")
