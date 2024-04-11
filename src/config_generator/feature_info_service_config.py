@@ -195,13 +195,13 @@ class FeatureInfoServiceConfig(ServiceConfig):
                 for sublayer in entry['layers']:
                     get_child_layers(sublayer, result)
             elif entry.get('queryable', False):
-                result.append(entry['name'])
+                result[entry['name']] = entry.get('attributes', [])
 
         for service_name in self.themes_reader.wms_service_names():
             cap = self.themes_reader.wms_capabilities(service_name)
             if not cap or not 'name' in cap:
                 continue
-            available_info_layers[service_name] = []
+            available_info_layers[service_name] = {}
             get_child_layers(cap['root_layer'], available_info_layers[service_name])
 
         return available_info_layers
@@ -233,11 +233,17 @@ class FeatureInfoServiceConfig(ServiceConfig):
                 'layers': permitted_resources(
                     'layer', role, session
                 ),
+                'attributes': permitted_resources(
+                    'attribute', role, session
+                ),
                 'info_services': permitted_resources(
                     'feature_info_service', role, session
                 ),
                 'info_layers': permitted_resources(
                     'feature_info_layer', role, session
+                ),
+                'info_attributes': permitted_resources(
+                    'info_attribute', role, session
                 )
             }
 
@@ -250,11 +256,17 @@ class FeatureInfoServiceConfig(ServiceConfig):
                 'layers': permitted_resources(
                     'layer', public_role, session
                 ),
+                'attributes': permitted_resources(
+                    'attribute', public_role, session
+                ),
                 'info_services': permitted_resources(
                     'feature_info_service', public_role, session
                 ),
                 'info_layers': permitted_resources(
                     'feature_info_layer', public_role, session
+                ),
+                'info_attributes': permitted_resources(
+                    'info_attribute', public_role, session
                 )
             }
 
@@ -262,8 +274,10 @@ class FeatureInfoServiceConfig(ServiceConfig):
             public_restrictions = {
                 'maps': non_public_resources('map', session),
                 'layers': non_public_resources('layer', session),
+                'attributes': non_public_resources('attribute', session),
                 'info_services': non_public_resources('feature_info_service', session),
-                'info_layers': non_public_resources('feature_info_layer', session)
+                'info_layers': non_public_resources('feature_info_layer', session),
+                'info_attributes': non_public_resources('info_attribute', session)
             }
 
             is_public_role = (role == self.permissions_query.public_role())
@@ -306,7 +320,7 @@ class FeatureInfoServiceConfig(ServiceConfig):
 
                 # collect info layers
                 layers = []
-                for info_layer in info_layers:
+                for info_layer, info_attributes in info_layers.items():
                     # lookup permissions
                     if self.permissions_default_allow:
                         info_layer_restricted_for_public = info_layer in \
@@ -342,10 +356,40 @@ class FeatureInfoServiceConfig(ServiceConfig):
                     # info template always permitted
                     wms_layer['info_template'] = True and queryable
 
+                    # Attributes
+                    wms_layer['info_attributes'] = []
+                    has_restricted_attributes = False
+                    for info_attribute in info_attributes:
+                        if self.permissions_default_allow:
+                            info_attr_restricted_for_public = info_attribute in \
+                                public_restrictions['info_attributes'].get(info_service, {}).get(info_layer, {}) or \
+                                    info_attribute in public_restrictions['attributes'].get(info_service, {}).get(info_layer, {})
+                        else:
+                            info_attr_restricted_for_public = info_attribute not in \
+                                public_permissions['info_attributes'].get(info_service, {}).get(info_layer, {}) and \
+                                    info_attribute not in public_permissions['attributes'].get(info_service, {}).get(info_layer, {})
+
+                        info_attr_permitted_for_role = info_attribute in \
+                            role_permissions['info_attributes'].get(info_service, {}).get(info_layer, {})
+
+                        # Special case: if attribute is restricted for public and info_attribute not explicitly permitted,
+                        # but info_attribute is default_allow and attribute resource is permitted, allow
+                        if not info_attr_permitted_for_role and \
+                            self.permissions_default_allow and \
+                                info_attribute not in public_restrictions['info_attributes'].get(info_service, {}).get(info_layer, {}) and \
+                                info_attribute in role_permissions['attributes'].get(info_service, {}).get(info_layer, {}):
+                            info_attr_permitted_for_role = True
+
+                        if is_public_role and not info_attr_restricted_for_public:
+                            wms_layer['info_attributes'].append(info_attribute)
+                        elif info_attr_restricted_for_public and info_attr_permitted_for_role:
+                            wms_layer['info_attributes'].append(info_attribute)
+                        has_restricted_attributes |= info_attr_restricted_for_public
+
                     # Only append layer if not already appended for public
                     if is_public_role:
                         layers.append(wms_layer)
-                    elif info_service_restricted_for_public or info_layer_restricted_for_public:
+                    elif info_service_restricted_for_public or info_layer_restricted_for_public or has_restricted_attributes:
                         layers.append(wms_layer)
 
                 wms_service['layers'] = layers
