@@ -234,15 +234,12 @@ class PermissionsQuery:
         """Load resources for lookup from ConfigDB."""
         resources_lookup = {}
 
-        session = self.config_models.session()
-
-        # collect resources lookup from ConfigDB
-        Resource = self.config_models.model('resources')
-        query = session.query(Resource).order_by(Resource.type)
-        for resource in query.all():
-            resources_lookup[resource.id] = resource
-
-        session.close()
+        with self.config_models.session() as session:
+            # collect resources lookup from ConfigDB
+            Resource = self.config_models.model('resources')
+            query = session.query(Resource).order_by(Resource.type)
+            for resource in query.all():
+                resources_lookup[resource.id] = resource
 
         return resources_lookup
 

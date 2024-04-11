@@ -49,18 +49,15 @@ class SearchServiceConfig(ServiceConfig):
 
         if 'permissions' not in self.service_config:
             # collect permissions from ConfigDB
-            session = self.config_models.session()
+            with self.config_models.session() as session:
+                # helper method alias
+                permitted_resources = self.permissions_query.permitted_resources
 
-            # helper method alias
-            permitted_resources = self.permissions_query.permitted_resources
-
-            # collect role permissions from ConfigDB
-            solr_facets = permitted_resources(
-                'solr_facet', role, session
-            ).keys()
-            permissions['solr_facets'] = sorted(list(solr_facets))
-
-            session.close()
+                # collect role permissions from ConfigDB
+                solr_facets = permitted_resources(
+                    'solr_facet', role, session
+                ).keys()
+                permissions['solr_facets'] = sorted(list(solr_facets))
         else:
             # use permissions from additional service config if present
             self.logger.debug("Reading permissions from tenantConfig")

@@ -70,12 +70,9 @@ class OGCServiceConfig(ServiceConfig):
         permissions = OrderedDict()
 
         # collect permissions from ConfigDB
-        session = self.config_models.session()
-
-        permissions['wms_services'] = self.wms_permissions(role, session)
-        permissions['wfs_services'] = self.wfs_permissions(role, session)
-
-        session.close()
+        with self.config_models.session() as session:
+            permissions['wms_services'] = self.wms_permissions(role, session)
+            permissions['wfs_services'] = self.wfs_permissions(role, session)
 
         return permissions
 

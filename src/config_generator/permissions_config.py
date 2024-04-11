@@ -24,14 +24,11 @@ class PermissionsConfig():
         # NOTE: use ordered keys
         permissions = OrderedDict()
 
-        session = self.config_models.session()
-
-        permissions['$schema'] = self.schema
-        permissions['users'] = self.users(session)
-        permissions['groups'] = self.groups(session)
-        permissions['roles'] = self.roles(session)
-
-        session.close()
+        with self.config_models.session() as session:
+            permissions['$schema'] = self.schema
+            permissions['users'] = self.users(session)
+            permissions['groups'] = self.groups(session)
+            permissions['roles'] = self.roles(session)
 
         return permissions
 

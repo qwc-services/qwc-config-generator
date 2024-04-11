@@ -40,8 +40,8 @@ class DataServiceConfig(ServiceConfig):
 
         resources = OrderedDict()
 
-        session = self.config_models.session()
-        resources['datasets'] = self._datasets(config, session)
+        with self.config_models.session() as session:
+            resources['datasets'] = self._datasets(config, session)
 
         config['resources'] = resources
         return config
@@ -55,12 +55,10 @@ class DataServiceConfig(ServiceConfig):
         permissions = OrderedDict()
 
         # collect permissions from ConfigDB
-        session = self.config_models.session()
-
-        permissions['data_datasets'] = self._dataset_permissions(role, session)
+        with self.config_models.session() as session:
+            permissions['data_datasets'] = self._dataset_permissions(role, session)
 
         # collect feature reports
-        session.close()
 
         return permissions
 

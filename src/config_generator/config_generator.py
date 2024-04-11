@@ -460,11 +460,10 @@ class ConfigGenerator():
             for role in permissions['roles']:
 
                 res_permissions = OrderedDict()
-                session = self.config_models.session()
-                permitted_resources = permissions_query.permitted_resources
-                resources = permitted_resources(resource_type, role['role'], session).keys()
-                res_permissions[resource_type] = sorted(list(resources))
-                session.close()
+                with self.config_models.session() as session:
+                    permitted_resources = permissions_query.permitted_resources
+                    resources = permitted_resources(resource_type, role['role'], session).keys()
+                    res_permissions[resource_type] = sorted(list(resources))
 
                 permissions_config.merge_service_permissions(
                     role['permissions'], res_permissions
