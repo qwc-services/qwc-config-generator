@@ -345,7 +345,7 @@ class FeatureInfoServiceConfig(ServiceConfig):
 
                         # If layer is not permitted, skip
                         if (
-                            info_layer_restricted_for_public
+                            layer_restricted_for_public
                             and not layer_permitted_for_role
                         ):
                             continue
