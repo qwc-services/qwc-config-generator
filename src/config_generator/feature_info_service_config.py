@@ -375,33 +375,39 @@ class FeatureInfoServiceConfig(ServiceConfig):
 
                     # Attributes
                     wms_layer['info_attributes'] = []
-                    has_restricted_attributes = False
-                    for info_attribute in info_attributes:
-                        if self.permissions_default_allow:
-                            info_attr_restricted_for_public = info_attribute in \
-                                public_restrictions['info_attributes'].get(info_service, {}).get(info_layer, {}) or \
-                                    info_attribute in public_restrictions['attributes'].get(info_service, {}).get(info_layer, {})
-                        else:
-                            info_attr_restricted_for_public = info_attribute not in \
-                                public_permissions['info_attributes'].get(info_service, {}).get(info_layer, {}) and \
-                                    info_attribute not in public_permissions['attributes'].get(info_service, {}).get(info_layer, {})
+                    if queryable:
+                        has_restricted_attributes = False
+                        for info_attribute in info_attributes:
+                            if self.permissions_default_allow:
+                                info_attr_restricted_for_public = info_attribute in \
+                                    public_restrictions['info_attributes'].get(info_service, {}).get(info_layer, {}) or \
+                                        info_attribute in public_restrictions['attributes'].get(info_service, {}).get(info_layer, {})
+                            else:
+                                info_attr_restricted_for_public = info_attribute not in \
+                                    public_permissions['info_attributes'].get(info_service, {}).get(info_layer, {}) and \
+                                        info_attribute not in public_permissions['attributes'].get(info_service, {}).get(info_layer, {})
 
-                        info_attr_permitted_for_role = info_attribute in \
-                            role_permissions['info_attributes'].get(info_service, {}).get(info_layer, {})
+                            info_attr_permitted_for_role = info_attribute in \
+                                role_permissions['info_attributes'].get(info_service, {}).get(info_layer, {})
 
-                        # Special case: if attribute is restricted for public and info_attribute not explicitly permitted,
-                        # but info_attribute is default_allow and attribute resource is permitted, allow
-                        if not info_attr_permitted_for_role and \
-                            self.permissions_default_allow and \
-                                info_attribute not in public_restrictions['info_attributes'].get(info_service, {}).get(info_layer, {}) and \
-                                info_attribute in role_permissions['attributes'].get(info_service, {}).get(info_layer, {}):
-                            info_attr_permitted_for_role = True
+                            # Special case: if attribute is restricted for public and info_attribute not explicitly permitted,
+                            # but info_attribute is default_allow and attribute resource is permitted, allow
+                            if not info_attr_permitted_for_role and \
+                                self.permissions_default_allow and \
+                                    info_attribute not in public_restrictions['info_attributes'].get(info_service, {}).get(info_layer, {}) and \
+                                    info_attribute in role_permissions['attributes'].get(info_service, {}).get(info_layer, {}):
+                                info_attr_permitted_for_role = True
 
-                        if is_public_role and not info_attr_restricted_for_public:
-                            wms_layer['info_attributes'].append(info_attribute)
-                        elif info_attr_restricted_for_public and info_attr_permitted_for_role:
-                            wms_layer['info_attributes'].append(info_attribute)
-                        has_restricted_attributes |= info_attr_restricted_for_public
+                            if (is_public_role and not info_attr_restricted_for_public):
+                                # Append attributes to public layer entry
+                                wms_layer['info_attributes'].append(info_attribute)
+                            elif info_attr_permitted_for_role and info_attr_restricted_for_public:
+                                # Append restricted attribute which was not permitted to public
+                                wms_layer['info_attributes'].append(info_attribute)
+                            elif not info_attr_restricted_for_public and not is_public_role and (info_service_restricted_for_public or info_layer_restricted_for_public):
+                                # Append public attribute of restricted layer
+                                wms_layer['info_attributes'].append(info_attribute)
+                            has_restricted_attributes |= info_attr_restricted_for_public
 
                     # Only append layer if not already appended for public
                     if is_public_role:
