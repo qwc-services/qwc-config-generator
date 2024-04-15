@@ -321,6 +321,29 @@ class FeatureInfoServiceConfig(ServiceConfig):
                 layers = []
                 for info_layer, info_attributes in info_layers.items():
 
+                    # lookup permissions
+                    if self.permissions_default_allow:
+                        info_layer_restricted_for_public = info_layer in \
+                            public_restrictions['info_layers'].get(info_service, {})
+                        layer_restricted_for_public = info_layer in public_restrictions['layers'].get(info_service, {})
+                    else:
+                        info_layer_restricted_for_public = info_layer not in \
+                            public_permissions['info_layers'].get(info_service, {})
+                        layer_restricted_for_public = info_layer not in public_permissions['layers'].get(info_service, {})
+
+                    info_layer_permitted_for_role = info_layer in \
+                        role_permissions['info_layers'].get(info_service, {})
+                    layer_permitted_for_role = info_layer in \
+                        role_permissions['layers'].get(info_service, {})
+
+                    # If layer is not permitted, skip
+                    if (
+                        layer_restricted_for_public
+                        and not layer_permitted_for_role
+                    ):
+                        continue
+
+                    # Determine whether layer is queryable
                     queryable = True
                     if (
                         info_service_restricted_for_public
@@ -328,28 +351,6 @@ class FeatureInfoServiceConfig(ServiceConfig):
                     ):
                         queryable = False
                     else:
-                        # lookup permissions
-                        if self.permissions_default_allow:
-                            info_layer_restricted_for_public = info_layer in \
-                                public_restrictions['info_layers'].get(info_service, {})
-                            layer_restricted_for_public = info_layer in public_restrictions['layers'].get(info_service, {})
-                        else:
-                            info_layer_restricted_for_public = info_layer not in \
-                                public_permissions['info_layers'].get(info_service, {})
-                            layer_restricted_for_public = info_layer not in public_permissions['layers'].get(info_service, {})
-
-                        info_layer_permitted_for_role = info_layer in \
-                            role_permissions['info_layers'].get(info_service, {})
-                        layer_permitted_for_role = info_layer in \
-                            role_permissions['layers'].get(info_service, {})
-
-                        # If layer is not permitted, skip
-                        if (
-                            layer_restricted_for_public
-                            and not layer_permitted_for_role
-                        ):
-                            continue
-
                         # Special case: if layer is restricted for public and info_layer not explicitly permitted,
                         # but info_layer is default_allow and layer resource is permitted, allow
                         if not info_layer_permitted_for_role and \
