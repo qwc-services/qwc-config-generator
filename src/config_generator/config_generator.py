@@ -184,7 +184,9 @@ class ConfigGenerator():
                     # Get themesConfig from config because it could have been merged with a template
                     themes_config = config.get("themesConfig")
             except Exception as e:
-                self.logger.warning("Failed to merge config template %s: %s."  % (config_template_path, str(e)))
+                msg = "Failed to merge config template %s: %s."  % (config_template_path, str(e))
+                self.logger.critical(msg)
+                raise Exception(msg)
 
         self.config = config
 
