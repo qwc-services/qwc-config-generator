@@ -17,6 +17,10 @@
       "schema_url": "https://github.com/qwc-services/qwc-db-auth/raw/master/schemas/qwc-db-auth.json"
     },
     {
+      "service": "document",
+      "schema_url": "https://github.com/qwc-services/qwc-document-service/raw/master/schemas/qwc-document-service.json"
+    },
+    {
       "service": "elevation",
       "schema_url": "https://github.com/qwc-services/qwc-elevation-service/raw/master/schemas/qwc-elevation-service.json"
     },
