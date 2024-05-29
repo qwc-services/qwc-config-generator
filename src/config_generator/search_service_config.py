@@ -1,5 +1,4 @@
 from collections import OrderedDict
-import json
 
 from .permissions_query import PermissionsQuery
 from .service_config import ServiceConfig

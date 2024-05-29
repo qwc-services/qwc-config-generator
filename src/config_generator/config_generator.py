@@ -24,6 +24,7 @@ from .ogc_service_config import OGCServiceConfig
 from .permissions_config import PermissionsConfig
 from .print_service_config import PrintServiceConfig
 from .search_service_config import SearchServiceConfig
+from .document_service_config import DocumentServiceConfig
 from .legend_service_config import LegendServiceConfig
 from .service_config import ServiceConfig
 from .permissions_query import PermissionsQuery
@@ -315,6 +316,10 @@ class ConfigGenerator():
             'search': SearchServiceConfig(
                 self.config_models, self.schema_urls.get('search'),
                 self.service_config('search'), self.logger
+            ),
+            'document': DocumentServiceConfig(
+                self.config_models, self.schema_urls.get('document'),
+                self.service_config('document'), self.logger
             ),
             'legend': LegendServiceConfig(
                 generator_config, self.theme_reader, self.config_models,
