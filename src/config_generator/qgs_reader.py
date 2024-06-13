@@ -338,11 +338,7 @@ class QGSReader:
             # get default value
             default = maplayer.find("defaults/default[@field='%s']" % field)
             if default is not None and default.get('expression'):
-                m = re.match(r"^'([^']+)'$", default.get('expression'))
-                if m:
-                    fields[field]['defaultValue'] = m.group(1)
-                else:
-                    fields[field]['defaultValue'] = "expr:%s" % default.get('expression').strip()
+                fields[field]['defaultValue'] = default.get('expression')
 
             # any any filter expression
             filterExpression = maplayer.find("fieldConfiguration/field[@name='%s']/editWidget[@type='ValueRelation']/config/Option/Option[@name='FilterExpression']" % field)
