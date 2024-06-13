@@ -412,6 +412,11 @@ class QGSReader:
                 .get('constraints')
             ) & 1 > 0
 
+        constraint_expr = maplayer.find(
+            "constraintExpressions/constraint[@field='%s']" % field
+        ).get('exp', '')
+        constraints['expression'] = constraint_expr
+
         constraint_desc = maplayer.find(
             "constraintExpressions/constraint[@field='%s']" % field
         ).get('desc')
