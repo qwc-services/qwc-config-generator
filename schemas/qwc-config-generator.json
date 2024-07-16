@@ -90,6 +90,10 @@
           "description": "Set whether resources are permitted or restricted by default. Example: true",
           "type": "boolean"
         },
+        "inherit_info_permissions": {
+          "description": "Whether info service/layer/attribute permissions should be inherited from the corresponding map/layer/attribute. Only useful if permissions_default_allow=false. Default: false",
+          "type": "boolean"
+        },
         "validate_schema": {
           "description": "Validate configuration against schema. Example: true",
           "type": "boolean"

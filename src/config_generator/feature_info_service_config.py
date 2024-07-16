@@ -33,6 +33,9 @@ class FeatureInfoServiceConfig(ServiceConfig):
         self.permissions_default_allow = generator_config.get(
             'permissions_default_allow', True
         )
+        self.inherit_info_permissions = generator_config.get(
+            'inherit_info_permissions', False
+        )
 
         self.themes_reader = themes_reader
 
@@ -306,9 +309,9 @@ class FeatureInfoServiceConfig(ServiceConfig):
                     continue
 
                 # Special case: if map is restricted for public and info_service not explicitly permitted,
-                # but info_service is default_allow and map resource is permitted, allow
+                # but permissions are default_allow or inherited and map resource is permitted, allow
                 if not info_service_permitted_for_role and \
-                    self.permissions_default_allow and \
+                    (self.permissions_default_allow or self.inherit_info_permissions) and \
                         info_service not in public_restrictions['info_services'] and \
                         info_service in role_permissions['maps']:
                     info_service_permitted_for_role = True
@@ -352,9 +355,9 @@ class FeatureInfoServiceConfig(ServiceConfig):
                         queryable = False
                     else:
                         # Special case: if layer is restricted for public and info_layer not explicitly permitted,
-                        # but info_layer is default_allow and layer resource is permitted, allow
+                        # but permissions are default_allow or inherited and layer resource is permitted, allow
                         if not info_layer_permitted_for_role and \
-                            self.permissions_default_allow and \
+                            (self.permissions_default_allow or self.inherit_info_permissions) and \
                                 info_layer not in public_restrictions['info_layers'].get(info_service, {}) and \
                                 info_layer in role_permissions['layers'].get(info_service, {}):
                             info_layer_permitted_for_role = True
@@ -391,9 +394,9 @@ class FeatureInfoServiceConfig(ServiceConfig):
                                 role_permissions['info_attributes'].get(info_service, {}).get(info_layer, {})
 
                             # Special case: if attribute is restricted for public and info_attribute not explicitly permitted,
-                            # but info_attribute is default_allow and attribute resource is permitted, allow
+                            # but permissions are default_allow or inherited and attribute resource is permitted, allow
                             if not info_attr_permitted_for_role and \
-                                self.permissions_default_allow and \
+                                (self.permissions_default_allow or self.inherit_info_permissions) and \
                                     info_attribute not in public_restrictions['info_attributes'].get(info_service, {}).get(info_layer, {}) and \
                                     info_attribute in role_permissions['attributes'].get(info_service, {}).get(info_layer, {}):
                                 info_attr_permitted_for_role = True
