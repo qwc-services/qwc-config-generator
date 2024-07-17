@@ -607,8 +607,8 @@ class MapViewerConfig(ServiceConfig):
             )
 
             if response.status_code != requests.codes.ok:
-                self.logger.error(
-                    "ERROR generating thumbnail for WMS %s:\n%s" %
+                self.logger.warn(
+                    "Error generating thumbnail for WMS %s:\n%s" %
                     (service_name, response.content)
                 )
                 return 'img/mapthumbs/default.jpg'
@@ -620,13 +620,13 @@ class MapViewerConfig(ServiceConfig):
                 os.makedirs(os.path.join(assets_dir, "img/genmapthumbs/"))
             except Exception as e:
                 if not isinstance(e, FileExistsError):
-                    self.logger.error("The directory for auto generated thumbnails could not be created\n %s" % (str(e)))
+                    self.logger.warn("The directory for auto generated thumbnails could not be created\n %s" % (str(e)))
             thumbnail = os.path.join(assets_dir, "img/genmapthumbs", basename)
             with open(thumbnail, "wb") as fh:
                 fh.write(document)
             return 'img/genmapthumbs/' + basename
         except Exception as e:
-            self.logger.error("ERROR generating thumbnail for WMS " + service_name + ":\n" + str(e))
+            self.logger.warn("Error generating thumbnail for WMS " + service_name + ":\n" + str(e))
             return 'img/mapthumbs/default.jpg'
 
     def unique_theme_id(self, name):
