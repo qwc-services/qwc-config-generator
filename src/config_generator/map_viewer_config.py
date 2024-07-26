@@ -919,11 +919,15 @@ class MapViewerConfig(ServiceConfig):
         # additional service config
         cfg_generator_config = self.service_config.get('generator_config', {})
         cfg_qwc2_config = cfg_generator_config.get('qwc2_config', {})
+        index_file = cfg_qwc2_config.get('qwc2_index_file', 'index.html')
+
+        if not os.path.exists(index_file):
+            self.logger.warning("Could not copy QWC2 index.html: File was not found")
+            return
 
         self.logger.info("Copying 'index.html' to tenant dir")
         try:
             # read index.html
-            index_file = cfg_qwc2_config.get('qwc2_index_file', 'index.html')
             index_contents = None
             with open(index_file, encoding='utf-8') as f:
                 index_contents = f.read()
