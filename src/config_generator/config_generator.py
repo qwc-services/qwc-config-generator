@@ -209,6 +209,7 @@ class ConfigGenerator():
             os.environ.get(
                'OUTPUT_CONFIG_PATH', '/tmp/'
                ))
+        self.qwc_config_schema = generator_config.get('qwc_config_schema', 'qwc_config')
         self.tenant_path = os.path.join(self.config_path, self.tenant)
         self.logger.info("Config destination: '%s'" % self.tenant_path)
 
@@ -226,7 +227,10 @@ class ConfigGenerator():
                 'config_db_url', 'postgresql:///?service=qwc_configdb'
             )
             db_engine = DatabaseEngine()
-            self.config_models = ConfigModels(db_engine, config_db_url)
+            self.config_models = ConfigModels(
+                db_engine, config_db_url,
+                qwc_config_schema=self.qwc_config_schema
+            )
         except Exception as e:
             msg = (
                 "Could not load ConfigModels for ConfigDB at '%s':\n%s" %

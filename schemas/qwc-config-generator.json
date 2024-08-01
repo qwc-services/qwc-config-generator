@@ -49,6 +49,10 @@
           "type": "string",
           "format": "uri"
         },
+        "qwc_config_schema": {
+          "description": "The name of the DB schema which stores the qwc config. Default: qwc_config",
+          "type": "string"
+        },
         "default_qgis_server_url": {
           "description": "Default QGIS Server URL for OGC requests. Example: http://qwc-qgis-server/ows/",
           "type": "string",
