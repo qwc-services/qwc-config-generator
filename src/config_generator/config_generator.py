@@ -126,11 +126,13 @@ class ConfigGenerator():
     from a tenantConfig.json and QWC ConfigDB.
     """
 
-    def __init__(self, config, logger, config_file_dir):
+    def __init__(self, config, logger, config_file_dir, use_cached_project_metadata):
         """Constructor
 
         :param obj config: ConfigGenerator config
         :param Logger logger: Logger
+        :param bool use_cached_project_metadata: Whether to use cached project metadata if available
+        :param str cache_dir: Project metadata cache directory
         """
         self.logger = Logger(logger)
 
@@ -250,7 +252,8 @@ class ConfigGenerator():
 
         # load metadata for all QWC2 theme items
         self.theme_reader = ThemeReader(
-            generator_config, config["themesConfig"], self.logger, print_layouts
+            generator_config, config["themesConfig"], self.logger, print_layouts,
+            use_cached_project_metadata, os.path.join(self.config_path, "__capabilities_cache")
         )
 
         # lookup for additional service configs by name

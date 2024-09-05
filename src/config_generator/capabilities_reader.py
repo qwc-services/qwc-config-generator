@@ -2,6 +2,7 @@ from collections import OrderedDict
 from urllib.parse import urljoin, urlparse
 from xml.etree import ElementTree
 
+import os
 import re
 import requests
 
@@ -12,13 +13,17 @@ class CapabilitiesReader():
     Load and parse WMS GetProjectSettings.and WFS Capabilities
     """
 
-    def __init__(self, generator_config, logger):
+    def __init__(self, generator_config, logger, use_cached_project_metadata, cache_dir):
         """Constructor
 
         :param obj generator_config: ConfigGenerator config
         :param Logger logger: Logger
+        :param bool use_cached_project_metadata: Whether to use cached project metadata if available
+        :param str cache_dir: Project metadata cache directory
         """
         self.logger = logger
+        self.use_cached_project_metadata = use_cached_project_metadata
+        self.cache_dir = cache_dir
 
         # get default QGIS server URL from ConfigGenerator config
         self.default_qgis_server_url = generator_config.get(
@@ -54,29 +59,46 @@ class CapabilitiesReader():
                 self.logger.warning(
                     "WMS URL is longer than 2000 characters!")
 
-            response = requests.get(
-                full_url,
-                params={
-                    'SERVICE': 'WMS',
-                    'VERSION': '1.3.0',
-                    'REQUEST': 'GetProjectSettings',
-                    'CLEARCACHE': '1'
-                },
-                timeout=self.project_settings_read_timeout
-            )
+            document = None
+            cache_file = os.path.join(self.cache_dir, full_url.replace('/', '_').replace(':', '_') + "WMS_GetProjectSettings")
+            if self.use_cached_project_metadata:
+                try:
+                    with open(cache_file) as fh:
+                        document = fh.read()
+                        self.logger.info("Using cached WMS GetProjectSettings for %s" % full_url)
+                except:
+                    pass
 
-            if response.status_code != requests.codes.ok:
-                self.logger.error(
-                    "Could not get WMS GetProjectSettings from %s:\n%s" %
-                    (full_url, response.content)
+            if not document:
+                response = requests.get(
+                    full_url,
+                    params={
+                        'SERVICE': 'WMS',
+                        'VERSION': '1.3.0',
+                        'REQUEST': 'GetProjectSettings',
+                        'CLEARCACHE': '1'
+                    },
+                    timeout=self.project_settings_read_timeout
                 )
-                return {}
 
-            self.logger.info(
-                "Downloaded WMS GetProjectSettings from %s" % full_url
-            )
+                if response.status_code != requests.codes.ok:
+                    self.logger.error(
+                        "Could not get WMS GetProjectSettings from %s:\n%s" %
+                        (full_url, response.content)
+                    )
+                    return {}
 
-            document = response.content
+                self.logger.info(
+                    "Downloaded WMS GetProjectSettings from %s" % full_url
+                )
+
+                document = response.content
+                try:
+                    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+                    with open(cache_file, "w") as fh:
+                        fh.write(document.decode('utf-8'))
+                except:
+                    pass
 
             # parse WMS GetProjectSettings XML
             ElementTree.register_namespace('', 'http://www.opengis.net/wms')
@@ -535,29 +557,46 @@ class CapabilitiesReader():
                 self.logger.warning(
                     "WFS URL is longer than 2000 characters!")
 
-            response = requests.get(
-                full_url,
-                params={
-                    'SERVICE': 'WFS',
-                    'VERSION': '1.1.0',
-                    'REQUEST': 'GetCapabilities',
-                    'CLEARCACHE': '1'
-                },
-                timeout=self.project_settings_read_timeout
-            )
+            document = None
+            cache_file = os.path.join(self.cache_dir, full_url.replace('/', '_').replace(':', '_') + "_WFS_GetCapabilities")
+            if self.use_cached_project_metadata:
+                try:
+                    with open(cache_file) as fh:
+                        document = fh.read()
+                        self.logger.info("Using cached WFS GetCapabilities for %s" % full_url)
+                except:
+                    pass
 
-            if response.status_code != requests.codes.ok:
-                self.logger.error(
-                    "Could not get WFS GetCapabilities from %s:\n%s" %
-                    (full_url, response.content)
+            if not document:
+                response = requests.get(
+                    full_url,
+                    params={
+                        'SERVICE': 'WFS',
+                        'VERSION': '1.1.0',
+                        'REQUEST': 'GetCapabilities',
+                        'CLEARCACHE': '1'
+                    },
+                    timeout=self.project_settings_read_timeout
                 )
-                return {}
 
-            self.logger.info(
-                "Downloaded WFS GetCapabilities from %s" % full_url
-            )
+                if response.status_code != requests.codes.ok:
+                    self.logger.error(
+                        "Could not get WFS GetCapabilities from %s:\n%s" %
+                        (full_url, response.content)
+                    )
+                    return {}
 
-            document = response.content
+                self.logger.info(
+                    "Downloaded WFS GetCapabilities from %s" % full_url
+                )
+
+                document = response.content
+                try:
+                    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+                    with open(cache_file, "w") as fh:
+                        fh.write(document.decode('utf-8'))
+                except:
+                    pass
 
             # parse WFS Capabilities XML
             ElementTree.register_namespace('', 'http://www.opengis.net/wfs')
@@ -666,28 +705,45 @@ class CapabilitiesReader():
         :param str full_url: WFS URL
         """
         try:
-            response = requests.get(
-                full_url,
-                params={
-                    'SERVICE': 'WFS',
-                    'VERSION': '1.1.0',
-                    'REQUEST': 'DescribeFeatureType'
-                },
-                timeout=self.project_settings_read_timeout
-            )
+            document = None
+            cache_file = os.path.join(self.cache_dir, full_url.replace('/', '_').replace(':', '_') + "_WFS_DescribeFeatureType")
+            if self.use_cached_project_metadata:
+                try:
+                    with open(cache_file) as fh:
+                        document = fh.read()
+                        self.logger.info("Using cached WFS DescribeFeatureType for %s" % full_url)
+                except:
+                    pass
 
-            if response.status_code != requests.codes.ok:
-                self.logger.error(
-                    "Could not get WFS DescribeFeatureType from %s:\n%s" %
-                    (full_url, response.content)
+            if not document:
+                response = requests.get(
+                    full_url,
+                    params={
+                        'SERVICE': 'WFS',
+                        'VERSION': '1.1.0',
+                        'REQUEST': 'DescribeFeatureType'
+                    },
+                    timeout=self.project_settings_read_timeout
                 )
-                return {}
 
-            self.logger.info(
-                "Downloaded WFS DescribeFeatureType from %s" % full_url
-            )
+                if response.status_code != requests.codes.ok:
+                    self.logger.error(
+                        "Could not get WFS DescribeFeatureType from %s:\n%s" %
+                        (full_url, response.content)
+                    )
+                    return {}
 
-            document = response.content
+                self.logger.info(
+                    "Downloaded WFS DescribeFeatureType from %s" % full_url
+                )
+
+                document = response.content
+                try:
+                    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+                    with open(cache_file, "w") as fh:
+                        fh.write(document.decode('utf-8'))
+                except:
+                    pass
 
             # parse WFS Capabilities XML
             ElementTree.register_namespace('', 'http://www.w3.org/2001/XMLSchema')

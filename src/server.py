@@ -15,7 +15,7 @@ config_in_path = os.environ.get(
 ).rstrip('/') + '/'
 
 
-def config_generator(tenant):
+def config_generator(tenant, use_cached_project_metadata):
     """Create a ConfigGenerator instance.
 
     :param str tenant: Tenant ID
@@ -40,7 +40,7 @@ def config_generator(tenant):
         raise Exception(msg)
 
     # create ConfigGenerator
-    return ConfigGenerator(config, app.logger, config_file_dir)
+    return ConfigGenerator(config, app.logger, config_file_dir, use_cached_project_metadata)
 
 
 # routes
@@ -51,7 +51,8 @@ def generate_configs():
     try:
         # create ConfigGenerator
         tenant = request.args.get("tenant")
-        generator = config_generator(tenant)
+        use_cached_project_metadata = str(request.args.get("use_cached_project_metadata", "")).lower() in ["1","true"]
+        generator = config_generator(tenant, use_cached_project_metadata)
         generator.write_configs()
         generator.write_permissions()
         generator.cleanup_temp_dir()
@@ -79,7 +80,8 @@ def maps():
     try:
         # get maps from ConfigGenerator
         tenant = request.args.get('tenant')
-        generator = config_generator(tenant)
+        use_cached_project_metadata = str(request.args.get("use_cached_project_metadata", "")).lower() in ["1","true"]
+        generator = config_generator(tenant, use_cached_project_metadata)
         maps = generator.maps()
         generator.cleanup_temp_dir()
 
@@ -94,7 +96,8 @@ def map_details(map_name):
     try:
         # get maps from ConfigGenerator
         tenant = request.args.get('tenant')
-        generator = config_generator(tenant)
+        use_cached_project_metadata = str(request.args.get("use_cached_project_metadata", "")).lower() in ["1","true"]
+        generator = config_generator(tenant, use_cached_project_metadata)
         map_details = generator.map_details(map_name)
         generator.cleanup_temp_dir()
 
@@ -112,7 +115,8 @@ def resources():
     try:
         # get maps from ConfigGenerator
         tenant = request.args.get('tenant')
-        generator = config_generator(tenant)
+        use_cached_project_metadata = str(request.args.get("use_cached_project_metadata", "")).lower() in ["1","true"]
+        generator = config_generator(tenant, use_cached_project_metadata)
         maps = generator.maps()
         for map_name in maps:
             maps_details.append(generator.map_details(

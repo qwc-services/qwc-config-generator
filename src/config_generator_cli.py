@@ -36,7 +36,7 @@ print("QWC ConfigGenerator")
 # parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    'config_file', help="Path to ConfigGenerator config file"
+    'config_file', help="Path to ConfigGenerator config file",
 )
 parser.add_argument(
     "command", choices=['all', 'service_configs', 'permissions'],
@@ -57,7 +57,7 @@ except Exception as e:
 logger = Logger()
 
 # create ConfigGenerator
-generator = ConfigGenerator(config, logger, os.path.dirname(args.config_file))
+generator = ConfigGenerator(config, logger, os.path.dirname(args.config_file), False)
 if args.command == 'all':
     generator.write_configs()
     generator.write_permissions()

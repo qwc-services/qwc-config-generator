@@ -11,13 +11,15 @@ class ThemeReader():
     Reads project metadata for all theme items in the QWC2 theme configuration.
     """
 
-    def __init__(self, generator_config, themes_config, logger, print_layouts):
+    def __init__(self, generator_config, themes_config, logger, print_layouts, use_cached_project_metadata, cache_dir):
         """Constructor
 
         :param obj generator_config: ConfigGenerator config
         :param dict themes_config: themes config
         :param Logger logger: Logger
-        :param list print_layouts Found print layouts
+        :param list print_layouts: Found print layouts
+        :param bool use_cached_project_metadata: Whether to use cached project metadata if available
+        :param str cache_dir: Project metadata cache directory
         """
         self.config = generator_config
         self.logger = logger
@@ -31,7 +33,7 @@ class ThemeReader():
         # lookup for services names by URL: {<url>: <service_name>}
         self.service_name_lookup = {}
 
-        self.capabilities_reader = CapabilitiesReader(generator_config, logger)
+        self.capabilities_reader = CapabilitiesReader(generator_config, logger, use_cached_project_metadata, cache_dir)
 
         self.qgis_project_extension = generator_config.get(
             'qgis_project_extension', '.qgs')
