@@ -76,7 +76,7 @@ class DnDFormGenerator:
         property.append(string)
         widget.append(property)
 
-    def __create_editor_widget(self, maplayer, projectname, layername, field, prefix=""):
+    def __create_editor_widget(self, maplayer, projectname, layername, project, field, prefix=""):
         editWidget = maplayer.find("fieldConfiguration/field[@name='%s']/editWidget" % field)
         if (
             editWidget is None
@@ -190,6 +190,14 @@ class DnDFormGenerator:
             key = editWidget.find("config/Option/Option[@name='Key']").get('value')
             value = editWidget.find("config/Option/Option[@name='Value']").get('value')
             layer = editWidget.find("config/Option/Option[@name='LayerName']").get('value')
+            # Lookup shortname
+            for maplayer in project.findall('.//maplayer'):
+                layernameEl = maplayer.find('layername')
+                shortnameEl = maplayer.find('shortname')
+                if layernameEl is not None and layernameEl.text == layer:
+                    if shortnameEl is not None and shortnameEl.text:
+                        layer = shortnameEl.text
+                    break
             widget.set("name", "kvrel__{field}__{kvtable}__{keyfield}__{valuefield}".format(
                 field=prefix + field, kvtable=layer, keyfield=key, valuefield=value
             ))
@@ -280,7 +288,7 @@ class DnDFormGenerator:
                 if field.get("name") == fkField:
                     continue
 
-                editorWidget = self.__create_editor_widget(referencingLayer, projectname, layername, field.get("name"), referencingLayerName + "__")
+                editorWidget = self.__create_editor_widget(referencingLayer, projectname, layername, project, field.get("name"), referencingLayerName + "__")
                 if editorWidget is None:
                     continue
 
@@ -358,7 +366,7 @@ class DnDFormGenerator:
             elif child.tag == "attributeEditorField":
                 tabWidget = None
 
-                editorWidget = self.__create_editor_widget(maplayer, projectname, layername, child.get("name"))
+                editorWidget = self.__create_editor_widget(maplayer, projectname, layername, project, child.get("name"))
                 if editorWidget is None:
                     continue
 
@@ -424,7 +432,7 @@ class DnDFormGenerator:
             if maplayer.find("expressionfields/field[@name='%s']" % field.get("name")) is not None:
                 continue
 
-            editorWidget = self.__create_editor_widget(maplayer, projectname, layername, field.get("name"))
+            editorWidget = self.__create_editor_widget(maplayer, projectname, layername, project, field.get("name"))
             if editorWidget is None:
                 continue
 

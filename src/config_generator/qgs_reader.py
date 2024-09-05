@@ -464,8 +464,17 @@ class QGSReader:
                         "config/Option/Option[@name='LayerName']").get('value')
             layerSource = edit_widget.find(
                         "config/Option/Option[@name='LayerSource']").get('value')
-            constraints['keyvalrel'] = self.map_prefix + "." + layerName + ":" + key + ":" + value
 
+            # Lookup shortname
+            for maplayer in self.root.findall('.//maplayer'):
+                layernameEl = maplayer.find('layername')
+                shortnameEl = maplayer.find('shortname')
+                if layernameEl is not None and layernameEl.text == layerName:
+                    if shortnameEl is not None and shortnameEl.text:
+                        layerName = shortnameEl.text
+                    break
+
+            constraints['keyvalrel'] = self.map_prefix + "." + layerName + ":" + key + ":" + value
             keyvaltables[self.map_prefix + "." + layerName] = self.__table_metadata(layerSource)
             keyvaltables[self.map_prefix + "." + layerName]['qgs_name'] = self.map_prefix
             keyvaltables[self.map_prefix + "." + layerName]['layername'] = layerName
