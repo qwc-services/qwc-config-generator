@@ -104,7 +104,7 @@ class DnDFormGenerator:
         if uploadField is not None:
             widget.set("class", "QLineEdit")
             widget.set("name", "%s__upload" % (prefix + field))
-            filterOpt = ",".join(map(lambda entry: "*" + entry, uploadField.get("expression", "").split(",")))
+            filterOpt = ",".join(map(lambda entry: "*" + entry, list(filter(bool, re.split(r"[\s,]", uploadField.get("expression", ""))))))
             self.__add_widget_property(widget, "text", None, "value", filterOpt)
             return widget
 
