@@ -79,6 +79,11 @@
           "description": "Subdirectory path relative to qgis_print_layouts_dir. If specified, only layouts within this subdir will be processed. Useful to specify separate print layouts per tenant.",
           "type": "string"
         },
+        "document_templates_dir": {
+          "description": "Directory containing the jasper report templates (*.jrxml).",
+          "type": "string",
+          "default": "/reports"
+        },
         "qgis_projects_scan_base_dir": {
           "description": "Path for QGIS projects, which should be automatically detected. Must be a subdir qgis_projects_base_dir. Example: /data/scan",
           "type": "string"

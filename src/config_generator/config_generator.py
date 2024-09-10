@@ -325,7 +325,7 @@ class ConfigGenerator():
                 self.service_config('search'), self.logger
             ),
             'document': DocumentServiceConfig(
-                self.config_models, self.schema_urls.get('document'),
+                generator_config, self.config_models, self.schema_urls.get('document'),
                 self.service_config('document'), self.logger
             ),
             'legend': LegendServiceConfig(
