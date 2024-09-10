@@ -71,8 +71,9 @@
           "type": "string"
         },
         "qgis_print_layouts_dir": {
-          "description": "Directory containing print layouts. Example: /layouts",
-          "type": "string"
+          "description": "Directory containing print layouts.",
+          "type": "string",
+          "default": "/layouts"
         },
         "qgis_print_layouts_tenant_subdir": {
           "description": "Subdirectory path relative to qgis_print_layouts_dir. If specified, only layouts within this subdir will be processed. Useful to specify separate print layouts per tenant.",
