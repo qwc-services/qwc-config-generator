@@ -394,6 +394,7 @@ class MapViewerConfig(ServiceConfig):
 
         item['mapCrs'] = cfg_item.get('mapCrs', themes_config.get('defaultMapCrs', 'EPSG:3857'))
         self.set_optional_config(cfg_item, 'additionalMouseCrs', item)
+        featureReports = cfg_item.get("featureReport", {})
 
         bbox = OrderedDict()
         bbox['crs'] = 'EPSG:4326'
@@ -428,7 +429,7 @@ class MapViewerConfig(ServiceConfig):
         newExternalLayers = []
         for layer in root_layer.get('layers', []):
             layers.append(self.collect_layers(
-                layer, search_layers, 1, collapseLayerGroupsBelowLevel, newExternalLayers, service_name))
+                layer, search_layers, 1, collapseLayerGroupsBelowLevel, newExternalLayers, service_name, featureReports))
 
         # Inject crs in wmts resource string
         for entry in newExternalLayers:
@@ -658,7 +659,7 @@ class MapViewerConfig(ServiceConfig):
         if field in cfg_item:
             item[field] = cfg_item.get(field)
 
-    def collect_layers(self, layer, search_layers, level, collapseBelowLevel, externalLayers, service_name):
+    def collect_layers(self, layer, search_layers, level, collapseBelowLevel, externalLayers, service_name, featureReports):
         """Recursively collect layer tree from capabilities.
 
         :param obj layer: Layer or group layer
@@ -677,7 +678,7 @@ class MapViewerConfig(ServiceConfig):
             for sublayer in layer['layers']:
                 # recursively collect sub layer
                 sublayers.append(self.collect_layers(
-                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers, service_name))
+                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers, service_name, featureReports))
 
             # abstract
             if 'abstract' in layer:
@@ -768,7 +769,9 @@ class MapViewerConfig(ServiceConfig):
             if layer['name'] in search_layers:
                 item_layer['searchterms'] = [search_layers.get(layer['name'])]
 
-            # TODO: featureReport
+            # featureReport
+            if layer['name'] in featureReports:
+                item_layer['featureReport'] = featureReports[layer['name']]
 
         return item_layer
 
