@@ -107,6 +107,14 @@ class QGSReader:
             ]
             self.qgis_version = major * 10000 + minor * 100 + rev
 
+            # Check if WMSUseLayerIDs is set
+            wmsUseLayerIds = self.root.find('./properties/WMSUseLayerIDs')
+            if wmsUseLayerIds is not None and wmsUseLayerIds.text == "true":
+                self.logger.warning(
+                    "'Use layer ids as names' is checked in the QGIS Server properites of '%s', which is not properly supported by QWC2"
+                    % qgs_filename
+                )
+
         except Exception as e:
             self.logger.error(e)
             return False
