@@ -13,7 +13,8 @@ class DataServiceConfig(ServiceConfig):
     """
 
     def __init__(self, generator_config, themes_reader,
-                 config_models, schema_url, service_config, logger):
+                 config_models, schema_url, service_config, logger,
+                 force_readonly_datasets):
         """Constructor
 
         :param obj generator_config: ConfigGenerator config
@@ -22,6 +23,7 @@ class DataServiceConfig(ServiceConfig):
         :param str schema_url: JSON schema URL for service config
         :param obj service_config: Additional service config
         :param Logger logger: Logger
+        :param bool force_readonly_datasets: Whether to force read-only datasets
         """
         super().__init__('data', schema_url, service_config, logger)
 
@@ -30,6 +32,7 @@ class DataServiceConfig(ServiceConfig):
 
         self.generator_config = generator_config
         self.themes_reader = themes_reader
+        self.force_readonly_datasets = force_readonly_datasets
 
     def config(self):
         """Return service config.
@@ -284,7 +287,7 @@ class DataServiceConfig(ServiceConfig):
             dataset = permission.resource.name
             if dataset not in examined_datasets[map_name]:
                 # check permission with highest priority
-                if permission.write:
+                if permission.write and not self.force_readonly_datasets:
                     # mark as writable
                     role_writeable_datasets[map_name].add(dataset)
                 examined_datasets[map_name].add(dataset)

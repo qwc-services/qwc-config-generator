@@ -15,7 +15,7 @@ config_in_path = os.environ.get(
 ).rstrip('/') + '/'
 
 
-def config_generator(tenant, use_cached_project_metadata):
+def config_generator(tenant, use_cached_project_metadata, force_readonly_datasets=False):
     """Create a ConfigGenerator instance.
 
     :param str tenant: Tenant ID
@@ -40,7 +40,7 @@ def config_generator(tenant, use_cached_project_metadata):
         raise Exception(msg)
 
     # create ConfigGenerator
-    return ConfigGenerator(config, app.logger, config_file_dir, use_cached_project_metadata)
+    return ConfigGenerator(config, app.logger, config_file_dir, use_cached_project_metadata, force_readonly_datasets)
 
 
 # routes
@@ -52,7 +52,8 @@ def generate_configs():
         # create ConfigGenerator
         tenant = request.args.get("tenant")
         use_cached_project_metadata = str(request.args.get("use_cached_project_metadata", "")).lower() in ["1","true"]
-        generator = config_generator(tenant, use_cached_project_metadata)
+        force_readonly_datasets = str(request.args.get("force_readonly_datasets", "")).lower() in ["1","true"]
+        generator = config_generator(tenant, use_cached_project_metadata, force_readonly_datasets)
         generator.write_configs()
         generator.write_permissions()
         generator.cleanup_temp_dir()
