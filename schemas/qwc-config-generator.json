@@ -143,6 +143,10 @@
         "use_default_map_thumbnail": {
           "description": "Whether to use the default mapthumb (mapthumbs/default.jpg) instead of generating the thumbnail via GetMap if no custom thumbnail is provided. Default: false"
         },
+        "generate_thumbnail_timeout": {
+          "description": "Timeout for GetMap request when generating thumbnail. Default: 10sec",
+          "type": "number"
+        },
         "ignore_errors": {
           "description": "Ignore errors during generation to allow creating configuration files despite some errors. Default: false",
           "type": "boolean"

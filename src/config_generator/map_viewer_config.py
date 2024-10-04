@@ -88,6 +88,11 @@ class MapViewerConfig(ServiceConfig):
             'use_default_map_thumbnail', False
         )
 
+        # Timeout for generating thumbnail via GetMap request
+        self.generate_thumbnail_timeout = generator_config.get(
+            "generate_thumbnail_timeout", 10
+        )
+
         # keep track of theme IDs for uniqueness
         self.theme_ids = []
 
@@ -604,7 +609,7 @@ class MapViewerConfig(ServiceConfig):
                     'BBOX': (",".join(map(str, adjustedExtent))),
                     'LAYERS': (",".join(layers).encode('utf-8'))
                 },
-                timeout=10
+                timeout=self.generate_thumbnail_timeout
             )
 
             if response.status_code != requests.codes.ok:
