@@ -34,6 +34,9 @@ class DocumentServiceConfig(ServiceConfig):
         # get base config
         config = super().config()
 
+        # additional service config
+        cfg_resources = self.service_config.get('resources', {})
+
         # scan for reports
         scanned_document_templates = []
         for root, dirs, files in os.walk(self.report_dir):
@@ -43,13 +46,13 @@ class DocumentServiceConfig(ServiceConfig):
             ]
 
         # additional service config
-        config['resources'] = config.get('resources', {})
+        config['resources'] = cfg_resources
         resources = config['resources']
 
         # get resources directly from service config()
         resources['document_templates'] = resources.get('document_templates', [])
 
-        # add templates from scanned_document_templates which are not already anually defined
+        # add templates from scanned_document_templates which are not already manually defined
         for entry in resources['document_templates']:
             try:
                 scanned_document_templates.remove(entry["template"])
