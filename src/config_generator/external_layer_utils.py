@@ -42,7 +42,7 @@ def getWmsRequestUrl(WMS_Capabilities, reqType, urlObj):
     except:
         return urllib.parse.urlunparse(urlObj)
 
-def resolve_external_layer(resource, logger, crs=None):
+def resolve_external_layer(resource, logger, timeout, crs=None):
     cpos = resource.find(':')
     hpos = resource.rfind('#')
     if hpos == -1:
@@ -63,20 +63,20 @@ def resolve_external_layer(resource, logger, crs=None):
             urlobj = urlobj._replace(query=urllib.parse.urlencode(params))
             url = urllib.parse.urlunparse(urlobj)
 
-        return get_external_wms_layer(resource, url, layername, infoFormat, logger)
+        return get_external_wms_layer(resource, url, layername, infoFormat, logger, timeout)
     elif type == "wmts":
         if not crs:
             urlobj = urllib.parse.urlparse(url)
             params = dict(urllib.parse.parse_qsl(urlobj.query))
             crs = params.get('crs', 'EPSG:3857')
-        return get_external_wmts_layer(resource, url, layername, crs, logger)
+        return get_external_wmts_layer(resource, url, layername, crs, logger, timeout)
     elif type == "mvt":
         return get_extermal_mvt_layer(resource, url, layername)
     else:
         logger.warn("Unknown external layer: %s" % resource)
         return None
 
-def get_external_wms_layer(resource, url, layerName, infoFormat, logger):
+def get_external_wms_layer(resource, url, layerName, infoFormat, logger, timeout):
 
     global capabilites_cache
 
@@ -106,7 +106,7 @@ def get_external_wms_layer(resource, url, layerName, infoFormat, logger):
 
     if not capabilites_cache.lookup(capabilitiesUrl):
         try:
-            response = urllib.request.urlopen(capabilitiesUrl)
+            response = urllib.request.urlopen(capabilitiesUrl, timeout=timeout)
         except:
             logger.warn("Failed to download capabilities for external layer %s" % resource)
             return None
@@ -198,13 +198,13 @@ def get_external_wms_layer(resource, url, layerName, infoFormat, logger):
     }
 
 
-def get_external_wmts_layer(resource, capabilitiesUrl, layerName, crs, logger):
+def get_external_wmts_layer(resource, capabilitiesUrl, layerName, crs, logger, timeout):
 
     global capabilites_cache
 
     if not capabilites_cache.lookup(capabilitiesUrl):
         try:
-            response = urllib.request.urlopen(capabilitiesUrl)
+            response = urllib.request.urlopen(capabilitiesUrl, timeout=timeout)
         except:
             logger.warn("Failed to download capabilities for external layer %s" % resource)
             return None

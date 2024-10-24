@@ -93,6 +93,10 @@ class MapViewerConfig(ServiceConfig):
             "generate_thumbnail_timeout", 10
         )
 
+        self.project_settings_read_timeout = generator_config.get(
+            "project_settings_read_timeout", 60
+        )
+
         # keep track of theme IDs for uniqueness
         self.theme_ids = []
 
@@ -280,7 +284,7 @@ class MapViewerConfig(ServiceConfig):
                 self.logger.warn("Skipping unused background layer %s" % entry.get("name", ""))
                 continue
             if "resource" in entry:
-                layer = resolve_external_layer(entry["resource"], self.logger, bgLayerCrs[entry["name"]])
+                layer = resolve_external_layer(entry["resource"], self.logger, self.project_settings_read_timeout, bgLayerCrs[entry["name"]])
                 if layer:
                     layer["name"] = entry["name"]
                     entry.update(layer)
@@ -288,7 +292,7 @@ class MapViewerConfig(ServiceConfig):
 
         # Resolve external layers
         for entry in autogenExternalLayers:
-            layer = resolve_external_layer(entry, self.logger)
+            layer = resolve_external_layer(entry, self.logger, self.project_settings_read_timeout)
             if layer:
                 themes["externalLayers"].append(layer)
 
