@@ -100,6 +100,8 @@ class DocumentServiceConfig(ServiceConfig):
                     'document_templates': non_public_resources('document_templates', session)
                 }
 
+                is_public_role = (role == self.permissions_query.public_role())
+
                 # Collect available templates
                 available_document_templates = []
                 for root, dirs, files in os.walk(self.report_dir):
@@ -130,7 +132,10 @@ class DocumentServiceConfig(ServiceConfig):
                     ):
                         continue
 
-                    permitted_templates.append(template)
+                    if is_public_role:
+                        permitted_templates.append(template)
+                    elif template_restricted_for_public:
+                        permitted_templates.append(template)
 
                 permissions['document_templates'] = permitted_templates
 
