@@ -190,6 +190,7 @@ class MapViewerConfig(ServiceConfig):
             'editServiceUrl',
             'elevationServiceUrl',
             'featureReportService',
+            'documentServiceUrl',
             'mapInfoService',
             'permalinkServiceUrl',
             'searchDataServiceUrl',
