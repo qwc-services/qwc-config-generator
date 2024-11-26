@@ -418,9 +418,12 @@ class MapViewerConfig(ServiceConfig):
         for search_provider in search_providers:
             if (
                 'provider' in search_provider
-                and search_provider.get('provider') == 'solr'
+                and (
+                    search_provider.get('provider') == 'solr' or
+                    search_provider.get('provider') == 'fulltext'
+                )
             ):
-                search_layers = search_provider.get('layers', {})
+                search_layers = search_provider.get('params', {}).get('layers', search_provider.get('layers', {}))
                 break
 
         # collect layers
