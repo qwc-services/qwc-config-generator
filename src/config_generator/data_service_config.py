@@ -132,6 +132,9 @@ class DataServiceConfig(ServiceConfig):
                 dataset['table_name'] = meta.get('table_name')
                 dataset['primary_key'] = meta.get('primary_key')
 
+                if not dataset['primary_key'] in meta['attributes']:
+                    self.logger.warn("The dataset %s.%s does not appear to have a valid primary key" % (dataset['schema'], dataset['table_name']))
+
                 dataset['fields'] = []
                 for key, attr_meta in meta.get('fields', {}).items():
 
