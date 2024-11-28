@@ -873,7 +873,8 @@ class MapViewerConfig(ServiceConfig):
                 meta['geometry_type']
             )
             
-            forms = self.themes_reader.collect_ui_forms(map_name, assets_dir, layer_name)
+            nested_nrels = cfg_item.get('editConfig', {}).get(layer_name, {}).get('generate_nested_nrel_forms', False)
+            forms = self.themes_reader.collect_ui_forms(map_name, assets_dir, layer_name, nested_nrels)
 
             if layer_name in forms:
                 dataset['form'] = forms[layer_name]

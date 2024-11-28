@@ -7,12 +7,12 @@ from sqlalchemy.sql import text as sql_text
 from qwc_services_core.database import DatabaseEngine
 
 class DnDFormGenerator:
-    def __init__(self, config, logger, assets_dir, metadata):
-        self.config = config
+    def __init__(self, logger, assets_dir, metadata, generate_nested_nrel_forms):
         self.logger = logger
         self.assets_dir = assets_dir
         self.db_engine = DatabaseEngine()
         self.metadata = metadata
+        self.generate_nested_nrel_forms = generate_nested_nrel_forms
         
     def generate_form(self, maplayer, projectname, layername, project):
         self.logger.info("Generating edit form for layer %s of project %s" % (layername, projectname))
@@ -246,7 +246,7 @@ class DnDFormGenerator:
         layout = ElementTree.Element("layout")
         layout.set("class", "QGridLayout")
 
-        if self.config.get('generate_nested_nrel_forms', False):
+        if self.generate_nested_nrel_forms:
 
             # Display field for the button:
             # - Try the layer displayfield if it is a simple field

@@ -744,12 +744,13 @@ class QGSReader:
             else:
                 return result.mappings()
 
-    def collect_ui_forms(self, assets_dir, edit_dataset, metadata):
+    def collect_ui_forms(self, assets_dir, edit_dataset, metadata, nested_nrels):
         """ Collect UI form files from project
 
         :param str assets_dir: The assets dir
         """
-        gen = DnDFormGenerator(self.config, self.logger, assets_dir, metadata)
+        generate_nested_nrel_forms = self.config.get('generate_nested_nrel_forms', False) or nested_nrels
+        gen = DnDFormGenerator(self.logger, assets_dir, metadata, generate_nested_nrel_forms)
         projectname = os.path.basename(self.map_prefix)
         result = {}
         for maplayer in self.root.findall('.//maplayer'):
