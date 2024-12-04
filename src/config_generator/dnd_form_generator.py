@@ -463,7 +463,7 @@ class DnDFormGenerator:
             if relation.get("referencedLayer") != layerid or referencingLayer is None or fieldRef is None:
                 continue
 
-            widget = self.__create_relation_widget(project, relation, True)
+            widget = self.__create_relation_widget(projectname, layername, project, relation, True)
             if not widget:
                 continue
 
