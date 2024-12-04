@@ -258,7 +258,7 @@ class MapViewerConfig(ServiceConfig):
             self.default_theme = self.theme_ids[0]
 
         themes['defaultTheme'] = themes_config.get(
-            'defaultTheme', self.default_theme)
+            'defaultTheme', self.default_theme) or self.default_theme
         themes['externalLayers'] = themes_config_themes.get(
             'externalLayers', []
         )
