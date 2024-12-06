@@ -354,12 +354,6 @@ class MapViewerConfig(ServiceConfig):
         # NOTE: use ordered keys
         item = OrderedDict()
 
-        # additional service config
-        cfg_config = self.service_config.get('config', {})
-        ogc_service_url = cfg_config.get(
-            'ogc_service_url', '/ows/'
-        ).rstrip('/') + '/'
-
         # get capabilities
         service_name = self.themes_reader.service_name(cfg_item['url'])
         cap = self.themes_reader.wms_capabilities(service_name)
@@ -388,8 +382,8 @@ class MapViewerConfig(ServiceConfig):
         item['wmsOnly'] = cfg_item.get('wmsOnly', False)
 
         # URL relative to OGC service
-        item['wms_name'] = name
-        item['url'] = "%s%s" % (ogc_service_url, name)
+        item['wms_name'] = service_name
+        item['url'] = cfg_item['url']
 
         attribution = OrderedDict()
         attribution['Title'] = cfg_item.get('attribution')

@@ -30,9 +30,6 @@ class ThemeReader():
         # Dictionary storing theme metadata
         self.theme_metadata = OrderedDict()
 
-        # lookup for services names by URL: {<url>: <service_name>}
-        self.service_name_lookup = {}
-
         self.capabilities_reader = CapabilitiesReader(generator_config, logger, use_cached_project_metadata, cache_dir)
 
         self.qgis_project_extension = generator_config.get(
@@ -45,6 +42,7 @@ class ThemeReader():
         self.default_qgis_server_url = generator_config.get(
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
+        self.ows_prefix = urlparse(self.default_qgis_server_url).path.rstrip('/') + '/'
 
         self.generate_wfs_services = generator_config.get(
             'generate_wfs_services', False
@@ -148,35 +146,10 @@ class ThemeReader():
         return self.theme_metadata[service_name]['project'].collect_ui_forms(assets_dir, edit_dataset, metadata, nested_nrels)
 
     def service_name(self, url):
-        """Return service name as relative path to default QGIS server URL
-        or last part of URL path if on a different WMS server.
+        """Return service name as relative path to default QGIS server URL.
 
         :param str url:  Theme item URL
         """
-        # get full URL
-        full_url = urljoin(self.default_qgis_server_url, url)
-
-        if full_url in self.service_name_lookup:
-            # service name from cache
-            return self.service_name_lookup[full_url]
-
-        service_name = full_url
-        if service_name.startswith(self.default_qgis_server_url):
-            # get relative path to default QGIS server URL
-            service_name = service_name[len(self.default_qgis_server_url):]
-        else:
-            # get last part of URL path for other WMS server
-            service_name = urlparse(full_url).path.split('/')[-1]
-
-        # make sure service name is unique
-        base_name = service_name
-        suffix = 1
-        while service_name in self.service_name_lookup.values():
-            # add suffix to name
-            service_name = "%s_%s" % (base_name, suffix)
-            suffix += 1
-
-        # add to lookup
-        self.service_name_lookup[full_url] = service_name
-
-        return service_name
+        if url.startswith(self.ows_prefix):
+            return url[len(self.ows_prefix):]
+        return url

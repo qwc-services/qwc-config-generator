@@ -199,9 +199,7 @@ class ConfigGenerator():
         self.default_qgis_server_url = generator_config.get(
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
-        self.ows_prefix = generator_config.get(
-            'ows_prefix', urlparse(self.default_qgis_server_url).path
-        ).rstrip('/') + '/'
+        self.ows_prefix = urlparse(self.default_qgis_server_url).path.rstrip('/') + '/'
 
         # Set output config path for the generated configuration files.
         # If `config_path` is not set in the configGeneratorConfig.json,
