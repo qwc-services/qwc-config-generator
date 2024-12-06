@@ -97,6 +97,13 @@ class MapViewerConfig(ServiceConfig):
             "project_settings_read_timeout", 60
         )
 
+        qgis_projects_base_dir = generator_config.get(
+            'qgis_projects_base_dir').rstrip('/') + '/'
+        qgis_projects_scan_base_dir = generator_config.get(
+            'qgis_projects_scan_base_dir').rstrip('/') + '/'
+        self.scan_prefix = os.path.relpath(qgis_projects_scan_base_dir, qgis_projects_base_dir) + "/"
+        self.strip_scan_prefix = generator_config.get('strip_scan_prefix_from_theme_names', False)
+
         # keep track of theme IDs for uniqueness
         self.theme_ids = []
 
@@ -364,6 +371,10 @@ class MapViewerConfig(ServiceConfig):
 
         name = service_name
 
+        if self.strip_scan_prefix:
+            if name.startswith(self.scan_prefix):
+                name = name[len(self.scan_prefix):]
+
         item['id'] = cfg_item.get('id', self.unique_theme_id(name))
         item['name'] = name
 
@@ -374,7 +385,7 @@ class MapViewerConfig(ServiceConfig):
         # title from themes config or capabilities
         title = cfg_item.get('title', cap.get('title'))
         if title is None:
-            title = root_layer.get('title', name)
+            title = root_layer.get('title', service_name)
         item['title'] = title
 
         item['description'] = cfg_item.get('description', '')

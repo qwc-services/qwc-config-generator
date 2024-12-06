@@ -146,6 +146,10 @@
         "ignore_errors": {
           "description": "Ignore errors during generation to allow creating configuration files despite some errors. Default: false",
           "type": "boolean"
+        },
+        "strip_scan_prefix_from_theme_names": {
+          "description": "Whether to strip the scan dir prefix from the generated theme names. Avoids the 'scan/<name>' prefix in the theme ids which appear in the t parameter in the viewer URL. Default: `False`",
+          "type": "boolean"
         }
       },
       "required": [
