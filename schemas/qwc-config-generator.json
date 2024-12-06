@@ -45,106 +45,104 @@
           "type": "string"
         },
         "config_db_url": {
-          "description": "Connection URL for configuration database. Example: postgresql:///?service=qwc_configdb",
+          "description": "Connection URL for configuration database. Example: `postgresql:///?service=qwc_configdb`",
           "type": "string",
           "format": "uri"
         },
         "qwc_config_schema": {
-          "description": "The name of the DB schema which stores the qwc config. Default: qwc_config",
+          "description": "The name of the DB schema which stores the qwc config. Default: `qwc_config`",
           "type": "string"
         },
         "default_qgis_server_url": {
-          "description": "Default QGIS Server URL for OGC requests. Example: http://qwc-qgis-server/ows/",
+          "description": "Default QGIS Server URL for OGC requests. Example: `http://qwc-qgis-server/ows/`",
           "type": "string",
           "format": "uri"
         },
         "qgis_project_extension": {
-          "description": "The QGIS project file extension to look for. Default: '.qgs'",
+          "description": "The QGIS project file extension to look for. Default: `.qgs`",
           "type": "string"
         },
         "qgis_projects_base_dir": {
-          "description": "Base path for QGIS projects. Example: /data",
+          "description": "Base path for QGIS projects. Example: `/data`",
           "type": "string"
         },
         "qgis_print_layouts_dir": {
-          "description": "Directory containing print layouts.",
-          "type": "string",
-          "default": "/layouts"
+          "description": "Directory containing print layouts. Default: `/layouts`",
+          "type": "string"
         },
         "qgis_print_layouts_tenant_subdir": {
-          "description": "Subdirectory path relative to qgis_print_layouts_dir. If specified, only layouts within this subdir will be processed. Useful to specify separate print layouts per tenant.",
+          "description": "Subdirectory path relative to `qgis_print_layouts_dir`. If specified, only layouts within this subdir will be processed. Useful to specify separate print layouts per tenant. Default: ``",
           "type": "string"
         },
         "document_templates_dir": {
-          "description": "Directory containing the jasper report templates (*.jrxml).",
-          "type": "string",
-          "default": "/reports"
+          "description": "Directory containing the jasper report templates (*.jrxml). Default: `/reports`",
+          "type": "string"
         },
         "qgis_projects_scan_base_dir": {
-          "description": "Path for QGIS projects, which should be automatically detected. Must be a subdir qgis_projects_base_dir. Example: /data/scan",
+          "description": "Path for QGIS projects, which should be automatically detected. Must be a subdir `qgis_projects_base_dir`. Example: `/data/scan`",
           "type": "string"
         },
         "group_scanned_projects_by_dir": {
-          "description": "Option to group scanned projects by directory in themes configuration. Default: false",
+          "description": "Option to group scanned projects by directory in themes configuration. Default: `false`",
           "type": "boolean"
         },
         "save_scanned_projects_in_config": {
-          "description": "Option to save scanned projects and groups in themes configuration. Requires write access to INPUT_CONFIG_PATH for config generator service. Default: false",
+          "description": "Option to save scanned projects and groups in themes configuration. Requires write access to `$INPUT_CONFIG_PATH` for config generator service. Default: `false`",
           "type": "boolean"
         },
         "permissions_default_allow": {
-          "description": "Set whether resources are permitted or restricted by default. Example: true",
+          "description": "Set whether resources are permitted or restricted by default. Example: `true`",
           "type": "boolean"
         },
         "inherit_info_permissions": {
-          "description": "Whether info service/layer/attribute permissions should be inherited from the corresponding map/layer/attribute. Only useful if permissions_default_allow=false. Default: false",
+          "description": "Whether info service/layer/attribute permissions should be inherited from the corresponding map/layer/attribute. Only useful if `permissions_default_allow=false`. Default: `false`",
           "type": "boolean"
         },
         "validate_schema": {
-          "description": "Validate configuration against schema. Example: true",
+          "description": "Validate configuration against schema. Example: `true`",
           "type": "boolean"
         },
         "config_path": {
-          "description": "Target path for generated service configs and permissions, if not set by $OUTPUT_CONFIG_PATH. Example: /config-out",
+          "description": "Target path for generated service configs and permissions, if not set by `$OUTPUT_CONFIG_PATH`. Default: `/tmp`",
           "type": "string"
         },
         "skip_print_layer_groups": {
-          "description": "Skip group layers containing print layers",
+          "description": "Skip group layers containing print layers. Default: `false`",
           "type": "boolean"
         },
         "layer_opacities": {
-          "description": "Layer opacity values for QGIS <= 3.10",
+          "description": "Layer opacity values for QGIS <= 3.10. Default: `{}`",
           "type": "object"
         },
         "project_settings_read_timeout": {
-          "description": "Timeout for GetProjectSettings, GetCapabilities and DescribeFeatureType requests. Default: 60sec",
+          "description": "Timeout for GetProjectSettings, GetCapabilities and DescribeFeatureType requests, in seconds. Default: `60`",
           "type": "number"
         },
         "autogen_keyvaltable_datasets": {
-          "description": "Whether to automatically generate data service datasets used for key-value relationships without requiring corresponding data resources to be created. Warning: this will expose the key and value fields of the key-value table as world readable. Default: false",
+          "description": "Whether to automatically generate data service datasets used for key-value relationships without requiring corresponding data resources to be created. Warning: this will expose the key and value fields of the key-value table as world readable. Default: `false`",
           "type": "boolean"
         },
         "generate_nested_nrel_forms": {
-          "description": "Whether to generate nested nrelation forms instead of a tabluar view. Default: false",
+          "description": "Whether to generate nested nrelation forms instead of a tabluar view. Default: `false`",
           "type": "boolean"
         },
         "generate_wfs_services": {
-          "description": "Generate WFS service resources and permissions for the OGC service. Default: false",
+          "description": "Generate WFS service resources and permissions for the OGC service. Default: `false`",
           "type": "boolean"
         },
         "use_default_map_thumbnail": {
-          "description": "Whether to use the default mapthumb (mapthumbs/default.jpg) instead of generating the thumbnail via GetMap if no custom thumbnail is provided. Default: false"
+          "description": "Whether to use the default mapthumb (`mapthumbs/default.jpg`) instead of generating the thumbnail via GetMap if no custom thumbnail is provided. Default: `false`"
         },
         "generate_thumbnail_timeout": {
-          "description": "Timeout for GetMap request when generating thumbnail. Default: 10sec",
+          "description": "Timeout for GetMap request when generating thumbnail, in seconds. Default: `10`",
           "type": "number"
         },
         "ignore_errors": {
-          "description": "Ignore errors during generation to allow creating configuration files despite some errors. Default: false",
+          "description": "Ignore errors during generation to allow creating configuration files despite some errors. Default: `false`",
           "type": "boolean"
         },
         "strip_scan_prefix_from_theme_names": {
-          "description": "Whether to strip the scan dir prefix from the generated theme names. Avoids the 'scan/<name>' prefix in the theme ids which appear in the t parameter in the viewer URL. Default: `False`",
+          "description": "Whether to strip the scan dir prefix from the generated theme names. Avoids the 'scan/<name>' prefix in the theme ids which appear in the t parameter in the viewer URL. Default: `false`",
           "type": "boolean"
         }
       },
