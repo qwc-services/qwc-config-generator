@@ -108,10 +108,6 @@
           "description": "Target path for generated service configs and permissions, if not set by $OUTPUT_CONFIG_PATH. Example: /config-out",
           "type": "string"
         },
-        "qwc2_base_dir": {
-          "description": "Path to the QWC2 directory, which will be used to autodetect thumbnails. If qgis_projects_scan_base_dir is not set, then this option will be ignored. Example /qwc2",
-          "type": "string"
-        },
         "skip_print_layer_groups": {
           "description": "Skip group layers containing print layers",
           "type": "boolean"

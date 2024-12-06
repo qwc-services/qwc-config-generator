@@ -75,7 +75,7 @@ class MapViewerConfig(ServiceConfig):
         # helper method alias
         self.permitted_resources = self.permissions_query.permitted_resources
 
-        # get qwc2 directory from ConfigGenerator config
+        # get qwc2 directory from mapviewer config
         self.qwc_base_dir = service_config.get('config').get('qwc2_path')
 
         # get default QGIS server URL from ConfigGenerator config

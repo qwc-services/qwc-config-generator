@@ -676,7 +676,6 @@ class ConfigGenerator():
             'qgis_projects_scan_base_dir')
         group_scanned_projects_by_dir = generator_config.get('group_scanned_projects_by_dir', False)
         save_scanned_projects_in_config = generator_config.get('save_scanned_projects_in_config', False)
-        qwc_base_dir = generator_config.get("qwc2_base_dir")
         qgis_project_extension = generator_config.get(
             'qgis_project_extension', '.qgs')
 
