@@ -15,6 +15,7 @@ from xml.etree import ElementTree
 
 from qwc_services_core.config_models import ConfigModels
 from qwc_services_core.database import DatabaseEngine
+from qwc_services_core.runtime_config import RuntimeConfig
 from .theme_reader import ThemeReader
 from .data_service_config import DataServiceConfig
 from .ext_service_config import ExtServiceConfig
@@ -194,8 +195,9 @@ class ConfigGenerator():
 
         self.config = config
 
-        # get default QGIS server URL from ConfigGenerator config
-        generator_config = self.config.get('config', {})
+        # Note: Wrap generator config in a RuntimeConfig so that config.get(...) honours environment variable overrides
+        generator_config = RuntimeConfig("configGenerator", self.logger).set_config(config)
+
         self.default_qgis_server_url = generator_config.get(
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
