@@ -100,9 +100,12 @@ class MapViewerConfig(ServiceConfig):
         qgis_projects_base_dir = generator_config.get(
             'qgis_projects_base_dir').rstrip('/') + '/'
         qgis_projects_scan_base_dir = generator_config.get(
-            'qgis_projects_scan_base_dir').rstrip('/') + '/'
-        self.scan_prefix = os.path.relpath(qgis_projects_scan_base_dir, qgis_projects_base_dir) + "/"
-        self.strip_scan_prefix = generator_config.get('strip_scan_prefix_from_theme_names', False)
+            'qgis_projects_scan_base_dir')
+        if qgis_projects_scan_base_dir:
+            self.scan_prefix = os.path.relpath(qgis_projects_scan_base_dir, qgis_projects_base_dir) + "/"
+            self.strip_scan_prefix = generator_config.get('strip_scan_prefix_from_theme_names', False)
+        else:
+            self.strip_scan_prefix = False
 
         # keep track of theme IDs for uniqueness
         self.theme_ids = []
