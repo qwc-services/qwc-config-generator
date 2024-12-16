@@ -738,6 +738,9 @@ class ConfigGenerator():
             elif item.is_file() and item.suffix == qgis_project_extension:
                 relpath = item.parent.relative_to(qgis_projects_base_dir)
                 wmspath = os.path.join(self.ows_prefix, relpath, item.stem)
+                if ' ' in wmspath:
+                    self.logger.warning(f"The project file '{os.path.join(relpath, item.stem)}' contains spaces, it will be ignored")
+                    continue
 
                 # Add to themes items
                 theme_item = OrderedDict()
