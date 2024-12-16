@@ -129,6 +129,18 @@ def resources():
         return jsonify({'error': str(e)}), 500
 
 
+""" readyness probe endpoint """
+@app.route("/ready", methods=['GET'])
+def ready():
+    return jsonify({"status": "OK"})
+
+
+""" liveness probe endpoint """
+@app.route("/healthz", methods=['GET'])
+def healthz():
+    return jsonify({"status": "OK"})
+
+
 # local webserver
 if __name__ == '__main__':
     print("Starting ConfigGenerator service...")
