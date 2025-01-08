@@ -363,6 +363,7 @@ class DnDFormGenerator:
                     if child.get('showLabel') == "1":
                         widget.set("class", "QGroupBox")
                         self.__add_widget_property(widget, "title", child, "name")
+                        self.__add_label_style_properties(widget, child.find("labelStyle"))
                     else:
                         widget.set("class", "QFrame")
                     self.__add_widget_property(widget, "visibilityExpression", None, None, child.get("visibilityExpression"))
@@ -393,6 +394,7 @@ class DnDFormGenerator:
                     labelWidget.set("class", "QLabel")
                     label = aliases.get(child.get("name"), child.get("name"))
                     self.__add_widget_property(labelWidget, "text", None, None, label)
+                    self.__add_label_style_properties(labelWidget, child.find("labelStyle"))
                     labelItem.append(labelWidget)
                 else:
                     editorItem.set("column", str(col))
@@ -476,3 +478,23 @@ class DnDFormGenerator:
             layout.append(item)
             row += 1
 
+    def __add_label_style_properties(self, widget, labelStyle):
+        if labelStyle is None:
+            return
+        added = False
+        font = ElementTree.Element("font")
+        if labelStyle.get("overrideLabelFont") == "1":
+            labelFont = labelStyle.find("labelFont")
+            if labelFont is not None:
+                propMap = {"bold": "bold", "italic": "italic", "underline": "underline", "strikethrough": "strikeout"}
+                for prop, elName in propMap.items():
+                    if labelFont.get(prop) == "1":
+                        propEl = ElementTree.Element(elName)
+                        propEl.text = "true"
+                        font.append(propEl)
+                        added = True
+        if added:
+            prop = ElementTree.Element("property")
+            prop.set("name", "font")
+            prop.append(font)
+            widget.append(prop)
