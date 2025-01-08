@@ -330,15 +330,15 @@ class DnDFormGenerator:
         for child in container:
             added = False
             if child.tag == "attributeEditorContainer":
-                item = ElementTree.Element("item")
-                item.set("row", str(row))
-                item.set("column", str(col))
-                item.set("colspan", "2")
-                layout.append(item)
-                added = True
 
-                if child.get('groupBox') == "0":
+                if child.get('type') == "Tab":
                     if not tabWidget:
+                        item = ElementTree.Element("item")
+                        item.set("row", str(row))
+                        item.set("column", str(col))
+                        item.set("colspan", "2")
+                        layout.append(item)
+                        added = True
                         tabWidget = ElementTree.Element("widget")
                         tabWidget.set("class", "QTabWidget")
                         item.append(tabWidget)
@@ -350,7 +350,13 @@ class DnDFormGenerator:
                     tabWidget.append(widget)
 
                     self.__add_tablayout_fields(maplayer, projectname, layername, project, widget, child, aliases)
-                else:
+                elif child.get('type') == "GroupBox":
+                    item = ElementTree.Element("item")
+                    item.set("row", str(row))
+                    item.set("column", str(col))
+                    item.set("colspan", "2")
+                    layout.append(item)
+                    added = True
                     tabWidget = None
 
                     widget = ElementTree.Element("widget")
@@ -413,12 +419,6 @@ class DnDFormGenerator:
                     col = 0
                     row += 1
 
-        item = ElementTree.Element("item")
-        item.set("row", str(row + 1))
-        item.set("column", "0")
-        item.set("colspan", str(2 * ncols))
-        layout.append(item)
-
     def __add_autolayout_fields(self, maplayer, projectname, layername, project, parent, aliases):
         fields = maplayer.findall("fieldConfiguration/field")
         layout = ElementTree.Element("layout")
@@ -464,7 +464,7 @@ class DnDFormGenerator:
                 continue
 
             widget = self.__create_relation_widget(projectname, layername, project, relation, True)
-            if not widget:
+            if widget is None:
                 continue
 
             item = ElementTree.Element("item")
@@ -476,8 +476,3 @@ class DnDFormGenerator:
             layout.append(item)
             row += 1
 
-        item = ElementTree.Element("item")
-        item.set("row", str(row + 1))
-        item.set("column", "0")
-        item.set("colspan", str(2))
-        layout.append(item)
