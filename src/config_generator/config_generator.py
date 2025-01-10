@@ -869,14 +869,17 @@ class ConfigGenerator():
                 layout = doc.getroot()
                 composer_map = doc.find(".//LayoutItem[@type='65639']")
                 if layout.tag != "Layout" or composer_map is None:
-                    self.logger.info("Skipping invalid print template " + filename)
+                    self.logger.info("Skipping invalid print template " + filename + " (may not contain a layout map element)")
                     continue
 
                 size = composer_map.get('size').split(',')
+                position = composer_map.get('positionOnPage').split(',')
                 print_template = OrderedDict()
                 print_template['name'] = os.path.join(relpath, layout.get('name'))
                 print_map = OrderedDict()
                 print_map['name'] = "map0"
+                print_map['x'] = float(position[0])
+                print_map['y'] = float(position[1])
                 print_map['width'] = float(size[0])
                 print_map['height'] = float(size[1])
                 print_template['map'] = print_map

@@ -190,6 +190,59 @@ class QGSReader:
 
         return config
 
+    def print_templates(self):
+        """Collect print templates from QGS.
+        """
+        print_templates = []
+        composer_template_map = {}
+        for template in self.root.findall('.//Layout'):
+            composer_template_map[template.get('name')] = template
+
+        for template in composer_template_map.values():
+            template_name = template.get('name')
+            if template_name.endswith("_legend") and template_name[:-7] in composer_template_map:
+                continue
+
+            # NOTE: use ordered keys
+            print_template = OrderedDict()
+            print_template['name'] = template.get('name')
+            if template_name + "_legend" in composer_template_map:
+                print_template["legendLayout"] = template_name + "_legend";
+
+            composer_map = template.find(".//LayoutItem[@type='65639']")
+            if template.tag != "Layout" or composer_map is None:
+                self.logger.info("Skipping invalid print template " + template.get('name') + " (may not contain a layout map element)")
+                continue
+
+            size = composer_map.get('size').split(',')
+            position = composer_map.get('positionOnPage').split(',')
+            print_template = OrderedDict()
+            print_template['name'] = template.get('name')
+            print_map = OrderedDict()
+            print_map['name'] = "map0"
+            print_map['x'] = float(position[0])
+            print_map['y'] = float(position[1])
+            print_map['width'] = float(size[0])
+            print_map['height'] = float(size[1])
+            print_template['map'] = print_map
+
+            atlas = template.find("Atlas")
+            if atlas is not None and atlas.get("enabled") == "1":
+                atlasLayer = atlas.get('coverageLayerName')
+                print_template['atlasCoverageLayer'] = self.__lookup_short_name(atlasLayer)
+                print_template['atlas_pk'] = self.__table_metadata(atlas.get('coverageLayerSource'))['primary_key']
+
+            labels = []
+            for label in template.findall(".//LayoutItem[@type='65641']"):
+                if label.get('visibility') == '1' and label.get('id'):
+                    labels.append(label.get('id'))
+            if labels:
+                print_template['labels'] = labels
+
+            print_templates.append(print_template)
+
+        return print_templates
+
     def __db_connection(self, datasource):
         """Parse QGIS datasource URI and return SQLALchemy DB connection
         string for a PostgreSQL database or connection service.
@@ -474,13 +527,7 @@ class QGSReader:
                         "config/Option/Option[@name='LayerSource']").get('value')
 
             # Lookup shortname
-            for maplayer in self.root.findall('.//maplayer'):
-                layernameEl = maplayer.find('layername')
-                shortnameEl = maplayer.find('shortname')
-                if layernameEl is not None and layernameEl.text == layerName:
-                    if shortnameEl is not None and shortnameEl.text:
-                        layerName = shortnameEl.text
-                    break
+            layerName = self.__lookup_short_name(layerName)
 
             constraints['keyvalrel'] = self.map_prefix + "." + layerName + ":" + key + ":" + value
             keyvaltables[self.map_prefix + "." + layerName] = self.__table_metadata(layerSource)
@@ -535,6 +582,20 @@ class QGSReader:
         :param str value: File filter string
         """
         return list(map(lambda x: x.strip().lstrip('*'), value.lower().split(",")))
+
+    def __lookup_short_name(self, layerName):
+        """Looks up the short name for a given layer name
+
+        :param layerName str: Layer name
+        """
+        for maplayer in self.root.findall('.//maplayer'):
+            layernameEl = maplayer.find('layername')
+            shortnameEl = maplayer.find('shortname')
+            if layernameEl is not None and layernameEl.text == layerName:
+                if shortnameEl is not None and shortnameEl.text:
+                    layerName = shortnameEl.text
+                break
+        return layerName
 
     def __lookup_attribute_data_types(self, meta):
         """Query column data types from GeoDB and add them to table metadata.

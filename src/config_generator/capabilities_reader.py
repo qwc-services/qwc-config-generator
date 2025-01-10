@@ -232,11 +232,6 @@ class CapabilitiesReader():
                 '%sCapability/%sRequest/%sGetFeatureInfo/%sFormat' % (np, np, np, np), ns
             )))
 
-            # collect print templates
-            print_templates = self.print_templates(root, np, ns)
-            if print_templates:
-                capabilities['print_templates'] = print_templates
-
             if internal_print_layers:
                 capabilities['internal_print_layers'] = internal_print_layers
 
@@ -487,56 +482,6 @@ class CapabilitiesReader():
                 return None
 
         return list(geometryless_layer_names)
-
-    def print_templates(self, root, np, ns):
-        """Collect print templates from WMS GetProjectSettings.
-
-        :param Element root: GetProjectSettings root node
-        :param obj ns: Namespace dict
-        :param str np: Namespace prefix
-        """
-        print_templates = []
-        composer_template_map = {}
-        for template in root.findall('.//%sComposerTemplate' % np, ns):
-            composer_template_map[template.get('name')] = template
-
-        for template in composer_template_map.values():
-            template_name = template.get('name')
-            if template_name.endswith("_legend") and template_name[:-7] in composer_template_map:
-                continue
-
-            # NOTE: use ordered keys
-            print_template = OrderedDict()
-            print_template['name'] = template.get('name')
-            if template_name + "_legend" in composer_template_map:
-                print_template["legendLayout"] = template_name + "_legend";
-
-            composer_map = template.find('%sComposerMap' % np, ns)
-            if composer_map is not None:
-                print_map = OrderedDict()
-                print_map['name'] = composer_map.get('name')
-                print_map['width'] = float(composer_map.get('width'))
-                print_map['height'] = float(composer_map.get('height'))
-                print_template['map'] = print_map
-            if template.get('atlasEnabled') == '1':
-                atlasLayer = template.get('atlasCoverageLayer')
-                try:
-                    pk = root.find(".//%sLayer/[%sName = '%s']" % (np, np, atlasLayer), ns).find('./%sPrimaryKey/%sPrimaryKeyAttribute' % (np, np), ns).text
-                    print_template['atlasCoverageLayer'] = atlasLayer
-                    print_template['atlas_pk'] = pk
-                except:
-                    self.logger.warning("Failed to determine primary key for atlas layer %s!" % atlasLayer)
-                    pass
-
-            labels = []
-            for label in template.findall('%sComposerLabel' % np, ns):
-                labels.append(label.get('name'))
-            if labels:
-                print_template['labels'] = labels
-
-            print_templates.append(print_template)
-
-        return print_templates
 
     # WFS Capabilities
 

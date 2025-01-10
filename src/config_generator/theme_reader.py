@@ -89,10 +89,6 @@ class ThemeReader():
         self.logger.info("<b>Reading theme %s</b>" % url)
 
         wms_capabilities = self.capabilities_reader.read_wms_service_capabilities(url, service_name, item)
-        project_layouts = wms_capabilities.get('print_templates', [])
-        project_layouts_names = [layout['name'] for layout in project_layouts]
-        wms_capabilities["print_templates"] = project_layouts + \
-            [layout for layout in self.print_layouts if layout["name"] not in project_layouts_names]
 
         wfs_capabilities = {}
         if self.generate_wfs_services:
@@ -102,6 +98,11 @@ class ThemeReader():
             self.config, self.logger, self.qgis_projects_base_dir,
             self.qgis_project_extension, service_name)
         project_read = qgs_reader.read()
+
+        project_layouts = qgs_reader.print_templates() if project_read else []
+        project_layouts_names = [layout['name'] for layout in project_layouts]
+        wms_capabilities["print_templates"] = project_layouts + \
+            [layout for layout in self.print_layouts if layout["name"] not in project_layouts_names]
 
         self.theme_metadata[service_name] = {
             'service_name': service_name,
