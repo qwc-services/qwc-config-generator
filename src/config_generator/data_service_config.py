@@ -130,6 +130,7 @@ class DataServiceConfig(ServiceConfig):
                 dataset['name'] = qgs_name + '.' + map_dataset
                 dataset['db_url'] = meta.get('database')
                 dataset['schema'] = meta.get('schema')
+                dataset['datasource_filter'] = meta.get('datasource_filter')
                 dataset['table_name'] = meta.get('table_name')
                 dataset['primary_key'] = meta.get('primary_key')
 
@@ -174,6 +175,7 @@ class DataServiceConfig(ServiceConfig):
                 dataset = OrderedDict()
                 dataset['name'] = key
                 dataset['db_url'] = value.get('database')
+                dataset['datasource_filter'] = value.get('datasource_filter')
                 dataset['schema'] = value.get('schema')
                 dataset['table_name'] = value.get('table_name')
                 dataset['primary_key'] = value.get('primary_key')

@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import html
 import io
 import math
 import os
@@ -181,7 +182,9 @@ class QGSReader:
                     continue
 
                 datasource = maplayer.find('datasource').text
-                config['database'] = self.__db_connection(datasource)
+                database, datasource_filter = self.__db_connection(datasource)
+                config['database'] = database
+                config['datasource_filter'] = datasource_filter
                 config.update(self.__table_metadata(datasource, maplayer))
 
                 self.__lookup_attribute_data_types(config)
@@ -250,6 +253,7 @@ class QGSReader:
         :param str datasource: QGIS datasource URI
         """
         connection_string = None
+        datasource_filter = None
 
         if 'service=' in datasource:
             # PostgreSQL connection service
@@ -296,7 +300,12 @@ class QGSReader:
 
             connection_string += "%s:%s/%s" % (host, port, dbname)
 
-        return connection_string
+        # sql appears last
+        m = re.search(r"sql=(.*)$", datasource)
+        if m is not None:
+            datasource_filter = html.unescape(m.group(1))
+
+        return connection_string, datasource_filter
 
     def __table_metadata(self, datasource, maplayer=None):
         """Parse QGIS datasource URI and return table metadata.
@@ -373,7 +382,9 @@ class QGSReader:
 
                         if not jointable in jointables:
                             jointables[jointable] = self.__table_metadata(joinlayer.find('datasource').text, joinlayer)
-                            jointables[jointable]['database'] = self.__db_connection(joinlayer.find('datasource').text)
+                            database, datasource_filter = self.__db_connection(joinlayer.find('datasource').text)
+                            jointables[jointable]['database'] = database
+                            jointables[jointable]['datasource_filter'] = datasource_filter
                             jointables[jointable]['targetField'] = join.get('targetFieldName')
                             jointables[jointable]['joinField'] = join.get('joinFieldName')
 
@@ -533,7 +544,9 @@ class QGSReader:
             keyvaltables[self.map_prefix + "." + layerName] = self.__table_metadata(layerSource)
             keyvaltables[self.map_prefix + "." + layerName]['qgs_name'] = self.map_prefix
             keyvaltables[self.map_prefix + "." + layerName]['layername'] = layerName
-            keyvaltables[self.map_prefix + "." + layerName]['database'] = self.__db_connection(layerSource)
+            database, datasource_filter = self.__db_connection(layerSource)
+            keyvaltables[self.map_prefix + "." + layerName]['database'] = database
+            keyvaltables[self.map_prefix + "." + layerName]['datasource_filter'] = datasource_filter
             keyvaltables[self.map_prefix + "." + layerName]['fields'] = {
                 key: {},
                 value: {}
