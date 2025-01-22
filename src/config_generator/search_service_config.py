@@ -57,6 +57,11 @@ class SearchServiceConfig(ServiceConfig):
                     'solr_facet', role, session
                 ).keys()
                 permissions['solr_facets'] = sorted(list(solr_facets))
+
+                dataproducts = permitted_resources(
+                    'dataproducts', role, session
+                ).keys()
+                permissions['dataproducts'] = sorted(list(dataproducts))
         else:
             # use permissions from additional service config if present
             self.logger.debug("Reading permissions from tenantConfig")

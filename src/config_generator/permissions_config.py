@@ -107,6 +107,7 @@ class PermissionsConfig():
             permissions['document_templates'] = []
             permissions['print_templates'] = []
             permissions['solr_facets'] = []
+            permissions['dataproducts'] = []
             permissions['external_links'] = []
 
             role_config['permissions'] = permissions
