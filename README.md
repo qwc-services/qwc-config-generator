@@ -60,19 +60,19 @@ Usage
 
 Show command options:
 
-    python src/config_generator_cli.py --help
+    uv run src/config_generator_cli.py --help
 
 Generate both service configs and permissions:
 
-    python src/config_generator_cli.py ./tenantConfig.json all
+    uv run src/config_generator_cli.py ./tenantConfig.json all
 
 Generate service config files:
 
-    python src/config_generator_cli.py ./tenantConfig.json service_configs
+    uv run src/config_generator_cli.py ./tenantConfig.json service_configs
 
 Generate permissions file:
 
-    python src/config_generator_cli.py ./tenantConfig.json permissions
+    uv run src/config_generator_cli.py ./tenantConfig.json permissions
 
 ### Service
 
@@ -94,23 +94,11 @@ You can change the versions of the schemas that the ConfigGenerator uses for ver
 
 Download JSON schemas:
 
-    python src/download_json_schemas.py master
+    uv run src/download_json_schemas.py master
 
 
 Development
 -----------
-
-Create a virtual environment:
-
-    virtualenv --python=/usr/bin/python3 --system-site-package .venv
-
-Activate virtual environment:
-
-    source .venv/bin/activate
-
-Install requirements:
-
-    pip install -r requirements.txt
 
 Run Demo-DB and QGIS Server:
 
@@ -118,4 +106,4 @@ Run Demo-DB and QGIS Server:
 
 Generate service configs and permissions for Docker:
 
-    python src/config_generator_cli.py ./tenantConfig-example.json all
+    uv run src/config_generator_cli.py ./tenantConfig-example.json all
