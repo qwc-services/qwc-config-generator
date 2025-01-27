@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import traceback
 from xml.etree import ElementTree
 
 from sqlalchemy.sql import text as sql_text
@@ -34,6 +35,7 @@ class DnDFormGenerator:
                 self.logger.info("Wrote %s_%s.ui" % (projectname, layername))
         except Exception as e:
             self.logger.warning("Failed to write form for layer %s: %s" % (layername, str(e)))
+            self.logger.debug(traceback.format_exc())
             return None
 
         return ":/forms/autogen/%s_%s.ui?v=%d" % (projectname, layername, int(time.time()))

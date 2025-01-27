@@ -3,6 +3,7 @@ import json
 import os
 from pathlib import Path
 import requests
+import traceback
 import urllib.parse
 
 from .external_layer_utils import resolve_external_layer
@@ -858,6 +859,7 @@ class MapViewerConfig(ServiceConfig):
                     "Could not get metadata for edit dataset '%s':\n%s" %
                     (dataset_name, e)
                 )
+                self.logger.debug(traceback.format_exc())
                 continue
 
             # check geometry type

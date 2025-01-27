@@ -8,6 +8,7 @@ from xml.etree import ElementTree
 import psycopg2
 import shutil
 import time
+import traceback
 from urllib.parse import quote as urlquote
 import zipfile
 
@@ -118,6 +119,7 @@ class QGSReader:
 
         except Exception as e:
             self.logger.error(e)
+            self.logger.debug(traceback.format_exc())
             return False
 
         return True

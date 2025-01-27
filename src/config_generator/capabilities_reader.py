@@ -5,6 +5,7 @@ from xml.etree import ElementTree
 import os
 import re
 import requests
+import traceback
 
 
 class CapabilitiesReader():
@@ -98,7 +99,7 @@ class CapabilitiesReader():
                     with open(cache_file, "w") as fh:
                         fh.write(document.decode('utf-8'))
                 except:
-                    pass
+                    self.logger.debug("Failed to store WMS GetProjectSettings for %s in cache: %s" % (full_url, str(e)))
 
             # parse WMS GetProjectSettings XML
             ElementTree.register_namespace('', 'http://www.opengis.net/wms')
@@ -244,6 +245,7 @@ class CapabilitiesReader():
                 "Could not parse WMS GetProjectSettings from %s:\n%s" %
                 (full_url, e)
             )
+            self.logger.debug(traceback.format_exc())
             return {}
 
     def collect_wms_layers(self, layer, layer_names, internal_print_layers, ns, np,
@@ -540,8 +542,8 @@ class CapabilitiesReader():
                     os.makedirs(os.path.dirname(cache_file), exist_ok=True)
                     with open(cache_file, "w") as fh:
                         fh.write(document.decode('utf-8'))
-                except:
-                    pass
+                except Exception as e:
+                    self.logger.debug("Failed to store WFS capabilities for %s in cache: %s" % (full_url, str(e)))
 
             # parse WFS Capabilities XML
             ElementTree.register_namespace('', 'http://www.opengis.net/wfs')
@@ -640,6 +642,7 @@ class CapabilitiesReader():
                 "Could not parse WFS GetCapabilities from %s:\n%s" %
                 (full_url, e)
             )
+            self.logger.debug(traceback.format_exc())
             return {}
 
     def collect_wfs_layers_attributes(self, full_url):
@@ -688,7 +691,7 @@ class CapabilitiesReader():
                     with open(cache_file, "w") as fh:
                         fh.write(document.decode('utf-8'))
                 except:
-                    pass
+                    self.logger.debug("Failed to store WFS DescribeFeatureType for %s in cache: %s" % (full_url, str(e)))
 
             # parse WFS Capabilities XML
             ElementTree.register_namespace('', 'http://www.w3.org/2001/XMLSchema')
@@ -726,4 +729,5 @@ class CapabilitiesReader():
                 "Could not parse WFS DescribeFeatureType from %s:\n%s" %
                 (full_url, e)
             )
+            self.logger.debug(traceback.format_exc())
             return {}
