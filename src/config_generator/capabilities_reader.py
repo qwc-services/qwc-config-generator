@@ -98,7 +98,7 @@ class CapabilitiesReader():
                     os.makedirs(os.path.dirname(cache_file), exist_ok=True)
                     with open(cache_file, "w") as fh:
                         fh.write(document.decode('utf-8'))
-                except:
+                except Exception as e
                     self.logger.debug("Failed to store WMS GetProjectSettings for %s in cache: %s" % (full_url, str(e)))
 
             # parse WMS GetProjectSettings XML
