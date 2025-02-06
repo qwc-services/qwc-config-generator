@@ -16,7 +16,6 @@ class DnDFormGenerator:
         self.generate_nested_nrel_forms = generate_nested_nrel_forms
         
     def generate_form(self, maplayer, projectname, layername, project):
-        self.logger.info("Generating edit form for layer %s of project %s" % (layername, projectname))
         widget = self.__generate_form_widget(maplayer, projectname, layername, project)
         if not widget:
             return None
@@ -32,7 +31,7 @@ class DnDFormGenerator:
             outputfile = os.path.join(outputdir, "%s_%s.ui" % (projectname, layername))
             with open(outputfile, "wb") as fh:
                 fh.write(text)
-                self.logger.info("Wrote %s_%s.ui" % (projectname, layername))
+                self.logger.info("Wrote edit form for layer {layer} of project {project} to {project}_{layer}.ui".format(layer=layername, project=projectname))
         except Exception as e:
             self.logger.warning("Failed to write form for layer %s: %s" % (layername, str(e)))
             self.logger.debug(traceback.format_exc())
