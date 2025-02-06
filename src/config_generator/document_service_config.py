@@ -41,6 +41,8 @@ class DocumentServiceConfig(ServiceConfig):
         scanned_document_templates = []
         for root, dirs, files in os.walk(self.report_dir):
             subdir = os.path.relpath(root, self.report_dir)
+            if subdir == ".":
+                subdir = ""
             scanned_document_templates += [
                 os.path.join(subdir, file[:-6]) for file in files if file.endswith(".jrxml")
             ]
@@ -106,6 +108,8 @@ class DocumentServiceConfig(ServiceConfig):
                 available_document_templates = []
                 for root, dirs, files in os.walk(self.report_dir):
                     subdir = os.path.relpath(root, self.report_dir)
+                    if subdir == ".":
+                        subdir = ""
                     available_document_templates += [
                         os.path.join(subdir, file[:-6]) for file in files if file.endswith(".jrxml")
                     ]
