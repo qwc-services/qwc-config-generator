@@ -216,7 +216,7 @@ class QGSReader:
 
             composer_map = template.find(".//LayoutItem[@type='65639']")
             if template.tag != "Layout" or composer_map is None:
-                self.logger.info("Skipping invalid print template " + template.get('name') + " (may not contain a layout map element)")
+                self.logger.warning("Skipping invalid print template " + template.get('name') + " (may not contain a layout map element)")
                 continue
 
             size = composer_map.get('size').split(',')
