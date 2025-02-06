@@ -56,7 +56,8 @@ class MapViewerConfig(ServiceConfig):
     }
 
     def __init__(self, tenant_path, generator_config, themes_reader,
-                 config_models, schema_url, service_config, logger):
+                 config_models, schema_url, service_config, logger,
+                 use_cached_project_metadata, cache_dir):
         """Constructor
 
         :param str tenant_path: Path to config files of tenant
@@ -66,12 +67,16 @@ class MapViewerConfig(ServiceConfig):
         :param str schema_url: JSON schema URL for service config
         :param obj service_config: Additional service config
         :param Logger logger: Logger
+        :param bool use_cached_project_metadata: Whether to use cached project metadata if available
+        :param str cache_dir: Project metadata cache directory
         """
         super().__init__('mapViewer', schema_url, service_config, logger)
 
         self.tenant_path = tenant_path
         self.themes_reader = themes_reader
         self.config_models = config_models
+        self.use_cached_project_metadata = use_cached_project_metadata
+        self.cache_dir = cache_dir
         self.permissions_query = PermissionsQuery(config_models, logger)
         # helper method alias
         self.permitted_resources = self.permissions_query.permitted_resources
@@ -296,7 +301,7 @@ class MapViewerConfig(ServiceConfig):
                 self.logger.warn("Skipping unused background layer %s" % entry.get("name", ""))
                 continue
             if "resource" in entry:
-                layer = resolve_external_layer(entry["resource"], self.logger, self.project_settings_read_timeout, bgLayerCrs[entry["name"]])
+                layer = resolve_external_layer(entry["resource"], self.logger, self.project_settings_read_timeout, bgLayerCrs[entry["name"]], self.use_cached_project_metadata, self.cache_dir)
                 if layer:
                     layer["name"] = entry["name"]
                     entry.update(layer)
@@ -304,7 +309,7 @@ class MapViewerConfig(ServiceConfig):
 
         # Resolve external layers
         for entry in autogenExternalLayers:
-            layer = resolve_external_layer(entry, self.logger, self.project_settings_read_timeout)
+            layer = resolve_external_layer(entry, self.logger, self.project_settings_read_timeout, None, self.use_cached_project_metadata, self.cache_dir)
             if layer:
                 themes["externalLayers"].append(layer)
 

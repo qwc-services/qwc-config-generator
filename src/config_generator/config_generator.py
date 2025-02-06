@@ -134,7 +134,6 @@ class ConfigGenerator():
         :param Logger logger: Logger
         :param bool use_cached_project_metadata: Whether to use cached project metadata if available
         :param bool force_readonly_datasets: Whether to force all datasets readonly
-        :param str cache_dir: Project metadata cache directory
         """
         self.logger = Logger(logger)
 
@@ -252,9 +251,10 @@ class ConfigGenerator():
         print_layouts = self.search_print_layouts(generator_config)
 
         # load metadata for all QWC2 theme items
+        capabilities_cache_dir = os.path.join(self.config_path, "__capabilities_cache")
         self.theme_reader = ThemeReader(
             generator_config, config["themesConfig"], self.logger, print_layouts,
-            use_cached_project_metadata, os.path.join(self.config_path, "__capabilities_cache")
+            use_cached_project_metadata, capabilities_cache_dir
         )
 
         # lookup for additional service configs by name
@@ -310,7 +310,8 @@ class ConfigGenerator():
                 self.temp_tenant_path,
                 generator_config, self.theme_reader, self.config_models,
                 self.schema_urls.get('mapViewer'),
-                self.service_config('mapViewer'), self.logger
+                self.service_config('mapViewer'), self.logger,
+                use_cached_project_metadata, capabilities_cache_dir
             ),
             'featureInfo': FeatureInfoServiceConfig(
                 generator_config, self.theme_reader, self.config_models,

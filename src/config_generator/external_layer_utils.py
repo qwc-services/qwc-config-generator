@@ -1,3 +1,4 @@
+import os
 import re
 import urllib.request
 from xml.dom.minidom import parseString
@@ -42,7 +43,7 @@ def getWmsRequestUrl(WMS_Capabilities, reqType, urlObj):
     except:
         return urllib.parse.urlunparse(urlObj)
 
-def resolve_external_layer(resource, logger, timeout, crs=None):
+def resolve_external_layer(resource, logger, timeout, crs, use_cached_project_metadata, cache_dir):
     cpos = resource.find(':')
     hpos = resource.rfind('#')
     if hpos == -1:
@@ -63,22 +64,61 @@ def resolve_external_layer(resource, logger, timeout, crs=None):
             urlobj = urlobj._replace(query=urllib.parse.urlencode(params))
             url = urllib.parse.urlunparse(urlobj)
 
-        return get_external_wms_layer(resource, url, layername, infoFormat, logger, timeout)
+        return get_external_wms_layer(resource, url, layername, infoFormat, logger, timeout, use_cached_project_metadata, cache_dir)
     elif type == "wmts":
         if not crs:
             urlobj = urllib.parse.urlparse(url)
             params = dict(urllib.parse.parse_qsl(urlobj.query))
             crs = params.get('crs', 'EPSG:3857')
-        return get_external_wmts_layer(resource, url, layername, crs, logger, timeout)
+        return get_external_wmts_layer(resource, url, layername, crs, logger, timeout, use_cached_project_metadata, cache_dir)
     elif type == "mvt":
         return get_extermal_mvt_layer(resource, url, layername)
     else:
         logger.warn("Unknown external layer: %s" % resource)
         return None
 
-def get_external_wms_layer(resource, url, layerName, infoFormat, logger, timeout):
-
+def fetch_capabilities(capabilitiesUrl, resource, logger, timeout, use_cached_project_metadata, cache_dir):
     global capabilites_cache
+
+    capabilitiesXml = None
+    cache_file = os.path.join(cache_dir, capabilitiesUrl.replace('/', '_').replace(':', '_'))
+
+    if use_cached_project_metadata:
+        try:
+            with open(cache_file) as fh:
+                capabilitiesXml = fh.read()
+                logger.info("Using cached capabilities for external layer %s" % resource)
+        except:
+            pass
+    else:
+        cache_entry = capabilites_cache.lookup(capabilitiesUrl)
+        if cache_entry:
+            capabilitiesXml = cache_entry["value"]
+
+    if not capabilitiesXml:
+        try:
+            response = urllib.request.urlopen(capabilitiesUrl, timeout=timeout)
+        except:
+            logger.warn("Failed to download capabilities for external layer %s" % resource)
+            return None
+
+        try:
+            capabilitiesXml = response.read()
+        except:
+            logger.warn("Failed to parse capabilities for external layer %s" % resource)
+            return None
+
+        capabilites_cache.set(capabilitiesUrl, capabilitiesXml)
+        try:
+            os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+            with open(cache_file, "w") as fh:
+                fh.write(capabilitiesXml.decode('utf-8'))
+        except Exception as e:
+            logger.debug("Failed to store capabilities for external layer %s: %s" % (resource, str(e)))
+
+    return capabilitiesXml
+
+def get_external_wms_layer(resource, url, layerName, infoFormat, logger, timeout, use_cached_project_metadata, cache_dir):
 
     urlobj = urllib.parse.urlparse(url)
     params = dict(urllib.parse.parse_qsl(urlobj.query))
@@ -104,22 +144,9 @@ def get_external_wms_layer(resource, url, layerName, infoFormat, logger, timeout
     capUrlObj = urlobj._replace(query=urllib.parse.urlencode(params))
     capabilitiesUrl = urllib.parse.urlunparse(capUrlObj)
 
-    if not capabilites_cache.lookup(capabilitiesUrl):
-        try:
-            response = urllib.request.urlopen(capabilitiesUrl, timeout=timeout)
-        except:
-            logger.warn("Failed to download capabilities for external layer %s" % resource)
-            return None
-
-        try:
-            capabilitiesXml = response.read()
-        except:
-            logger.warn("Failed to parse capabilities for external layer %s" % resource)
-            return None
-
-        capabilites_cache.set(capabilitiesUrl, capabilitiesXml)
-    else:
-        capabilitiesXml = capabilites_cache.lookup(capabilitiesUrl)["value"]
+    capabilitiesXml = fetch_capabilities(capabilitiesUrl, resource, logger, timeout, use_cached_project_metadata, cache_dir)
+    if not capabilitiesXml:
+        return None
 
     capabilities = parseString(capabilitiesXml)
     contents = getFirstElementByTagName(capabilities, "WMS_Capabilities")
@@ -198,26 +225,11 @@ def get_external_wms_layer(resource, url, layerName, infoFormat, logger, timeout
     }
 
 
-def get_external_wmts_layer(resource, capabilitiesUrl, layerName, crs, logger, timeout):
+def get_external_wmts_layer(resource, capabilitiesUrl, layerName, crs, logger, timeout, use_cached_project_metadata, cache_dir):
 
-    global capabilites_cache
-
-    if not capabilites_cache.lookup(capabilitiesUrl):
-        try:
-            response = urllib.request.urlopen(capabilitiesUrl, timeout=timeout)
-        except:
-            logger.warn("Failed to download capabilities for external layer %s" % resource)
-            return None
-
-        try:
-            capabilitiesXml = response.read()
-        except:
-            logger.warn("Failed to parse capabilities for external layer %s" % resource)
-            return None
-
-        capabilites_cache.set(capabilitiesUrl, capabilitiesXml)
-    else:
-        capabilitiesXml = capabilites_cache.lookup(capabilitiesUrl)["value"]
+    capabilitiesXml = fetch_capabilities(capabilitiesUrl, resource, logger, timeout, use_cached_project_metadata, cache_dir)
+    if not capabilitiesXml:
+        return None
 
     capabilities = parseString(capabilitiesXml)
     contents = getFirstElementByTagName(capabilities, "Contents")
