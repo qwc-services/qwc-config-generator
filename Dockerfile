@@ -9,6 +9,7 @@ RUN \
     apk add --no-cache --virtual runtime-deps postgresql-libs && \
     apk add --no-cache --virtual build-deps --update git postgresql-dev g++ python3-dev && \
     uv sync --frozen && \
+    uv cache clean && \
     apk del build-deps
 
 ADD src /srv/qwc_service/
