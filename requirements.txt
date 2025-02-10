@@ -203,9 +203,9 @@ psycopg2==2.9.10 \
 python-dotenv==1.0.1 \
     --hash=sha256:e324ee90a023d808f1959c46bcbc04446a10ced277783dc6ee09987c37ec10ca \
     --hash=sha256:f7b63ef50f1b690dddf550d03497b66d609393b40b564ed0d674909a68ebf16a
-qwc-services-core==1.4.1 \
-    --hash=sha256:809f2f7a589e13927e856aa783f3b4b47cb9407ae973af5b588a4ff04731441a \
-    --hash=sha256:a806a683b97b34cfc9c88de69c2bcc3160078cfd649a98827c13a5d9ec78242c
+qwc-services-core==1.4.3 \
+    --hash=sha256:9a634faf0441432057cd5a02bdf15ff885c790c3a7423a1d4081d0a02e291222 \
+    --hash=sha256:ba415b71a9445f85f4a4ce070f28ca760ee4dd4053ca8157f3efb76bd8f854aa
 referencing==0.36.2 \
     --hash=sha256:df2e89862cd09deabbdba16944cc3f10feb6b3e6f18e902f7cc25609a34775aa \
     --hash=sha256:e8699adbbf8b5c7de96d8ffa0eb5c158b3beafce084968e2ea8bb08c6794dcd0
