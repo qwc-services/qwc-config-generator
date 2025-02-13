@@ -96,14 +96,3 @@ Download JSON schemas:
 
     uv run src/download_json_schemas.py master
 
-
-Development
------------
-
-Run Demo-DB and QGIS Server:
-
-    cd ../qwc-docker && docker-compose up -d qwc-postgis qwc-qgis-server
-
-Generate service configs and permissions for Docker:
-
-    uv run src/config_generator_cli.py ./tenantConfig-example.json all
