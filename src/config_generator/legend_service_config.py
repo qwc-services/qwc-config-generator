@@ -26,16 +26,15 @@ class LegendServiceConfig(ServiceConfig):
         """
         super().__init__('legend', schema_url, service_config, logger)
 
+        self.config_models = config_models
+        self.permissions_query = PermissionsQuery(config_models, logger)
+
         # get default QGIS server URL from ConfigGenerator config
         self.default_qgis_server_url = generator_config.get(
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
-        self.legend_images_path = None
 
         self.themes_reader = themes_reader
-
-        self.config_models = config_models
-        self.permissions_query = PermissionsQuery(config_models, logger)
 
     def config(self):
         """Return service config."""
@@ -50,7 +49,6 @@ class LegendServiceConfig(ServiceConfig):
             cfg_config['default_qgis_server_url'] = \
                 self.default_qgis_server_url
 
-        self.legend_images_path = cfg_config['legend_images_path']
         config['config'] = cfg_config
 
         resources = OrderedDict()
@@ -133,16 +131,6 @@ class LegendServiceConfig(ServiceConfig):
         # NOTE: use ordered keys
         wms_layer = OrderedDict()
         wms_layer['name'] = layer['name']
-
-        layer_legend_images_path = os.path.join(
-            self.legend_images_path, mapid, layer['name'])
-
-        # Look for already existing legend images in self.legend_images_path,
-        # without looking at the file extensions
-        legend_image_path_candidates = glob.glob(layer_legend_images_path + ".*")
-        if legend_image_path_candidates:
-            # If there are multiple images found, then just take the first one
-            wms_layer['legend_image'] = legend_image_path_candidates[0]
 
         if 'layers' in layer:
             # group layer
