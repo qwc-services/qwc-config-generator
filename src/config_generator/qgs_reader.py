@@ -233,9 +233,11 @@ class QGSReader:
 
             atlas = template.find("Atlas")
             if atlas is not None and atlas.get("enabled") == "1":
-                atlasLayer = atlas.get('coverageLayerName')
-                print_template['atlasCoverageLayer'] = self.__lookup_short_name(atlasLayer)
-                print_template['atlas_pk'] = self.__table_metadata(atlas.get('coverageLayerSource'))['primary_key']
+                tableMetadata = self.__table_metadata(atlas.get('coverageLayerSource'))
+                if 'primary_key' in tableMetadata:
+                    atlasLayer = atlas.get('coverageLayerName')
+                    print_template['atlasCoverageLayer'] = self.__lookup_short_name(atlasLayer)
+                    print_template['atlas_pk'] = tableMetadata['primary_key']
 
             labels = []
             for label in template.findall(".//LayoutItem[@type='65641']"):
