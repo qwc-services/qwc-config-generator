@@ -679,9 +679,6 @@ class QGSReader:
                             row['character_maximum_length']):
                         constraints['maxlength'] = \
                             row['character_maximum_length']
-                    elif data_type in ['double precision', 'real']:
-                        # NOTE: use text field with pattern for floats
-                        constraints['pattern'] = '[0-9]+([\\.,][0-9]+)?'
                     elif data_type == 'numeric' and row['numeric_precision']:
                         step = pow(10, -row['numeric_scale'])
                         max_value = pow(

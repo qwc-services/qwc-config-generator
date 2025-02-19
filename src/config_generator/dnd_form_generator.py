@@ -120,8 +120,9 @@ class DnDFormGenerator:
             optMin = editWidget.find("config/Option/Option[@name='Min']")
             optMax = editWidget.find("config/Option/Option[@name='Max']")
             optStep = editWidget.find("config/Option/Option[@name='Step']")
+            optPrecision = editWidget.find("config/Option/Option[@name='Precision']")
             optStyle = editWidget.find("config/Option/Option[@name='Style']")
-            className = "QSpinBox"
+            className = "QDoubleSpinBox"
             if optStyle is not None and optStyle.get("value") == "Slider":
                 className = "QSlider"
                 self.__add_widget_property(widget, "orientation", None, None, "Qt::Horizontal", "property", "enum")
@@ -129,6 +130,7 @@ class DnDFormGenerator:
             self.__add_widget_property(widget, "minimum", optMin, "value", "-2147483648")
             self.__add_widget_property(widget, "maximum", optMax, "value", "2147483647")
             self.__add_widget_property(widget, "singleStep", optStep, "value", "1")
+            self.__add_widget_property(widget, "decimals", optPrecision, "value", "0")
             return widget
         elif editWidget.get("type") == "DateTime":
             fieldFormatEl = editWidget.find("config/Option/Option[@name='field_format']")
