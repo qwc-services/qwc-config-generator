@@ -396,12 +396,16 @@ class FeatureInfoServiceConfig(ServiceConfig):
                                 role_permissions['info_attributes'].get(info_service, {}).get(info_layer, {})
 
                             # Special case: if info_attribute is not explicitly permitted,
-                            # but permissions are default_allow or inherited and the attribute is permitted and
-                            # the info_attribute is not explicitly resticted, then allow info_attribute
+                            # but permissions are default_allow or inherited and the attribute or the parent layer is permitted and
+                            # the info_attribute or attribute are not explicitly resticted, then allow info_attribute
                             if not info_attr_permitted_for_role and \
                                 (self.permissions_default_allow or self.inherit_info_permissions) and \
                                     info_attribute not in public_restrictions['info_attributes'].get(info_service, {}).get(info_layer, {}) and \
-                                    info_attribute in role_permissions['attributes'].get(info_service, {}).get(info_layer, {}):
+                                    info_attribute not in public_restrictions['attributes'].get(info_service, {}).get(info_layer, {}) and \
+                                    (
+                                        info_attribute in role_permissions['attributes'].get(info_service, {}).get(info_layer, {}) or
+                                        info_layer_permitted_for_role
+                                    ):
                                 info_attr_permitted_for_role = True
 
                             if (is_public_role and not info_attr_restricted_for_public):
