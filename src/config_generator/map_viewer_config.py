@@ -400,6 +400,8 @@ class MapViewerConfig(ServiceConfig):
         item['description'] = cfg_item.get('description', '')
 
         item['wmsOnly'] = cfg_item.get('wmsOnly', False)
+        if item['wmsOnly'] == True:
+            self.logger.info("Configuring %s as WMS-only theme" % cfg_item['url'])
 
         # URL relative to OGC service
         item['wms_name'] = service_name
