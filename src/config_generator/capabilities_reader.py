@@ -355,7 +355,7 @@ class CapabilitiesReader():
         if layer.find('%sAbstract' % np, ns) is not None:
             wms_layer["abstract"] = layer.find('%sAbstract' % np, ns).text
 
-        if layer.find('%sKeywordList' % np, ns):
+        if layer.find('%sKeywordList' % np, ns) is not None:
             keywords = []
             for keyword in layer.find('%sKeywordList' % np, ns).findall(
                     '%sKeyword' % np, ns):
