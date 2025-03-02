@@ -10,10 +10,6 @@ from config_generator.config_generator import ConfigGenerator
 # Flask application
 app = Flask(__name__)
 
-config_in_path = os.environ.get(
-    'INPUT_CONFIG_PATH', 'config-in/'
-).rstrip('/') + '/'
-
 
 def config_generator(tenant, use_cached_project_metadata, force_readonly_datasets=False):
     """Create a ConfigGenerator instance.
@@ -26,6 +22,9 @@ def config_generator(tenant, use_cached_project_metadata, force_readonly_dataset
         raise Exception(msg)
 
     # read ConfigGenerator config file
+    config_in_path = os.environ.get(
+        'INPUT_CONFIG_PATH', 'config-in/'
+    ).rstrip('/') + '/'
     config_file_dir = os.path.join(config_in_path, tenant)
     try:
         config_file = os.path.join(
