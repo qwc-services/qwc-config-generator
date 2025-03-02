@@ -17,7 +17,7 @@ class DnDFormGenerator:
         
     def generate_form(self, maplayer, projectname, layername, project):
         widget = self.__generate_form_widget(maplayer, projectname, layername, project)
-        if not widget:
+        if widget is None:
             return None
 
         ui = ElementTree.Element("ui")
@@ -56,7 +56,7 @@ class DnDFormGenerator:
 
         if editorlayout.text == "tablayout":
             attributeEditorForm = maplayer.find('attributeEditorForm')
-            if not attributeEditorForm:
+            if attributeEditorForm is None:
                 return None
             self.__add_tablayout_fields(maplayer, projectname, layername, project, widget, attributeEditorForm, aliases)
         elif editorlayout.text == "generatedlayout":
