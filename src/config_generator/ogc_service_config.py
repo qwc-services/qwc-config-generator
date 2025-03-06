@@ -155,6 +155,8 @@ class OGCServiceConfig(ServiceConfig):
             if 'attributes' in layer:
                 wms_layer['attributes'] = layer['attributes']
 
+            wms_layer['queryable'] = layer.get('queryable', False)
+
         return wms_layer
 
     def wfs_services(self):
