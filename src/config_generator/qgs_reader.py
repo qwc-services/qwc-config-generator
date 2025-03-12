@@ -318,6 +318,8 @@ class QGSReader:
         """
         # NOTE: use ordered keys
         metadata = OrderedDict()
+        if not datasource:
+            return metadata
 
         # parse schema, table and geometry column
         m = re.search(r'table="([^"]+)"\."([^"]+)" \((\w+)\)', datasource)
