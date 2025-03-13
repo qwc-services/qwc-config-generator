@@ -362,7 +362,7 @@ wheels = [
 
 [[package]]
 name = "qwc-config-generator"
-version = "2025.3.12"
+version = "2025.3.13"
 source = { virtual = "." }
 dependencies = [
     { name = "deepmerge" },
