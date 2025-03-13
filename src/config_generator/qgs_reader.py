@@ -47,6 +47,13 @@ class QGSReader:
 
     def read(self):
         """Read QGIS project file and return True on success.
+
+        :param db_pool_size: Maximum number of database connections
+        :param db_max_overflow: Additional connections beyond pool_size during peak load
+        :param db_pool_timeout: Time (in seconds) to wait for a connection to become available
+        :param db_pool_recycle: Time (in seconds) after idle connections will be resetted
+
+        see https://docs.sqlalchemy.org/en/latest/core/engines.html#sqlalchemy.create_engine
         """
 
         try:
@@ -55,7 +62,14 @@ class QGSReader:
                 self.qgs_path = self.qgs_resources_path
                 qgs_filename = 'postgresql:///?service=qgisprojects&schema=%s&project=%s' % (parts[1], parts[2])
 
-                qgis_projects_db = self.db_engine.db_engine("postgresql:///?service=qgisprojects")
+                self.db_pool_size = self.config.get('db_pool_size', 10)
+                self.db_max_overflow = self.config.get('db_max_overflow', 20)
+                self.db_pool_timeout = self.config.get('db_pool_timeout', 30)
+                self.db_pool_recycle = self.config.get('db_pool_recycle', 300)
+
+                qgis_projects_db = self.db_engine.db_engine("postgresql:///?service=qgisprojects", 
+                                                            pool_size=self.db_pool_size, max_overflow=self.db_max_overflow, 
+                                                            pool_timeout=self.db_pool_timeout, pool_recycle=self.db_pool_recycle)
 
                 with qgis_projects_db.connect() as conn:
                     sql = sql_text("""
