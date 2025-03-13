@@ -525,11 +525,12 @@ class QGSReader:
                     "config/Option/Option[@type='List']/Option"
             ):
                 option = option_map.find("Option")
-                # NOTE: use ordered keys
-                value = OrderedDict()
-                value['label'] = option.get('name')
-                value['value'] = option.get('value')
-                values.append(value)
+                if option.get('type') != "invalid":
+                    # NOTE: use ordered keys
+                    value = OrderedDict()
+                    value['label'] = option.get('name')
+                    value['value'] = option.get('value')
+                    values.append(value)
 
             if values:
                 constraints['values'] = values
