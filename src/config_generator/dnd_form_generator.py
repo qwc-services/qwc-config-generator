@@ -153,7 +153,7 @@ class DnDFormGenerator:
             if optMap is not None:
                 for opt in optMap:
                     child = opt.find("Option")
-                    if child is not None:
+                    if child is not None and child.get("type") != "invalid":
                         item = ElementTree.Element("item")
                         self.__add_widget_property(item, "value", child, "value")
                         self.__add_widget_property(item, "text", child, "name")
