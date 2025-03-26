@@ -515,7 +515,7 @@ class MapViewerConfig(ServiceConfig):
         item['searchProviders'] = search_providers
 
         # edit config
-        item['editConfig'] = self.edit_config(name, cfg_item, assets_dir)
+        item['editConfig'] = self.edit_config(service_name, cfg_item, assets_dir)
 
         self.set_optional_config(cfg_item, 'watermark', item)
         self.set_optional_config(cfg_item, 'config', item)
