@@ -282,10 +282,16 @@ def get_external_wmts_layer(resource, capabilitiesUrl, layerName, crs, logger, t
 
     # Determine style
     styleIdentifier = ""
+    styleIdentifiers = []
     for style in targetLayer.getElementsByTagName("Style"):
         if style.getAttribute("isDefault") == "true":
             styleIdentifier = getFirstElementValueByTagName(style, "ows:Identifier")
             break
+        else:
+            styleIdentifiers.append(getFirstElementValueByTagName(style, "ows:Identifier"))
+    # Use first style
+    if not styleIdentifier:
+        styleIdentifier = styleIdentifiers[0]
 
     # Resource URL
     tileUrl = None
