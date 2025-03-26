@@ -335,6 +335,9 @@ def get_external_wmts_layer(resource, capabilitiesUrl, layerName, crs, logger, t
                 if constraint.getAttribute("name") == "GetEncoding":
                     requestEncoding = getFirstElementValueByTagName(constraint, "ows:Value")
 
+    if requestEncoding == "KVP":
+        tileUrl = capabilitiesUrl.split("?")[0]
+
     return {
         "type": "wmts",
         "url": tileUrl,
