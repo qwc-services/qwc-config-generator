@@ -191,6 +191,7 @@ def get_external_wms_layer(resource, url, layerName, infoFormat, logger, timeout
     legendUrl = getWmsRequestUrl(contents, "sld:GetLegendGraphic", urlobj)
 
     # BBOX
+    bbox = None
     boundingBox = getFirstElementByTagName(targetLayer, "BoundingBox")
     if boundingBox is not None:
         bbox = {
