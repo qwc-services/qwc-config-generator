@@ -49,7 +49,8 @@ class ThemeReader():
         )
 
         self.read_metadata_for_group(
-            themes_config.get('themes', {})
+            themes_config.get('themes', {}),
+            themes_config
         )
 
     def wms_service_names(self):
@@ -65,16 +66,16 @@ class ThemeReader():
                 wfs_services.append(service_name)
         return sorted(wfs_services)
 
-    def read_metadata_for_group(self, item_group):
+    def read_metadata_for_group(self, item_group, themes_config):
         """Recursively read theme metadata for theme item group."""
         for item in item_group.get('items', []):
-            self.read_metadata_for_theme(item)
+            self.read_metadata_for_theme(item, themes_config)
 
         for group in item_group.get('groups', []):
             # collect group items
-            self.read_metadata_for_group(group)
+            self.read_metadata_for_group(group, themes_config)
 
-    def read_metadata_for_theme(self, item):
+    def read_metadata_for_theme(self, item, themes_config):
         """Read theme metadata for a theme item.
 
         :param obj item: QWC2 themes config item.
@@ -88,7 +89,7 @@ class ThemeReader():
 
         self.logger.info("<b>Reading theme %s</b>" % url)
 
-        wms_capabilities = self.capabilities_reader.read_wms_service_capabilities(url, service_name, item)
+        wms_capabilities = self.capabilities_reader.read_wms_service_capabilities(url, service_name, item, themes_config)
 
         wfs_capabilities = {}
         if self.generate_wfs_services:
