@@ -44,12 +44,13 @@ class CapabilitiesReader():
 
     # WMS GetProjectSettings
 
-    def read_wms_service_capabilities(self, url, service_name, item):
+    def read_wms_service_capabilities(self, url, service_name, item, themes_config):
         """Load and parse WMS GetProjectSettings for a theme item.
 
         :param str url: service URL
         :param str service_name: service name
         :param object item: theme item
+        :param object themes_config: themes config
         """
 
         try:
@@ -180,7 +181,7 @@ class CapabilitiesReader():
 
             # collect internal print layers
             internal_print_layers = item.get('extraPrintLayers', [])
-            for bg_layer in item.get('backgroundLayers', []):
+            for bg_layer in item.get('backgroundLayers', themes_config.get('defaultBackgroundLayers', [])):
                 printLayer = bg_layer.get('printLayer', None)
                 if printLayer:
                     if isinstance(printLayer, str):
