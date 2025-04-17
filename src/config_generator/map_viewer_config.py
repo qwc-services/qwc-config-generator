@@ -298,11 +298,8 @@ class MapViewerConfig(ServiceConfig):
 
         # Resolve background layers
         for entry in themes['backgroundLayers']:
-            if not "name" in entry or not entry["name"] in bgLayerCrs:
-                self.logger.warn("Skipping unused background layer %s" % entry.get("name", ""))
-                continue
             if "resource" in entry:
-                layer = resolve_external_layer(entry["resource"], self.logger, self.project_settings_read_timeout, bgLayerCrs[entry["name"]], self.use_cached_project_metadata, self.cache_dir)
+                layer = resolve_external_layer(entry["resource"], self.logger, self.project_settings_read_timeout, entry.get("projection", bgLayerCrs.get(entry["name"])), self.use_cached_project_metadata, self.cache_dir)
                 if layer:
                     layer["name"] = entry["name"]
                     entry.update(layer)
