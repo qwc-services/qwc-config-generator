@@ -711,6 +711,9 @@ class ConfigGenerator():
 
         base_path = Path(qgis_projects_scan_base_dir)
         for item in base_path.glob('**/*'):
+            # Skip hidden files/folders
+            if item.name.startswith("."):
+                continue
             if group_scanned_projects_by_dir and item.is_dir():
                 if item.parent == base_path:
                     # Search if dir is already a group
