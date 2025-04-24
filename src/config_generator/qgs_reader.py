@@ -570,7 +570,6 @@ class QGSReader:
             constraints['fileextensions'] = self.__parse_fileextensions(filterOpt.get('value')) if filterOpt is not None else ""
         elif edit_widget.get('type') == 'Hidden':
             constraints['hidden'] = True
-            constraints['readOnly'] = True
         elif edit_widget.get('type') == 'CheckBox':
             constraints['required'] = False
 
