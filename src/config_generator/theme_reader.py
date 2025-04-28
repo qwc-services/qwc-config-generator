@@ -82,6 +82,10 @@ class ThemeReader():
         """
         # get service name
         url = item.get('url')
+        # check if theme is disabled
+        if item.get('disabled', False):
+            self.logger.info(f"Theme {url} {"(" + item.get("title") + ")" if item.get("title") else ""} has been disabled")
+            return
         service_name = self.service_name(url)
         if service_name in self.theme_metadata:
             # skip service already in cache

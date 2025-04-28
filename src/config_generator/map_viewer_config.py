@@ -365,6 +365,7 @@ class MapViewerConfig(ServiceConfig):
         :param obj cfg_item: Themes config item
         :param str assets_dir: Assets dir
         """
+        if cfg_item.get('disabled', False): return None
         # NOTE: use ordered keys
         item = OrderedDict()
 
