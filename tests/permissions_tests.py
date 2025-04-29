@@ -79,6 +79,9 @@ class PermissionsTests(unittest.TestCase):
             url = "/generate_configs?tenant=default&use_cached_project_metadata=true"
             response = self.app.post(url)
 
+            # Wait for full response
+            data = response.get_data(as_text=True)
+
             if response.status_code != 200:
                 print(response.text)
             self.assertEqual(response.status_code, 200)
