@@ -489,7 +489,7 @@ class MapViewerConfig(ServiceConfig):
                     ]
                     print_template['labels'] = labels
 
-                print_template['default'] = print_template['name'] == cfg_item.get('defaultPrintLayout')
+                print_template['default'] = print_template['name'].split("/")[-1] == cfg_item.get('defaultPrintLayout')
             item['print'] = print_templates
 
         self.set_optional_config(cfg_item, 'printLabelConfig', item)
