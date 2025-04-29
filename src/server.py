@@ -100,7 +100,10 @@ def generate_configs():
             except queue.Empty:
                 pass
 
-    return Response(stream_with_context(log_stream()), mimetype='text/plain')
+    if request.args.get("stream_response", "").lower() in ["1","true"]:
+        return Response(stream_with_context(log_stream()), mimetype='text/plain')
+    else:
+        return Response(''.join(log_stream()), mimetype='text/plain')
 
 @app.route("/maps", methods=['GET'])
 def maps():
