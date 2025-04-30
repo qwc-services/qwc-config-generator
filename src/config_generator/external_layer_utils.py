@@ -247,7 +247,7 @@ def get_external_wmts_layer(resource, capabilitiesUrl, layerName, crs, logger, t
             break
 
     if not targetLayer:
-        logger.warn("Could not find external layer %s in capabilities" % entry)
+        logger.warn("Could not find external layer %s in capabilities %s" % (layerName, capabilitiesUrl))
         return None
 
     # Get supported tile matrix
