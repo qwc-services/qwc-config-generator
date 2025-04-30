@@ -279,10 +279,13 @@ def get_external_wmts_layer(resource, capabilitiesUrl, layerName, crs, logger, t
         int(getFirstElementValueByTagName(tileMatrix[0], "TileHeight"))
     ]
     resolutions = []
+    matrixIds = []
     for entry in tileMatrix:
         scaleDenominator = getFirstElementValueByTagName(entry, "ScaleDenominator")
+        matrixId = getFirstElementValueByTagName(entry, "ows:Identifier")
         # 0.00028: assumed pixel width in meters, as per WMTS standard
         resolutions.append(float(scaleDenominator) * 0.00028)
+        matrixIds.append(matrixId)
 
     # Determine style
     styleIdentifier = ""
@@ -354,6 +357,7 @@ def get_external_wmts_layer(resource, capabilitiesUrl, layerName, crs, logger, t
         "capabilitiesUrl": capabilitiesUrl,
         "title": title,
         "name": resource,
+        "layerName": layerName,
         "format": format,
         "requestEncoding": requestEncoding,
         "tileMatrixPrefix": "",
@@ -368,6 +372,7 @@ def get_external_wmts_layer(resource, capabilitiesUrl, layerName, crs, logger, t
             "bounds": bounds
         },
         "resolutions": resolutions,
+        "matrixIds": matrixIds,
         "abstract": abstract,
         "attribution": attribution
     }
