@@ -152,6 +152,9 @@ def get_external_wms_layer(resource, url, layerName, infoFormat, logger, timeout
     contents = getFirstElementByTagName(capabilities, "WMS_Capabilities")
     if not contents:
         contents = getFirstElementByTagName(capabilities, "WMT_MS_Capabilities")
+    if not contents:
+        logger.warn("Could not parse capabilities for external layer %s" % resource)
+        return None
 
     targetLayer = None
     for layer in contents.getElementsByTagName("Layer"):
