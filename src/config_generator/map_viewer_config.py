@@ -733,6 +733,8 @@ class MapViewerConfig(ServiceConfig):
             # visible
             item_layer['visibility'] = layer['visible']
         else:
+            meta = self.themes_reader.layer_metadata(service_name, layer['name'])
+
             # layer
             item_layer['visibility'] = layer['visible']
             item_layer['geometryType'] = layer['geometryType']
@@ -765,14 +767,9 @@ class MapViewerConfig(ServiceConfig):
             if 'dimensions' in layer:
                 item_layer["dimensions"] = layer.get('dimensions')
                 # Fallback for pre qgis-3.26.0
-                meta = None
                 for dimension in item_layer["dimensions"]:
                     if not dimension["fieldName"]:
-                        if not meta:
-                            meta = self.themes_reader.layer_metadata(service_name, layer['name'])
-                            if not meta or 'dimensions' not in meta:
-                                break
-                        dimmeta = meta['dimensions']
+                        dimmeta = meta.get('dimensions', {})
                         if dimension['name'] in dimmeta:
                             dimension["fieldName"] = dimmeta[dimension['name']]["fieldName"]
                             dimension["endFieldName"] = dimmeta[dimension['name']]["endFieldName"]
@@ -806,6 +803,9 @@ class MapViewerConfig(ServiceConfig):
             # featureReport
             if layer['name'] in featureReports:
                 item_layer['featureReport'] = featureReports[layer['name']]
+
+            # refresh interval
+            item_layer['refreshInterval'] = meta.get('refresh_interval', 0)
 
         return item_layer
 

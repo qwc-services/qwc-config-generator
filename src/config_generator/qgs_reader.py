@@ -175,19 +175,20 @@ class QGSReader:
                 maplayer_name = maplayer.find('layername').text
             if maplayer_name == layer_name:
 
+                config['refresh_interval'] = int(maplayer.get('autoRefreshTime', 0))
                 config.update(self.__attributes_metadata(maplayer))
                 config.update(self.__dimension_metadata(maplayer))
 
                 provider = maplayer.find('provider').text
-                if provider != 'postgres':
+                if provider == 'postgres':
+                    datasource = maplayer.find('datasource').text
+                    database, datasource_filter = self.__db_connection(datasource)
+                    config['database'] = database
+                    config['datasource_filter'] = datasource_filter
+                    config.update(self.__table_metadata(datasource, maplayer))
+                else:
                     self.logger.info("Not a PostgreSQL layer")
-                    continue
 
-                datasource = maplayer.find('datasource').text
-                database, datasource_filter = self.__db_connection(datasource)
-                config['database'] = database
-                config['datasource_filter'] = datasource_filter
-                config.update(self.__table_metadata(datasource, maplayer))
 
                 self.__lookup_attribute_data_types(config)
 
