@@ -22,8 +22,8 @@ def config_generator(tenant, logger, use_cached_project_metadata, force_readonly
     """
     if tenant is None:
         msg = "No tenant selected"
-        logger.error(msg)
-        raise Exception(msg)
+        logger.critical(msg)
+        return None
 
     # read ConfigGenerator config file
     config_in_path = os.environ.get(
@@ -39,11 +39,14 @@ def config_generator(tenant, logger, use_cached_project_metadata, force_readonly
             config = json.load(f, object_pairs_hook=OrderedDict)
     except Exception as e:
         msg = "Error loading ConfigGenerator config:\n%s" % e
-        logger.error(msg)
-        raise Exception(msg)
+        logger.critical(msg)
+        return None
 
     # create ConfigGenerator
-    return ConfigGenerator(config, logger, config_file_dir, use_cached_project_metadata, force_readonly_datasets)
+    try:
+        return ConfigGenerator(config, logger, config_file_dir, use_cached_project_metadata, force_readonly_datasets)
+    except:
+        return None
 
 
 # routes
@@ -79,11 +82,12 @@ def generate_configs():
         tenant = args.get("tenant")
         use_cached_project_metadata = str(args.get("use_cached_project_metadata", "")).lower() in ["1","true"]
         force_readonly_datasets = str(args.get("force_readonly_datasets", "")).lower() in ["1","true"]
-        generator = config_generator(tenant, logger, use_cached_project_metadata, force_readonly_datasets)
         try:
-            generator.write_configs()
-            generator.write_permissions()
-            generator.cleanup_temp_dir()
+            generator = config_generator(tenant, logger, use_cached_project_metadata, force_readonly_datasets)
+            if generator:
+                generator.write_configs()
+                generator.write_permissions()
+                generator.cleanup_temp_dir()
         except Exception as e:
             logger.error("<b>Python Exception: %s\n%s</b>" % (str(e), traceback.format_exc()))
 

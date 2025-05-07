@@ -148,8 +148,8 @@ class ConfigGenerator():
                     themes_config = os.path.join(config_file_dir, themes_config)
                 with open(themes_config, encoding='utf-8') as f:
                     config["themesConfig"] = json.load(f)
-            except:
-                msg = "Failed to read themes configuration %s" % themes_config
+            except Exception as e:
+                msg = "Failed to read themes configuration %s:\n%s" % (themes_config, str(e))
                 self.logger.critical(msg)
                 raise Exception(msg)
         elif not isinstance(themes_config, dict):
@@ -174,8 +174,8 @@ class ConfigGenerator():
                                 themes_config_template_path = os.path.join(os.path.dirname(config_template_path), themes_config_template)
                             with open(themes_config_template_path, encoding='utf-8') as f:
                                 config_template["themesConfig"] = json.load(f)
-                        except:
-                            msg = "Failed to read themes configuration %s" % themes_config_template_path
+                        except Exception as e:
+                            msg = "Failed to read themes configuration %s:\n%s" % (themes_config_template_path, str(e))
                             self.logger.critical(msg)
                             raise Exception(msg)
 
