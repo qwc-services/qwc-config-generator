@@ -302,6 +302,7 @@ class MapViewerConfig(ServiceConfig):
                 layer = resolve_external_layer(entry["resource"], self.logger, self.project_settings_read_timeout, entry.get("projection", bgLayerCrs.get(entry["name"])), self.use_cached_project_metadata, self.cache_dir)
                 if layer:
                     layer["name"] = entry["name"]
+                    layer["title"] = entry.get("title", layer["title"])
                     entry.update(layer)
                     del entry["resource"]
 
