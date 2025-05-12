@@ -170,6 +170,9 @@ class MapViewerConfig(ServiceConfig):
             permissions['plugin_data'] = self.permitted_plugin_data_resources(
                 role, session
             )
+            permissions['tilesets_3d'] = self.permitted_3d_tilesets(
+                role, session
+            )
 
         return permissions
 
@@ -1056,3 +1059,16 @@ class MapViewerConfig(ServiceConfig):
         return sorted(
             plugin_permissions, key=lambda plugin: plugin.get('name')
         )
+
+    def permitted_3d_tilesets(self, role, session):
+        """Return permitted 3d tilesets from ConfigDB.
+
+        :param str role: Role name
+        :param Session session: DB session
+        """
+        # collect role permissions from ConfigDB
+        tilesets_3d = self.permitted_resources(
+            'tileset3d', role, session
+        ).keys()
+
+        return sorted(list(tilesets_3d))
