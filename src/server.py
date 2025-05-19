@@ -43,10 +43,7 @@ def config_generator(tenant, logger, use_cached_project_metadata, force_readonly
         return None
 
     # create ConfigGenerator
-    try:
-        return ConfigGenerator(config, logger, config_file_dir, use_cached_project_metadata, force_readonly_datasets)
-    except:
-        return None
+    return ConfigGenerator(config, logger, config_file_dir, use_cached_project_metadata, force_readonly_datasets)
 
 
 # routes
@@ -84,12 +81,11 @@ def generate_configs():
         force_readonly_datasets = str(args.get("force_readonly_datasets", "")).lower() in ["1","true"]
         try:
             generator = config_generator(tenant, logger, use_cached_project_metadata, force_readonly_datasets)
-            if generator:
-                generator.write_configs()
-                generator.write_permissions()
-                generator.cleanup_temp_dir()
+            generator.write_configs()
+            generator.write_permissions()
+            generator.cleanup_temp_dir()
         except Exception as e:
-            logger.error("<b>Python Exception: %s\n%s</b>" % (str(e), traceback.format_exc()))
+            logger.error("<b>Internal error: %s\n%s</b>" % (str(e), traceback.format_exc()))
 
         config_generator_running.clear()
 
