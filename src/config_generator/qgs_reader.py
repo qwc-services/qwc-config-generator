@@ -544,11 +544,14 @@ class QGSReader:
                         "config/Option/Option[@name='LayerName']").get('value')
             layerSource = edit_widget.find(
                         "config/Option/Option[@name='LayerSource']").get('value')
+            allowMulti = edit_widget.find(
+                        "config/Option/Option[@name='AllowMulti']").get('value') == "true"
 
             # Lookup shortname
             layerName = self.__lookup_short_name(layerName)
 
             constraints['keyvalrel'] = self.map_prefix + "." + layerName + ":" + key + ":" + value
+            constraints['allowMulti'] = allowMulti
             keyvaltables[self.map_prefix + "." + layerName] = self.__table_metadata(layerSource)
             keyvaltables[self.map_prefix + "." + layerName]['qgs_name'] = self.map_prefix
             keyvaltables[self.map_prefix + "." + layerName]['layername'] = layerName

@@ -193,6 +193,7 @@ class DnDFormGenerator:
             key = editWidget.find("config/Option/Option[@name='Key']").get('value')
             value = editWidget.find("config/Option/Option[@name='Value']").get('value')
             layer = editWidget.find("config/Option/Option[@name='LayerName']").get('value')
+            allowMulti = editWidget.find("config/Option/Option[@name='AllowMulti']").get('value')
             # Lookup shortname
             for maplayer in project.findall('.//maplayer'):
                 layernameEl = maplayer.find('layername')
@@ -204,6 +205,7 @@ class DnDFormGenerator:
             widget.set("name", "kvrel__{field}__{kvtable}__{keyfield}__{valuefield}".format(
                 field=prefix + field, kvtable=layer, keyfield=key, valuefield=value
             ))
+            widget.set("allowMulti", allowMulti)
             return widget
         elif editWidget.get("type") == "ExternalResource":
             widget.set("class", "QLineEdit")
