@@ -893,10 +893,10 @@ class QGSReader:
         result = {}
         for visibilityPreset in visibilityPresets.findall('./visibility-preset'):
             name = visibilityPreset.get('name')
-            result[name] = []
+            result[name] = {}
             for layer in visibilityPreset.findall('./layer'):
                 layerId = layer.get('id')
                 if layer.get('visible') == "1" and layerId in layerMap:
-                    result[name].append(layerMap[layerId])
+                    result[name][layerMap[layerId]] = layer.get('style')
 
         return result
