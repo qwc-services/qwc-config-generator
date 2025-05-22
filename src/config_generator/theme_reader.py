@@ -151,6 +151,11 @@ class ThemeReader():
         metadata = self.layer_metadata(service_name, edit_dataset)
         return self.theme_metadata[service_name]['project'].collect_ui_forms(assets_dir, edit_dataset, metadata, nested_nrels)
 
+    def visibility_presets(self, service_name):
+        if not self.theme_metadata[service_name]['project']:
+            return {}
+        return self.theme_metadata[service_name]['project'].visibility_presets()
+
     def service_name(self, url):
         """Return service name as relative path to default QGIS server URL.
 

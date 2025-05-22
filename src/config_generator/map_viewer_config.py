@@ -452,6 +452,8 @@ class MapViewerConfig(ServiceConfig):
         else:
             item['initialBbox'] = item['bbox']
 
+        item['visibilityPresets'] = self.themes_reader.visibility_presets(service_name)
+
         # get search layers from searchProviders
         search_providers = cfg_item.get('searchProviders', themes_config.get('defaultSearchProviders', []))
         search_layers = {}

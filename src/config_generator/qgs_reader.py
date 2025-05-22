@@ -876,3 +876,29 @@ class QGSReader:
                 result[layername] = uipath
 
         return result
+
+    def visibility_presets(self):
+        visibilityPresets = self.root.find('./visibility-presets')
+        if visibilityPresets is None:
+            return {}
+
+        # layerId => (short)name map
+        layerMap = {}
+        for mapLayer in self.root.findall('.//maplayer'):
+            layerId = mapLayer.find('./id')
+            if layerId is not None:
+                if mapLayer.find('shortname') is not None:
+                    layerMap[layerId.text] = mapLayer.find('shortname').text
+                elif mapLayer.find('layername') is not None:
+                    layerMap[layerId.text] = mapLayer.find('layername').text
+
+        result = {}
+        for visibilityPreset in visibilityPresets.findall('./visibility-preset'):
+            name = visibilityPreset.get('name')
+            result[name] = []
+            for layer in visibilityPreset.findall('./layer'):
+                layerId = layer.get('id')
+                if layer.get('visible') == "1" and layerId in layerMap:
+                    result[name].append(layerMap[layerId])
+
+        return result
