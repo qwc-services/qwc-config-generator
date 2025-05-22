@@ -32,7 +32,21 @@ class MapViewerConfig(ServiceConfig):
         'POLYGON': 'Polygon',
         'POLYGONZ': 'PolygonZ',
         'MULTIPOLYGON': 'MultiPolygon',
-        'MULTIPOLYGONZ': 'MultiPolygonZ'
+        'MULTIPOLYGONZ': 'MultiPolygonZ',
+        'CURVE': 'Curve',
+        'CURVEZ': 'CurveZ',
+        'CIRCULARSTRING': 'CircularString',
+        'CIRCULARSTRINGZ': 'CircularStringZ',
+        'COMPOUNDCURVE': 'CompoundCurve',
+        'COMPOUNDCURVEZ': 'CompoundCurveZ',
+        'MULTICURVE': 'MultiCurve',
+        'MULTICURVEZ': 'MultiCurveZ',
+        'SURFACE': 'Surface',
+        'SURFACEZ': 'SurfaceZ',
+        'CURVEPOLYGON': 'CurvePolygon',
+        'CURVEPOLYGONZ': 'CurvePolygonZ',
+        'MULTISURFACE': 'MultiSurface',
+        'MULTISURFACEZ': 'MultiSurfaceZ'
     }
 
     # lookup for edit field types:
@@ -879,7 +893,7 @@ class MapViewerConfig(ServiceConfig):
                 continue
 
             # check geometry type
-            if not 'geometry_type' in meta or meta['geometry_type'] not in self.EDIT_GEOM_TYPES:
+            if meta.get('geometry_type') not in self.EDIT_GEOM_TYPES:
                 table = (
                     "%s.%s" % (meta.get('schema'), meta.get('table_name'))
                 )
@@ -895,9 +909,7 @@ class MapViewerConfig(ServiceConfig):
             dataset['layerName'] = layer_name
             dataset['displayField'] = meta['displayField']
             dataset['editDataset'] = dataset_name
-            dataset['geomType'] = self.EDIT_GEOM_TYPES.get(
-                meta['geometry_type']
-            )
+            dataset['geomType'] = self.EDIT_GEOM_TYPES.get(meta['geometry_type'])
             
             nested_nrels = cfg_item.get('editConfig', {}).get(layer_name, {}).get('generate_nested_nrel_forms', False)
             forms = self.themes_reader.collect_ui_forms(map_name, assets_dir, layer_name, nested_nrels)
