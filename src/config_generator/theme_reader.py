@@ -147,6 +147,8 @@ class ThemeReader():
         return self.theme_metadata[service_name]['layer_metadata'][layername]
 
     def collect_ui_forms(self, service_name, assets_dir, edit_dataset, nested_nrels):
+        if not self.theme_metadata[service_name]['project']:
+            return {}
         metadata = self.layer_metadata(service_name, edit_dataset)
         return self.theme_metadata[service_name]['project'].collect_ui_forms(assets_dir, edit_dataset, metadata, nested_nrels)
 
