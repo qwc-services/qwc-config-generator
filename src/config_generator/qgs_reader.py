@@ -113,7 +113,7 @@ class QGSReader:
             wmsUseLayerIds = self.root.find('./properties/WMSUseLayerIDs')
             if wmsUseLayerIds is not None and wmsUseLayerIds.text == "true":
                 self.logger.warning(
-                    "'Use layer ids as names' is checked in the QGIS Server properites of '%s', which is not properly supported by QWC2"
+                    "'Use layer ids as names' is checked in the QGIS Server properites of '%s', which is not properly supported by QWC"
                     % qgs_filename
                 )
 
@@ -160,9 +160,9 @@ class QGSReader:
         """
         # NOTE: use ordered keys
         config = OrderedDict()
+        self.logger.info("Collecting layer metadata for layer %s of project %s" % (layer_name, self.map_prefix))
 
         if self.root is None:
-            self.logger.warning("Root element is empty")
             return config
 
         # find layer by shortname
@@ -186,8 +186,6 @@ class QGSReader:
                     config['database'] = database
                     config['datasource_filter'] = datasource_filter
                     config.update(self.__table_metadata(datasource, maplayer))
-                else:
-                    self.logger.info("Not a PostgreSQL layer")
 
 
                 self.__lookup_attribute_data_types(config)

@@ -142,7 +142,6 @@ class ThemeReader():
             return {}
 
         if not layername in self.theme_metadata[service_name]['layer_metadata']:
-            self.logger.info("Collecting layer metadata for layer %s of project %s" % (layername, service_name))
             metadata = self.theme_metadata[service_name]['project'].layer_metadata(layername)
             self.theme_metadata[service_name]['layer_metadata'][layername] = metadata
         return self.theme_metadata[service_name]['layer_metadata'][layername]
