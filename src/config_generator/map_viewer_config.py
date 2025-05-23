@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import json
 import os
+import re
 from pathlib import Path
 import requests
 import traceback
@@ -452,7 +453,20 @@ class MapViewerConfig(ServiceConfig):
         else:
             item['initialBbox'] = item['bbox']
 
-        item['visibilityPresets'] = self.themes_reader.visibility_presets(service_name)
+        visibilityPresets = self.themes_reader.visibility_presets(service_name)
+        item['visibilityPresets'] = {}
+        visibilityPresetsBlacklist = [
+            re.compile(
+                '^' + '.*'.join(re.escape(part) for part in re.split(r'\*+', pattern)) + '$'
+            )
+            for pattern in cfg_item.get('visibilityPresetsBlacklist', [])
+        ]
+        for key in visibilityPresets:
+            for pattern in visibilityPresetsBlacklist:
+                if pattern.match(key):
+                    break
+            else:
+                item['visibilityPresets'][key] = visibilityPresets[key]
 
         # get search layers from searchProviders
         search_providers = cfg_item.get('searchProviders', themes_config.get('defaultSearchProviders', []))
@@ -549,7 +563,6 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'layerTreeHiddenSublayers', item)
         self.set_optional_config(cfg_item, 'predefinedFilters', item)
         self.set_optional_config(cfg_item, 'map3d', item)
-        self.set_optional_config(cfg_item, 'visibilityPresetsBlacklist', item)
 
         if not cfg_item.get('wmsOnly', False):
             item['thumbnail'] = self.get_thumbnail(cfg_item, service_name, cap, assets_dir)
