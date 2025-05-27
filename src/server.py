@@ -13,6 +13,8 @@ from config_generator.config_generator import ConfigGenerator
 
 # Flask application
 app = Flask(__name__)
+flask_debug = os.environ.get("FLASK_DEBUG", "0") == "1"
+app.logger.setLevel(logging.DEBUG if flask_debug else logging.INFO)
 
 
 def config_generator(tenant, logger, use_cached_project_metadata, force_readonly_datasets=False):
