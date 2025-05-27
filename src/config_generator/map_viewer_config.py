@@ -790,8 +790,9 @@ class MapViewerConfig(ServiceConfig):
                 item_layer['style'] = ''
 
             if lockedPreset and layer['name'] in lockedPreset:
-                item_layer['styles'] = [lockedPreset[layer['name']]]
-                item_layer['style'] = lockedPreset[layer['name']]
+                style = lockedPreset[layer['name']]
+                item_layer['styles'] = {style: style}
+                item_layer['style'] = style
 
             if 'display_field' in layer:
                 item_layer['displayField'] = layer.get('display_field')
