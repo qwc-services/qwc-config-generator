@@ -516,7 +516,7 @@ class QGSReader:
             constraints['step'] = self.__parse_number(
                 step_option.get('value')) if step_option is not None else 1
             constraints['prec'] = self.__parse_number(
-                prec_option.get('value')) if step_option is not None else math.ceil(abs(math.log10(constraints['step'])))
+                prec_option.get('value')) if prec_option is not None else math.ceil(abs(math.log10(constraints['step'])))
 
         elif edit_widget.get('type') == 'ValueMap':
             values = []
