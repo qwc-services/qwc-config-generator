@@ -77,7 +77,7 @@ class MapViewerConfig(ServiceConfig):
 
         :param str tenant_path: Path to config files of tenant
         :param obj generator_config: ConfigGenerator config
-        :param CapabilitiesReader themes_reader: ThemesReader
+        :param ThemeReader themes_reader: ThemesReader
         :param ConfigModels config_models: Helper for ORM models
         :param str schema_url: JSON schema URL for service config
         :param obj service_config: Additional service config
@@ -453,20 +453,27 @@ class MapViewerConfig(ServiceConfig):
         else:
             item['initialBbox'] = item['bbox']
 
+        # Visibility presets
+        internal_print_layers = cap.get('internal_print_layers', [])
         visibilityPresets = self.themes_reader.visibility_presets(service_name)
-        item['visibilityPresets'] = {}
-        visibilityPresetsBlacklist = [
-            re.compile(
-                '^' + '.*'.join(re.escape(part) for part in re.split(r'\*+', pattern)) + '$'
-            )
-            for pattern in cfg_item.get('visibilityPresetsBlacklist', [])
-        ]
-        for key in visibilityPresets:
-            for pattern in visibilityPresetsBlacklist:
-                if pattern.match(key):
-                    break
-            else:
-                item['visibilityPresets'][key] = visibilityPresets[key]
+        lockedPreset = visibilityPresets.get(cfg_item.get('lockedVisibilityPreset'))
+        if not lockedPreset:
+            item['visibilityPresets'] = {}
+            visibilityPresetsBlacklist = [
+                re.compile(
+                    '^' + '.*'.join(re.escape(part) for part in re.split(r'\*+', pattern)) + '$'
+                )
+                for pattern in cfg_item.get('visibilityPresetsBlacklist', [])
+            ]
+            for key in visibilityPresets:
+                for pattern in visibilityPresetsBlacklist:
+                    if pattern.match(key):
+                        break
+                else:
+                    item['visibilityPresets'][key] = dict(
+                        filter(lambda kv: kv[0] not in internal_print_layers, visibilityPresets[key].items())
+                    )
+
 
         # get search layers from searchProviders
         search_providers = cfg_item.get('searchProviders', themes_config.get('defaultSearchProviders', []))
@@ -491,7 +498,7 @@ class MapViewerConfig(ServiceConfig):
         newExternalLayers = []
         for layer in root_layer.get('layers', []):
             layers.append(self.collect_layers(
-                layer, search_layers, 1, collapseLayerGroupsBelowLevel, newExternalLayers, service_name, featureReports))
+                layer, search_layers, 1, collapseLayerGroupsBelowLevel, newExternalLayers, service_name, featureReports, lockedPreset))
 
         # Inject crs in wmts resource string
         for entry in newExternalLayers:
@@ -727,7 +734,7 @@ class MapViewerConfig(ServiceConfig):
         if field in cfg_item:
             item[field] = cfg_item.get(field)
 
-    def collect_layers(self, layer, search_layers, level, collapseBelowLevel, externalLayers, service_name, featureReports):
+    def collect_layers(self, layer, search_layers, level, collapseBelowLevel, externalLayers, service_name, featureReports, lockedPreset):
         """Recursively collect layer tree from capabilities.
 
         :param obj layer: Layer or group layer
@@ -746,7 +753,7 @@ class MapViewerConfig(ServiceConfig):
             for sublayer in layer['layers']:
                 # recursively collect sub layer
                 sublayers.append(self.collect_layers(
-                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers, service_name, featureReports))
+                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers, service_name, featureReports, lockedPreset))
 
             # abstract
             if 'abstract' in layer:
@@ -781,6 +788,11 @@ class MapViewerConfig(ServiceConfig):
                 item_layer['style'] = list(item_layer['styles'])[0]
             else:
                 item_layer['style'] = ''
+
+            if lockedPreset and layer['name'] in lockedPreset:
+                item_layer['styles'] = [lockedPreset[layer['name']]]
+                item_layer['style'] = lockedPreset[layer['name']]
+
             if 'display_field' in layer:
                 item_layer['displayField'] = layer.get('display_field')
             item_layer['opacity'] = layer['opacity']
