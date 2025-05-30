@@ -436,7 +436,8 @@ class MapViewerConfig(ServiceConfig):
         item['contact'] = cap.get('contact', {})
 
 
-        item['mapCrs'] = cfg_item.get('mapCrs', themes_config.get('defaultMapCrs', 'EPSG:3857'))
+        projectCrs = self.themes_reader.project_crs(service_name)
+        item['mapCrs'] = cfg_item.get('mapCrs', projectCrs or themes_config.get('defaultMapCrs', 'EPSG:3857'))
         self.set_optional_config(cfg_item, 'additionalMouseCrs', item)
         featureReports = cfg_item.get("featureReport", {})
 

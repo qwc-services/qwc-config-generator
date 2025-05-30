@@ -153,6 +153,10 @@ class QGSReader:
 
         return layers
 
+    def project_crs(self):
+        authid = self.root.find('./projectCrs/spatialrefsys/authid')
+        return authid.text if authid is not None else None
+
     def layer_metadata(self, layer_name):
         """Collect layer metadata from QGS.
 
