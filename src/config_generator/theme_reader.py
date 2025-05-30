@@ -121,6 +121,11 @@ class ThemeReader():
     def wfs_capabilities(self, service_name):
         return self.theme_metadata[service_name]['wfs_capabilities']
 
+    def project_crs(self, service_name):
+        if not self.theme_metadata[service_name]['project']:
+            return None
+        return self.theme_metadata[service_name]['project'].project_crs()
+
     def pg_layers(self, service_name):
         if not service_name in self.theme_metadata:
             return []

@@ -750,8 +750,6 @@ class ConfigGenerator():
                     "defaultBackgroundLayers", [])
                 theme_item["searchProviders"] = themes_config.get(
                     "defaultSearchProviders", [])
-                theme_item["mapCrs"] = themes_config.get(
-                    "defaultMapCrs")
 
                 if not has_default:
                     theme_item["default"] = True
