@@ -573,7 +573,7 @@ class QGSReader:
 
         elif edit_widget.get("type") == "ExternalResource":
             filterOpt = edit_widget.find("config/Option/Option[@name='FileWidgetFilter']")
-            constraints['fileextensions'] = self.__parse_fileextensions(filterOpt.get('value')) if filterOpt is not None else ""
+            constraints['fileextensions'] = self.__parse_fileextensions(filterOpt.get('value', "")) if filterOpt is not None else ""
         elif edit_widget.get('type') == 'Hidden':
             constraints['hidden'] = True
         elif edit_widget.get('type') == 'CheckBox':
