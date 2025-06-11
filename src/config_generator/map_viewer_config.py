@@ -774,6 +774,9 @@ class MapViewerConfig(ServiceConfig):
 
             # visible
             item_layer['visibility'] = layer['visible']
+
+            if lockedPreset and layer['name'] in lockedPreset:
+                item_layer['visibility'] = True
         else:
             meta = self.themes_reader.layer_metadata(service_name, layer['name'])
 
@@ -794,6 +797,7 @@ class MapViewerConfig(ServiceConfig):
                 style = lockedPreset[layer['name']]
                 item_layer['styles'] = {style: style}
                 item_layer['style'] = style
+                item_layer['visibility'] = True
 
             if 'display_field' in layer:
                 item_layer['displayField'] = layer.get('display_field')

@@ -902,5 +902,9 @@ class QGSReader:
                 layerId = layer.get('id')
                 if layer.get('visible') == "1" and layerId in layerMap:
                     result[name][layerMap[layerId]] = layer.get('style')
+            for checkedGroupNode in visibilityPreset.findall('./checked-group-nodes/checked-group-node'):
+                groupid = checkedGroupNode.get('id')
+                if groupid is not None:
+                    result[name][groupid] = ""
 
         return result
