@@ -224,14 +224,25 @@ class QGSReader:
 
             size = composer_map.get('size').split(',')
             position = composer_map.get('positionOnPage').split(',')
+            resolution = float(template.get('printResolution'))
+            tomm = {
+                'mm': 1,
+                'cm': 10,
+                'm': 1000,
+                'in': 25.4,
+                'ft': 304.8,
+                'pt': 25.4 / 72,
+                'pica': 25.4 / 6,
+                'px': 25.4 / resolution
+            }
             print_template = OrderedDict()
             print_template['name'] = template.get('name')
             print_map = OrderedDict()
             print_map['name'] = "map0"
-            print_map['x'] = float(position[0])
-            print_map['y'] = float(position[1])
-            print_map['width'] = float(size[0])
-            print_map['height'] = float(size[1])
+            print_map['x'] = float(position[0]) * tomm.get(position[2], 1)
+            print_map['y'] = float(position[1]) * tomm.get(position[2], 1)
+            print_map['width'] = float(size[0]) * tomm.get(size[2], 1)
+            print_map['height'] = float(size[1]) * tomm.get(size[2], 1)
             print_template['map'] = print_map
 
             atlas = template.find("Atlas")
