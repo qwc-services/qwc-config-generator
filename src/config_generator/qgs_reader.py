@@ -354,6 +354,9 @@ class QGSReader:
         m = re.search(r"type=([\w.]+)", datasource)
         if m is not None:
             metadata['geometry_type'] = m.group(1).upper()
+        elif maplayer and maplayer.get('wkbType'):
+            # Try to fall back to wkbType attr of maplayer element
+            metadata['geometry_type'] = maplayer.get('wkbType').upper()
         else:
             metadata['geometry_type'] = None
 
