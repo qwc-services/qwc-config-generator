@@ -1,6 +1,6 @@
 [project]
 name = "qwc-config-generator"
-version = "v2025.07.01"
+version = "v2025.07.03"
 description = "QWC ConfigGenerator"
 readme = "README.md"
 requires-python = ">=3.10"
