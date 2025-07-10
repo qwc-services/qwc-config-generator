@@ -96,3 +96,9 @@ Download JSON schemas:
 
     uv run src/download_json_schemas.py master
 
+Docker usage
+------------
+
+See sample [docker-compose.yml](https://github.com/qwc-services/qwc-docker/blob/master/docker-compose-example.yml) of [qwc-docker](https://github.com/qwc-services/qwc-docker).
+
+
