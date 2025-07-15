@@ -312,7 +312,9 @@ class MapViewerConfig(ServiceConfig):
             backgroundLayer.pop("attributionUrl", None)
 
             imgPath = backgroundLayer.get("thumbnail", "")
-            if not os.path.isfile(os.path.join(assets_dir, imgPath)):
+            if not imgPath:
+                imgPath = "img/mapthumbs/default.jpg"
+            elif not os.path.isfile(os.path.join(assets_dir, imgPath)):
                 imgPath = "img/mapthumbs/" + backgroundLayer.get("thumbnail", "")
                 if not os.path.isfile(os.path.join(assets_dir, imgPath)):
                     self.logger.warn("Could not find thumbnail %s for background layer %s, using default thumbnail" % (backgroundLayer.get("thumbnail", ""), backgroundLayer.get("name", "")))
