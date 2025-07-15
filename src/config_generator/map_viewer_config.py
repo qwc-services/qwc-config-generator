@@ -23,6 +23,7 @@ class MapViewerConfig(ServiceConfig):
     #     PostGIS geometry type -> QWC2 edit geometry type
     EDIT_GEOM_TYPES = {
         None: None,
+        'NOGEOMETRY': None,
         'POINT': 'Point',
         'POINTZ': 'PointZ',
         'MULTIPOINT': 'MultiPoint',
