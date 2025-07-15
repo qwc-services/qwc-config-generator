@@ -348,13 +348,13 @@ class CapabilitiesReader():
                 return None
 
             # collect attributes
-            attributes = []
+            attributes = {}
             attrs = layer.find('%sAttributes' % np, ns)
             if attrs is not None:
                 for attr in attrs.findall('%sAttribute' % np, ns):
-                    attributes.append(attr.get('alias', attr.get('name')))
-                attributes.append('geometry')
-                attributes.append('maptip')
+                    attributes[attr.get('name')] = attr.get('alias', attr.get('name'))
+                attributes['geometry'] = 'geometry'
+                attributes['maptip'] = 'maptip'
 
             if attributes:
                 wms_layer['attributes'] = attributes
