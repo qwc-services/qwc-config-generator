@@ -30,6 +30,9 @@ class FeatureInfoServiceConfig(ServiceConfig):
         self.default_qgis_server_url = generator_config.get(
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
+        self.qgis_server_url_tenant_suffix = generator_config.get(
+            'qgis_server_url_tenant_suffix', ''
+        ).strip('/')
         self.permissions_default_allow = generator_config.get(
             'permissions_default_allow', True
         )
@@ -53,6 +56,11 @@ class FeatureInfoServiceConfig(ServiceConfig):
             # if not set in service config
             cfg_config['default_qgis_server_url'] = \
                 self.default_qgis_server_url
+
+        if 'qgis_server_url_tenant_suffix' not in cfg_config:
+            # use qgis_server_url_tenant_suffix from ConfigGenerator config
+            # if not set in service config
+            cfg_config['qgis_server_url_tenant_suffix'] = self.qgis_server_url_tenant_suffix
 
         config['config'] = cfg_config
 

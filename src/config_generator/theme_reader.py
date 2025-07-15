@@ -93,11 +93,11 @@ class ThemeReader():
 
         self.logger.info("<b>Reading theme %s</b>" % url)
 
-        wms_capabilities = self.capabilities_reader.read_wms_service_capabilities(url, service_name, item, themes_config)
+        wms_capabilities = self.capabilities_reader.read_wms_service_capabilities(service_name, item, themes_config)
 
         wfs_capabilities = {}
         if self.generate_wfs_services:
-            wfs_capabilities = self.capabilities_reader.read_wfs_service_capabilities(url, service_name, item)
+            wfs_capabilities = self.capabilities_reader.read_wfs_service_capabilities(service_name, item)
 
         qgs_reader = QGSReader(
             self.config, self.logger, self.qgis_projects_base_dir,

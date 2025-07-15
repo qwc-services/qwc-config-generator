@@ -3,6 +3,7 @@ import json
 import os
 import re
 from pathlib import Path
+import posixpath
 import requests
 import traceback
 import urllib.parse
@@ -103,6 +104,9 @@ class MapViewerConfig(ServiceConfig):
         self.default_qgis_server_url = generator_config.get(
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
+        self.qgis_server_url_tenant_suffix = generator_config.get(
+            'qgis_server_url_tenant_suffix', ''
+        ).strip('/')
 
         # Use default map thumbnail instead of generating via GetMap
         self.use_default_map_thumbnail = generator_config.get(
@@ -650,7 +654,10 @@ class MapViewerConfig(ServiceConfig):
             layers.append(layer['name'])
 
         # WMS GetMap request
-        url = urllib.parse.urljoin(self.default_qgis_server_url, service_name)
+        url = urllib.parse.urljoin(
+            self.default_qgis_server_url,
+            posixpath.join(self.qgis_server_url_tenant_suffix, service_name)
+        )
 
         bboxw = extent[2] - extent[0]
         bboxh = extent[3] - extent[1]

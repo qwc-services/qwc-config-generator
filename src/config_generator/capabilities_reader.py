@@ -3,6 +3,7 @@ from urllib.parse import urljoin, urlparse
 from xml.etree import ElementTree
 
 import os
+import posixpath
 import re
 import requests
 import traceback
@@ -30,6 +31,9 @@ class CapabilitiesReader():
         self.default_qgis_server_url = generator_config.get(
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
+        self.qgis_server_url_tenant_suffix = generator_config.get(
+            'qgis_server_url_tenant_suffix', ''
+        ).strip('/')
 
         # layer opacity values for QGIS <= 3.10 from ConfigGenerator config
         self.layer_opacities = generator_config.get("layer_opacities", {})
@@ -44,10 +48,9 @@ class CapabilitiesReader():
 
     # WMS GetProjectSettings
 
-    def read_wms_service_capabilities(self, url, service_name, item, themes_config):
+    def read_wms_service_capabilities(self, service_name, item, themes_config):
         """Load and parse WMS GetProjectSettings for a theme item.
 
-        :param str url: service URL
         :param str service_name: service name
         :param object item: theme item
         :param object themes_config: themes config
@@ -55,7 +58,10 @@ class CapabilitiesReader():
 
         try:
             # get GetProjectSettings
-            full_url = urljoin(self.default_qgis_server_url, url)
+            full_url = urljoin(
+                self.default_qgis_server_url,
+                posixpath.join(self.qgis_server_url_tenant_suffix, service_name)
+            )
 
             if len(full_url) > 2000:
                 self.logger.warning(
@@ -488,18 +494,20 @@ class CapabilitiesReader():
 
     # WFS Capabilities
 
-    def read_wfs_service_capabilities(self, url, service_name, item):
+    def read_wfs_service_capabilities(self, service_name, item):
         """Load and parse WFS GetCapabilities for a theme item.
 
         NOTE: returns empty result if WFS does not contains any layers
 
-        :param str url: service URL
         :param str service_name: service name
         :param object item: theme item
         """
         try:
             # get GetProjectSettings
-            full_url = urljoin(self.default_qgis_server_url, url)
+            full_url = urljoin(
+                self.default_qgis_server_url,
+                posixpath.join(self.qgis_server_url_tenant_suffix, service_name )
+            )
 
             if len(full_url) > 2000:
                 self.logger.warning(
