@@ -126,15 +126,12 @@ class ThemeReader():
         return self.theme_metadata[service_name]['wfs_capabilities']
 
     def project_crs(self, service_name):
-        if not self.theme_metadata[service_name]['project']:
+        if not self.theme_metadata.get(service_name, {}).get('project'):
             return None
         return self.theme_metadata[service_name]['project'].project_crs()
 
     def pg_layers(self, service_name):
-        if not service_name in self.theme_metadata:
-            return []
-
-        if not self.theme_metadata[service_name]['project']:
+        if not self.theme_metadata.get(service_name, {}).get('project'):
             return []
 
         if not self.theme_metadata[service_name]['pg_layers']:
@@ -143,7 +140,7 @@ class ThemeReader():
         return self.theme_metadata[service_name]['pg_layers']
 
     def layer_metadata(self, service_name, layername):
-        if not self.theme_metadata[service_name]['project']:
+        if not self.theme_metadata.get(service_name).get('project'):
             return {}
 
         if not layername in self.theme_metadata[service_name]['layer_metadata']:
@@ -152,13 +149,13 @@ class ThemeReader():
         return self.theme_metadata[service_name]['layer_metadata'][layername]
 
     def collect_ui_forms(self, service_name, assets_dir, edit_dataset, nested_nrels):
-        if not self.theme_metadata[service_name]['project']:
+        if not self.theme_metadata.get(service_name, {}).get('project'):
             return {}
         metadata = self.layer_metadata(service_name, edit_dataset)
         return self.theme_metadata[service_name]['project'].collect_ui_forms(assets_dir, edit_dataset, metadata, nested_nrels)
 
     def visibility_presets(self, service_name):
-        if not self.theme_metadata[service_name]['project']:
+        if not self.theme_metadata.get(service_name, {}).get('project'):
             return {}
         return self.theme_metadata[service_name]['project'].visibility_presets()
 
