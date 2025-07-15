@@ -110,17 +110,17 @@ class PermissionsTests(unittest.TestCase):
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_points')]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_points' & @.queryable==true)]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_points' & @.info_template==true)]").find(perm)), 1)
-        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_points')].attributes[?(@=='Name')]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_points')].attributes[?(@=='name')]").find(perm)), 1)
         self.assertGreater(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_points')].attributes.`len`").find(perm)[0].value, 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines' & @.queryable==true)]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines' & @.info_template==true)]").find(perm)), 1)
-        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes[?(@=='Name')]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes[?(@=='name')]").find(perm)), 1)
         self.assertGreater(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes.`len`").find(perm)[0].value, 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons')]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons' & @.queryable==true)]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons' & @.info_template==true)]").find(perm)), 1)
-        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons')].attributes[?(@=='Name')]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons')].attributes[?(@=='name')]").find(perm)), 1)
         self.assertGreater(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons')].attributes.`len`").find(perm)[0].value, 1)
 
         # No additional permissions for role admin, as they are public
@@ -137,7 +137,7 @@ class PermissionsTests(unittest.TestCase):
             (1, NULL, 'map', 'qwc_demo'),
             (2, 1, 'layer', 'edit_points'),
             (3, 1, 'layer', 'edit_lines'),
-            (4, 3, 'attribute', 'Name');
+            (4, 3, 'attribute', 'name');
             INSERT INTO qwc_config.permissions (id, role_id, resource_id, priority, write)
             VALUES
             (1, {ROLE_PUBLIC}, 1, 0, FALSE),
@@ -154,23 +154,23 @@ class PermissionsTests(unittest.TestCase):
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines' & @.queryable==true)]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines' & @.info_template==true)]").find(perm)), 1)
-        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes[?(@=='Name')]").find(perm)), 0)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes[?(@=='name')]").find(perm)), 0)
         self.assertGreater(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes.`len`").find(perm)[0].value, 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons')]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons' & @.queryable==true)]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons' & @.info_template==true)]").find(perm)), 1)
-        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons')].attributes[?(@=='Name')]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons')].attributes[?(@=='name')]").find(perm)), 1)
         self.assertGreater(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons')].attributes.`len`").find(perm)[0].value, 1)
 
         # Permission for layer edit_points for admin
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_points')]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_points' & @.queryable==true)]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_points' & @.info_template==true)]").find(perm)), 1)
-        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_points')].attributes[?(@=='Name')]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_points')].attributes[?(@=='name')]").find(perm)), 1)
         self.assertGreater(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_points')].attributes.`len`").find(perm)[0].value, 1)
 
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')]").find(perm)), 1)
-        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes[?(@=='Name')]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes[?(@=='name')]").find(perm)), 1)
         self.assertEqual(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes.`len`").find(perm)[0].value, 1)
 
 
@@ -344,7 +344,7 @@ class PermissionsTests(unittest.TestCase):
             (3, 1, 'layer', 'edit_demo'),
             (4, 1, 'layer', 'edit_points'),
             (5, 1, 'layer', 'edit_lines'),
-            (6, 5, 'attribute', 'Name');
+            (6, 5, 'attribute', 'name');
             INSERT INTO qwc_config.permissions (id, role_id, resource_id, priority, write)
             VALUES
             (1, {ROLE_PUBLIC}, 1, 0, FALSE), -- permit qwc_demo map for public
@@ -363,7 +363,7 @@ class PermissionsTests(unittest.TestCase):
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines' & @.queryable==false)]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines' & @.info_template==false)]").find(perm)), 1)
-        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes[?(@=='Name')]").find(perm)), 0)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes[?(@=='name')]").find(perm)), 0)
 
         # edit_points is permitted for admin (with all attributes, but not queryable), and Name is permitted for edit_lines
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_points')]").find(perm)), 1)
@@ -372,7 +372,7 @@ class PermissionsTests(unittest.TestCase):
         self.assertGreater(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_points')].attributes.`len`").find(perm)[0].value, 1)
 
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')]").find(perm)), 1)
-        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes[?(@=='Name')]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes[?(@=='name')]").find(perm)), 1)
 
     def test_public_permissions_default_restrict_selected_permissions_inherit_info_permissions(self):
         """ Test permissions_default_allow=false and inherit_info_permissions=true and selected permissions. """
@@ -387,7 +387,7 @@ class PermissionsTests(unittest.TestCase):
             (3, 1, 'layer', 'edit_demo'),
             (4, 1, 'layer', 'edit_points'),
             (5, 1, 'layer', 'edit_lines'),
-            (6, 5, 'attribute', 'Name'),
+            (6, 5, 'attribute', 'name'),
             (7, 1, 'layer', 'edit_polygons'),
             (8, NULL, 'feature_info_service', 'qwc_demo'),
             (9, 8, 'feature_info_layer', 'edit_polygons');
@@ -411,7 +411,7 @@ class PermissionsTests(unittest.TestCase):
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines' & @.queryable==true)]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines' & @.info_template==true)]").find(perm)), 1)
-        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes[?(@=='Name')]").find(perm)), 0)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes[?(@=='name')]").find(perm)), 0)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons')]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons' & @.queryable==false)]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons' & @.info_template==false)]").find(perm)), 1)
@@ -423,7 +423,7 @@ class PermissionsTests(unittest.TestCase):
         self.assertGreater(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_points')].attributes.`len`").find(perm)[0].value, 1)
 
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')]").find(perm)), 1)
-        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes[?(@=='Name')]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_lines')].attributes[?(@=='name')]").find(perm)), 1)
 
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons')]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons' & @.queryable==true)]").find(perm)), 1)
