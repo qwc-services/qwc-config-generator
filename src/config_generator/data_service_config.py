@@ -65,10 +65,11 @@ class DataServiceConfig(ServiceConfig):
 
         return permissions
 
-    def available_datasets(self, session):
+    def available_datasets(self, session, quiet=False):
         """Collect all available datasets from ConfigDB, grouped by map name.
 
         :param Session session: DB session
+        :param bool quiet: Whether to log warnings
         """
         # NOTE: use ordered keys
         available_datasets = OrderedDict()
@@ -79,6 +80,10 @@ class DataServiceConfig(ServiceConfig):
             .filter(Resource.type == 'map') \
             .order_by(Resource.name)
         for map_obj in query.all():
+            # Skip if map is not in processed wms services (i.e. leftover permission for since deleted map)
+            if map_obj.name not in self.themes_reader.wms_service_names():
+                continue
+
             # collect unique datasets for each map resource
             resource_types = [
                 'data',
@@ -89,9 +94,15 @@ class DataServiceConfig(ServiceConfig):
                 .filter(Resource.type.in_(resource_types)) \
                 .distinct(Resource.name) \
                 .order_by(Resource.name)
-            available_datasets[map_obj.name] = [
-                resource.name for resource in datasets_query.all()
-            ]
+            available_datasets[map_obj.name] = []
+            invalid_datasets = list()
+            for resource in datasets_query.all():
+                if not self.themes_reader.layer_metadata(map_obj.name, resource.name):
+                    invalid_datasets.append(resource.name)
+                else:
+                    available_datasets[map_obj.name].append(resource.name)
+            if not quiet and invalid_datasets:
+                self.logger.warn("The following data resources did not match any layer in the QGS project %s: %s" % (map_obj.name, ",".join(invalid_datasets)))
 
         return available_datasets
 
@@ -107,18 +118,11 @@ class DataServiceConfig(ServiceConfig):
 
         for qgs_name, map_datasets in self.available_datasets(session).items():
 
-            # In multi-tenant setups with shared config db, some resources may concern themes which
-            # are not available for the current tenant.
-            if qgs_name not in self.themes_reader.wms_service_names():
-                continue
-
             pg_layers = self.themes_reader.pg_layers(qgs_name)
-            invalid_datasets = list()
 
             for map_dataset in map_datasets:
+                # NOTE: only write resources for datasets which are pg_layers
                 if map_dataset not in pg_layers:
-                    # dataset not in layers
-                    invalid_datasets.append(map_dataset)
                     continue
 
                 meta = self.themes_reader.layer_metadata(qgs_name, map_dataset)
@@ -166,9 +170,6 @@ class DataServiceConfig(ServiceConfig):
 
                 added_datasets.add(dataset['name'])
                 datasets.append(dataset)
-
-            if invalid_datasets:
-                self.logger.warn("The following data resources did not match any layer in the QGS project %s: %s" % (qgs_name, ",".join(invalid_datasets)))
 
         for key, value in keyvaltables.items():
             if not key in added_datasets:
@@ -309,10 +310,7 @@ class DataServiceConfig(ServiceConfig):
                 # map not permitted
                 continue
 
-            for layer_name in self.themes_reader.pg_layers(map_name):
-                if layer_name not in datasets:
-                    # skip layers not in datasets
-                    continue
+            for layer_name in datasets:
 
                 # lookup permissions (dataset restricted by default)
                 restricted_for_public = layer_name not in \
