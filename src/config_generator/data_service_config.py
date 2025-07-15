@@ -44,7 +44,7 @@ class DataServiceConfig(ServiceConfig):
         resources = OrderedDict()
 
         with self.config_models.session() as session:
-            resources['datasets'] = self._datasets(config, session)
+            resources['datasets'] = self._dataset_resources(config, session)
 
         config['resources'] = resources
         return config
@@ -95,7 +95,7 @@ class DataServiceConfig(ServiceConfig):
 
         return available_datasets
 
-    def _datasets(self, config, session):
+    def _dataset_resources(self, config, session):
         """Return data service resources.
 
         :param Session session: DB session
