@@ -29,6 +29,9 @@ class DataServiceConfig(ServiceConfig):
 
         self.config_models = config_models
         self.permissions_query = PermissionsQuery(config_models, logger)
+        self.permissions_default_allow = generator_config.get(
+            'permissions_default_allow', True
+        )
 
         self.generator_config = generator_config
         self.themes_reader = themes_reader
@@ -242,6 +245,7 @@ class DataServiceConfig(ServiceConfig):
 
         # collect public restrictions from ConfigDB
         public_restrictions = {
+            'maps': non_public_resources('map', session),
             'attributes': non_public_resources('data_attribute', session)
         }
 
@@ -301,10 +305,12 @@ class DataServiceConfig(ServiceConfig):
         is_public_role = (role == self.permissions_query.public_role())
 
         # collect edit dataset permissions for each map
-        for map_name, datasets in self.available_datasets(session).items():
-            # lookup permissions (map restricted by default)
-            map_restricted_for_public = map_name not in \
-                public_permissions['maps']
+        for map_name, datasets in self.available_datasets(session, True).items():
+
+            if self.permissions_default_allow:
+                map_restricted_for_public = map_name in public_restrictions['maps']
+            else:
+                map_restricted_for_public = map_name not in public_permissions['maps']
             map_permitted_for_role = map_name in role_permissions['maps']
             if map_restricted_for_public and not map_permitted_for_role:
                 # map not permitted
