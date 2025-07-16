@@ -637,6 +637,9 @@ class CapabilitiesReader():
                 wfs_layer = OrderedDict()
 
                 layer_name = layer.find('%sName' % np, ns).text
+                # NOTE: ensure special characters in layer names are consistently replaced (varies across QGIS WFS versions)
+                layer_name = layer_name.replace(' ', '_').replace(':', '-')
+
                 wfs_layer['name'] = layer_name
                 wfs_layer['title'] = layer.find('%sTitle' % np, ns).text
                 wfs_layer['attributes'] = wfs_layers_attributes.get(layer_name, [])
@@ -720,15 +723,19 @@ class CapabilitiesReader():
                 np = ''
 
             layers_attributes = {}
+            replace_unicode_pat = re.compile(r'[^\w.\-_]', flags=re.UNICODE)
 
             for complex_type in root.findall('%scomplexType' % np, ns):
                 # extract layer name from complexType by removing "Type" suffix
                 # e.g. "edit_pointsType" -> "edit_points"
                 layer_name = complex_type.get('name').removesuffix('Type')
 
-                attributes = []
+                attributes = {}
                 for element in complex_type.findall('%scomplexContent/%sextension/%ssequence/%selement' % (np, np, np, np), ns):
-                    attributes.append(element.get('name'))
+                    attribute_name = element.get('name')
+                    # NOTE: ensure special characters in attribute names are consistently replaced (varies across QGIS WFS versions)
+                    attribute_name = replace_unicode_pat.sub('', attribute_name.replace(' ', '_'))
+                    attributes[attribute_name] = element.get('alias', attribute_name)
 
                 layers_attributes[layer_name] = attributes
 

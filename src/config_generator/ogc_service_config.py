@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import re
 
 from .permissions_query import PermissionsQuery
 from .service_config import ServiceConfig
@@ -655,6 +656,24 @@ class OGCServiceConfig(ServiceConfig):
             'layers': non_public_resources('layer', session),
             'attributes': non_public_resources('attribute', session)
         }
+
+        # NOTE: replace special characters in layer/attribute names
+        # (WFS capabilities/etc report cleaned names)
+        replace_unicode_pat = re.compile(r'[^\w.\-_]', flags=re.UNICODE)
+        clean_layer_name = lambda layer_name: layer_name.replace(' ', '_').replace(':', '-')
+        clean_attr_name = lambda attr_name: replace_unicode_pat.sub('', attr_name.replace(' ', '_'))
+
+        for perm in (role_permissions, public_permissions, public_restrictions):
+            for service_name in perm['layers']:
+                perm['layers'][service_name] = dict([
+                    (clean_layer_name(layer_name), {}) for layer_name in perm['layers'][service_name]
+                ])
+            for service_name in perm['attributes']:
+                perm['attributes'][service_name] = dict([
+                    (clean_layer_name(layer_name_attrs[0]), dict([
+                        (clean_attr_name(attr_name), {}) for attr_name in layer_name_attrs[1]
+                    ])) for layer_name_attrs in perm['attributes'][service_name].items()
+                ])
 
         is_public_role = (role == self.permissions_query.public_role())
 
