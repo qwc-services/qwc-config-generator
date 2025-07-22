@@ -350,7 +350,8 @@ class DnDFormGenerator:
 
                     widget = ElementTree.Element("widget")
                     widget.set("class", "QWidget")
-                    self.__add_widget_property(widget, "visibilityExpression", None, None, child.get("visibilityExpression"))
+                    visibilityExpression = child.get("visibilityExpression") if child.get("visibilityExpressionEnabled", "0") == "1" else ""
+                    self.__add_widget_property(widget, "visibilityExpression", None, None, visibilityExpression)
                     self.__add_widget_property(widget, "title", child, "name", "", "attribute")
                     tabWidget.append(widget)
 
@@ -371,7 +372,8 @@ class DnDFormGenerator:
                         self.__add_label_style_properties(widget, child.find("labelStyle"))
                     else:
                         widget.set("class", "QFrame")
-                    self.__add_widget_property(widget, "visibilityExpression", None, None, child.get("visibilityExpression"))
+                    visibilityExpression = child.get("visibilityExpression") if child.get("visibilityExpressionEnabled", "0") == "1" else ""
+                    self.__add_widget_property(widget, "visibilityExpression", None, None, visibilityExpression)
                     item.append(widget)
 
                     self.__add_tablayout_fields(maplayer, projectname, layername, project, widget, child, aliases)
