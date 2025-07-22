@@ -435,7 +435,12 @@ class QGSReader:
             if default is not None and default.get('expression'):
                 fields[field]['defaultValue'] = default.get('expression')
 
-            # any any filter expression
+            # virtual fields
+            expressionField = maplayer.find("expressionfields/field[@name='%s']" % field)
+            if expressionField is not None and expressionField.get('expression'):
+                fields[field]['expression'] = expressionField.get('expression')
+
+            # filter expression
             filterExpression = maplayer.find("fieldConfiguration/field[@name='%s']/editWidget[@type='ValueRelation']/config/Option/Option[@name='FilterExpression']" % field)
             if filterExpression is not None and filterExpression.get('value'):
                 fields[field]['filterExpression'] = filterExpression.get('value')
@@ -444,12 +449,6 @@ class QGSReader:
             constraints = self.__edit_widget_constraints(maplayer, field, keyvaltables)
             if constraints:
                 fields[field]['constraints'] = constraints
-
-            expressionfields_field = maplayer.find(
-                "expressionfields/field[@name='%s']" % field
-            )
-            if expressionfields_field is not None:
-                fields[field]['expression'] = expressionfields_field.get('expression').lstrip("'").rstrip("'")
 
             fields[field]['joinfield'] = joinfields.get(field, None)
 

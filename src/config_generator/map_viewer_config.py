@@ -966,10 +966,6 @@ class MapViewerConfig(ServiceConfig):
             for attr in meta.get('attributes'):
                 field = meta['fields'].get(attr, {})
 
-                if field.get('expression'):
-                    # Skip expression field
-                    continue
-
                 alias = field.get('alias', attr)
                 data_type = self.EDIT_FIELD_TYPES.get(
                     field.get('data_type'), 'text'
@@ -987,6 +983,9 @@ class MapViewerConfig(ServiceConfig):
 
                 if 'filterExpression' in field:
                     edit_field['filterExpression'] = field['filterExpression']
+
+                if 'expression' in field:
+                    edit_field['expression'] = field['expression']
 
                 if 'constraints' in field:
                     # add any constraints

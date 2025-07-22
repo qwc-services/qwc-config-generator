@@ -285,9 +285,6 @@ class DnDFormGenerator:
             fields = referencingLayer.findall("fieldConfiguration/field")
             col = 0
             for field in fields:
-                # Skip expression fields
-                if referencingLayer.find("expressionfields/field[@name='%s']" % field.get("name")) is not None:
-                    continue
 
                 # Skip foreign key field
                 if field.get("name") == fkField:
@@ -437,10 +434,6 @@ class DnDFormGenerator:
         row = 0
 
         for field in fields:
-            # Skip expression fields
-            if maplayer.find("expressionfields/field[@name='%s']" % field.get("name")) is not None:
-                continue
-
             editorWidget = self.__create_editor_widget(maplayer, projectname, layername, project, field.get("name"))
             if editorWidget is None:
                 continue
