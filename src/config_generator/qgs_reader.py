@@ -125,7 +125,7 @@ class QGSReader:
         return True
 
     def pg_layers(self):
-        """Collect PostgreSQL layers in QGS.
+        """Collect PostgreSQL and MSSQL layers in QGS.
 
         """
         layers = []
@@ -148,7 +148,7 @@ class QGSReader:
                 maplayer_name = maplayer.find('layername').text
             provider = maplayer.find('provider').text
 
-            if provider == 'postgres':
+            if provider in ('postgres', 'mssql'):
                 layers.append(maplayer_name)
 
         return layers
@@ -190,6 +190,12 @@ class QGSReader:
                     config['database'] = database
                     config['datasource_filter'] = datasource_filter
                     config.update(self.__table_metadata(datasource, maplayer))
+                elif provider == 'mssql':
+                    datasource = maplayer.find('datasource').text
+                    database, datasource_filter = self.__mssql_db_connection(datasource)
+                    config['database'] = database
+                    config['datasource_filter'] = datasource_filter
+                    config.update(self.__mssql_table_metadata(datasource, maplayer))
 
 
                 self.__lookup_attribute_data_types(config)
@@ -325,6 +331,78 @@ class QGSReader:
 
         return connection_string, datasource_filter
 
+    def __mssql_db_connection(self, datasource):
+        """Parse QGIS datasource URI and return SQLAlchemy DB connection
+        string for a MSSQL database.
+
+        :param str datasource: QGIS datasource URI
+        """
+        connection_string = None
+        datasource_filter = None
+
+        # MSSQL connection parameters
+        server, database, user, password, port, driver = '', '', '', '', '1433', ''
+
+        # Parse server/host
+        m = re.search(r"host=(\S+)", datasource)
+        if m is not None:
+            server = m.group(1)
+
+        # Parse database name
+        m = re.search(r"database='(.+?)' \w+=", datasource)
+        if m is None:
+            m = re.search(r"dbname='(.+?)' \w+=", datasource)
+        if m is not None:
+            database = m.group(1)
+
+        # Parse port
+        m = re.search(r"port=(\d+)", datasource)
+        if m is not None:
+            port = m.group(1)
+
+        # Parse user
+        m = re.search(r"user='(.+?)' \w+=", datasource)
+        if m is not None:
+            user = m.group(1)
+            # unescape \' and \\'
+            user = re.sub(r"\\'", "'", user)
+            user = re.sub(r"\\\\", r"\\", user)
+
+        # Parse password
+        m = re.search(r"password='(.+?)' \w+=", datasource)
+        if m is not None:
+            password = m.group(1)
+            # unescape \' and \\'
+            password = re.sub(r"\\'", "'", password)
+            password = re.sub(r"\\\\", r"\\", password)
+
+        # Parse ODBC driver if specified
+        m = re.search(r"driver='(.+?)' \w+=", datasource)
+        if m is not None:
+            driver = m.group(1)
+        else:
+            # Default to ODBC Driver 17 for SQL Server
+            driver = 'ODBC Driver 17 for SQL Server'
+
+        # Build MSSQL connection string
+        # Format: mssql+pyodbc://user:password@server:port/database?driver=ODBC+Driver+17+for+SQL+Server
+        if server and database:
+            connection_string = 'mssql+pyodbc://'
+            if user and password:
+                connection_string += f"{urlquote(user)}:{urlquote(password)}@"
+            
+            connection_string += f"{server}:{port}/{database}"
+            
+            if driver:
+                connection_string += f"?driver={urlquote(driver)}"
+
+        # Parse SQL filter
+        m = re.search(r"sql=(.*)$", datasource)
+        if m is not None:
+            datasource_filter = html.unescape(m.group(1))
+
+        return connection_string, datasource_filter
+
     def __table_metadata(self, datasource, maplayer=None):
         """Parse QGIS datasource URI and return table metadata.
 
@@ -370,6 +448,64 @@ class QGSReader:
 
         if not metadata or not metadata.get('table_name') or not metadata.get('schema'):
             self.logger.warning("Failed to parse schema and/or table from datasource %s" % datasource)
+        return metadata
+
+    def __mssql_table_metadata(self, datasource, maplayer=None):
+        """Parse QGIS datasource URI and return table metadata for MSSQL.
+
+        :param str datasource: QGIS datasource URI
+        :param Element maplayer: QGS maplayer node
+        """
+        # NOTE: use ordered keys
+        metadata = OrderedDict()
+        if not datasource:
+            return metadata
+
+        # parse schema, table and geometry column
+        # MSSQL may use different format in QGIS datasource strings
+        m = re.search(r'table="([^"]+)"\."([^"]+)" \(([^)]+)\)', datasource)
+        if m is not None:
+            metadata['schema'] = m.group(1)
+            metadata['table_name'] = m.group(2)
+            metadata['geometry_column'] = m.group(3)
+        else:
+            m = re.search(r'table="([^"]+)"\."([^"]+)"', datasource)
+            if m is not None:
+                metadata['schema'] = m.group(1)
+                metadata['table_name'] = m.group(2)
+            else:
+                # Alternative format for MSSQL
+                m = re.search(r"schema='([^']+)' table='([^']+)'", datasource)
+                if m is not None:
+                    metadata['schema'] = m.group(1)
+                    metadata['table_name'] = m.group(2)
+
+        # Parse primary key
+        m = re.search(r"key='([^']+)'", datasource)
+        if m is not None:
+            metadata['primary_key'] = m.group(1)
+
+        # Parse geometry type
+        m = re.search(r"type=([\w.]+)", datasource)
+        if m is not None:
+            metadata['geometry_type'] = m.group(1).upper()
+        elif maplayer and maplayer.get('wkbType'):
+            # Try to fall back to wkbType attr of maplayer element
+            metadata['geometry_type'] = maplayer.get('wkbType').upper()
+        else:
+            metadata['geometry_type'] = None
+
+        # Parse SRID
+        m = re.search(r"srid=([\d.]+)", datasource)
+        if m is not None:
+            metadata['srid'] = int(m.group(1))
+        elif maplayer:
+            srid = maplayer.find('srs/spatialrefsys/srid')
+            if srid is not None:
+                metadata['srid'] = int(srid.text)
+
+        if not metadata or not metadata.get('table_name') or not metadata.get('schema'):
+            self.logger.warning("Failed to parse schema and/or table from MSSQL datasource %s" % datasource)
         return metadata
 
     def __attributes_metadata(self, maplayer):
@@ -696,14 +832,14 @@ class QGSReader:
                     data_type = row['data_type']
 
                     # constraints from data type
-                    if (data_type in ['character', 'character varying'] and
+                    if (data_type in ['character', 'character varying', 'char', 'varchar', 'nchar', 'nvarchar'] and
                             row['character_maximum_length']):
                         constraints['maxlength'] = \
                             row['character_maximum_length']
-                    elif data_type == 'numeric' and row['numeric_precision']:
-                        step = pow(10, -row['numeric_scale'])
+                    elif data_type in ['numeric', 'decimal'] and row['numeric_precision']:
+                        step = pow(10, -row['numeric_scale']) if row['numeric_scale'] else 1
                         max_value = pow(
-                            10, row['numeric_precision'] - row['numeric_scale']
+                            10, row['numeric_precision'] - (row['numeric_scale'] or 0)
                         ) - step
                         constraints['numeric_precision'] = \
                             row['numeric_precision']
@@ -711,10 +847,14 @@ class QGSReader:
                         constraints['min'] = -max_value
                         constraints['max'] = max_value
                         constraints['step'] = step
-                    elif data_type == 'smallint':
-                        constraints['min'] = -32768
-                        constraints['max'] = 32767
-                    elif data_type == 'integer':
+                    elif data_type in ['smallint', 'tinyint']:
+                        if data_type == 'tinyint':
+                            constraints['min'] = 0
+                            constraints['max'] = 255
+                        else:  # smallint
+                            constraints['min'] = -32768
+                            constraints['max'] = 32767
+                    elif data_type in ['integer', 'int']:
                         constraints['min'] = -2147483648
                         constraints['max'] = 2147483647
                     elif data_type == 'bigint':
@@ -766,79 +906,97 @@ class QGSReader:
         :param str column: Column name
         :param Engine db_engine: DB engine
         """
-        # build query SQL for tables and views
-        sql = sql_text("""
-            SELECT data_type, character_maximum_length,
-                numeric_precision, numeric_scale
-            FROM information_schema.columns
-            WHERE table_schema = '{schema}' AND table_name = '{table}'
-                AND column_name = '{column}'
-            ORDER BY ordinal_position;
-        """.format(schema=schema, table=table, column=column))
         with db_engine.connect() as conn:
-            # execute query
-            result = conn.execute(sql)
-
-            if result.rowcount == 0:
-                # fallback to query SQL for materialized views
-
-                # SQL partially based on definition of information_schema.columns:
-                #   https://github.com/postgres/postgres/tree/master/src/backendsrc/backend/catalog/information_schema.sql#L674
+            dialect = conn.dialect.name
+            
+            if dialect == 'mssql':
+                # MSSQL-specific query
                 sql = sql_text("""
-                    SELECT
-                        ns.nspname AS table_schema,
-                        c.relname AS table_name,
-                        a.attname AS column_name,
-                        format_type(a.atttypid, null) AS data_type,
-                        CASE
-                            WHEN a.atttypmod = -1 /* default typmod */
-                                THEN NULL
-                            WHEN a.atttypid IN (1042, 1043) /* char, varchar */
-                                THEN a.atttypmod - 4
-                            WHEN a.atttypid IN (1560, 1562) /* bit, varbit */
-                                THEN a.atttypmod
-                            ELSE
-                                NULL
-                        END AS character_maximum_length,
-                        CASE a.atttypid
-                            WHEN 21 /*int2*/ THEN 16
-                            WHEN 23 /*int4*/ THEN 32
-                            WHEN 20 /*int8*/ THEN 64
-                            WHEN 1700 /*numeric*/ THEN
-                                CASE
-                                    WHEN a.atttypmod = -1
-                                        THEN NULL
-                                    ELSE ((a.atttypmod - 4) >> 16) & 65535
-                                END
-                            WHEN 700 /*float4*/ THEN 24 /*FLT_MANT_DIG*/
-                            WHEN 701 /*float8*/ THEN 53 /*DBL_MANT_DIG*/
-                            ELSE NULL
-                        END AS numeric_precision,
-                        CASE
-                            WHEN a.atttypid IN (21, 23, 20) /* int */ THEN 0
-                            WHEN a.atttypid IN (1700) /* numeric */ THEN
-                                CASE
-                                    WHEN a.atttypmod = -1
-                                        THEN NULL
-                                    ELSE (a.atttypmod - 4) & 65535
-                                END
-                            ELSE NULL
-                        END AS numeric_scale
-                    FROM pg_catalog.pg_class c
-                        JOIN pg_catalog.pg_namespace ns ON ns.oid = c.relnamespace
-                        JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
-                    WHERE
-                        /* tables, views, materialized views */
-                        c.relkind in ('r', 'v', 'm')
-                        AND ns.nspname = '{schema}'
-                        AND c.relname = '{table}'
-                        AND a.attname = '{column}'
-                    ORDER BY nspname, relname, attnum
+                    SELECT 
+                        c.data_type,
+                        c.character_maximum_length,
+                        c.numeric_precision,
+                        c.numeric_scale
+                    FROM INFORMATION_SCHEMA.COLUMNS c
+                    WHERE c.table_schema = '{schema}' 
+                        AND c.table_name = '{table}'
+                        AND c.column_name = '{column}'
+                    ORDER BY c.ordinal_position;
                 """.format(schema=schema, table=table, column=column))
-                # execute query
                 return conn.execute(sql).mappings()
+            
             else:
-                return result.mappings()
+                # PostgreSQL query (default)
+                sql = sql_text("""
+                    SELECT data_type, character_maximum_length,
+                        numeric_precision, numeric_scale
+                    FROM information_schema.columns
+                    WHERE table_schema = '{schema}' AND table_name = '{table}'
+                        AND column_name = '{column}'
+                    ORDER BY ordinal_position;
+                """.format(schema=schema, table=table, column=column))
+                result = conn.execute(sql)
+
+                if result.rowcount == 0:
+                    # fallback to query SQL for materialized views
+
+                    # SQL partially based on definition of information_schema.columns:
+                    #   https://github.com/postgres/postgres/tree/master/src/backendsrc/backend/catalog/information_schema.sql#L674
+                    sql = sql_text("""
+                        SELECT
+                            ns.nspname AS table_schema,
+                            c.relname AS table_name,
+                            a.attname AS column_name,
+                            format_type(a.atttypid, null) AS data_type,
+                            CASE
+                                WHEN a.atttypmod = -1 /* default typmod */
+                                    THEN NULL
+                                WHEN a.atttypid IN (1042, 1043) /* char, varchar */
+                                    THEN a.atttypmod - 4
+                                WHEN a.atttypid IN (1560, 1562) /* bit, varbit */
+                                    THEN a.atttypmod
+                                ELSE
+                                    NULL
+                            END AS character_maximum_length,
+                            CASE a.atttypid
+                                WHEN 21 /*int2*/ THEN 16
+                                WHEN 23 /*int4*/ THEN 32
+                                WHEN 20 /*int8*/ THEN 64
+                                WHEN 1700 /*numeric*/ THEN
+                                    CASE
+                                        WHEN a.atttypmod = -1
+                                            THEN NULL
+                                        ELSE ((a.atttypmod - 4) >> 16) & 65535
+                                    END
+                                WHEN 700 /*float4*/ THEN 24 /*FLT_MANT_DIG*/
+                                WHEN 701 /*float8*/ THEN 53 /*DBL_MANT_DIG*/
+                                ELSE NULL
+                            END AS numeric_precision,
+                            CASE
+                                WHEN a.atttypid IN (21, 23, 20) /* int */ THEN 0
+                                WHEN a.atttypid IN (1700) /* numeric */ THEN
+                                    CASE
+                                        WHEN a.atttypmod = -1
+                                            THEN NULL
+                                        ELSE (a.atttypmod - 4) & 65535
+                                    END
+                                ELSE NULL
+                            END AS numeric_scale
+                        FROM pg_catalog.pg_class c
+                            JOIN pg_catalog.pg_namespace ns ON ns.oid = c.relnamespace
+                            JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
+                        WHERE
+                            /* tables, views, materialized views */
+                            c.relkind in ('r', 'v', 'm')
+                            AND ns.nspname = '{schema}'
+                            AND c.relname = '{table}'
+                            AND a.attname = '{column}'
+                        ORDER BY nspname, relname, attnum
+                    """.format(schema=schema, table=table, column=column))
+                    # execute query
+                    return conn.execute(sql).mappings()
+                else:
+                    return result.mappings()
 
     def collect_ui_forms(self, assets_dir, edit_dataset, metadata, nested_nrels):
         """ Collect UI form files from project

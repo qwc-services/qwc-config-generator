@@ -53,8 +53,9 @@ class MapViewerConfig(ServiceConfig):
     }
 
     # lookup for edit field types:
-    #     PostgreSQL data_type -> QWC2 edit field type
+    #     PostgreSQL/MSSQL data_type -> QWC2 edit field type
     EDIT_FIELD_TYPES = {
+        # PostgreSQL types
         'bigint': 'number',
         'boolean': 'boolean',
         'character varying': 'text',
@@ -69,7 +70,29 @@ class MapViewerConfig(ServiceConfig):
         'time': 'time',
         'timestamp with time zone': 'date',
         'timestamp without time zone': 'date',
-        'uuid': 'text'
+        'uuid': 'text',
+        # MSSQL types
+        'bit': 'boolean',
+        'tinyint': 'number',
+        'int': 'number',
+        'bigint': 'number',
+        'decimal': 'number',
+        'money': 'number',
+        'smallmoney': 'number',
+        'float': 'number',
+        'real': 'number',
+        'char': 'text',
+        'varchar': 'text',
+        'nchar': 'text',
+        'nvarchar': 'text',
+        'ntext': 'text',
+        'date': 'date',
+        'datetime': 'date',
+        'datetime2': 'date',
+        'smalldatetime': 'date',
+        'time': 'time',
+        'datetimeoffset': 'date',
+        'uniqueidentifier': 'text'
     }
 
     def __init__(self, tenant_path, generator_config, themes_reader,
