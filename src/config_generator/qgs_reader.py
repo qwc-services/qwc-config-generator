@@ -264,50 +264,105 @@ class QGSReader:
 
         return print_templates
 
+    def __parse_datasource(self, datasource):
+        """ Parse a QGS datasource URI string. """
+
+        result = {}
+
+        # sql= is placed at end of datasource string, and can contain spaces even if it is not quoted (hurray)
+        def extract_datasource_filter(match):
+            result['sql'] = html.unescape(match.group(1))
+            return ""
+
+        datasource = re.sub("sql=(.*)$", extract_datasource_filter, datasource)
+
+        # Parse remaining datasource key-values
+        key = ''
+        value = ''
+        state = 'key'  # can be 'key', 'before_value', 'value'
+        quote_char = None
+        escape = False
+
+        def commit():
+            nonlocal key, value, state, quote_char
+            if key:
+                result[key] = value
+            key = ''
+            value = ''
+            state = 'key'
+            quote_char = None
+
+        i = 0
+        while i < len(datasource):
+            c = datasource[i]
+
+            if state == 'key':
+                if c == '=':
+                    key = key.strip()
+                    state = 'before_value'
+                elif c.isspace() and key:
+                    # NOTE: geom is the only (?) param which is not in key=value format
+                    value = key
+                    key = 'geom'
+                    commit()
+                else:
+                    key += c
+
+            elif state == 'before_value':
+                if c == "'":
+                    state = 'value'
+                    quote_char = c
+                elif not c.isspace():
+                    state = 'value'
+                    value += c
+
+            elif state == 'value':
+                if escape:
+                    value += c
+                    escape = False
+                elif c == '\\':
+                    escape = True
+                elif quote_char:
+                    if c == quote_char:
+                        commit()
+                    else:
+                        value += c
+                else:
+                    if c.isspace():
+                        commit()
+                    else:
+                        value += c
+            i += 1
+
+        # Final token
+        if state == 'value':
+            commit()
+        elif state == 'key' and key:
+            # NOTE: geom is the only (?) param which is not in key=value format
+            value = key
+            key = 'geom'
+            commit()
+
+        return result
+
     def __db_connection(self, datasource):
         """Parse QGIS datasource URI and return SQLALchemy DB connection
         string for a PostgreSQL database or connection service.
 
         :param str datasource: QGIS datasource URI
         """
+        params = self.__parse_datasource(datasource)
+
         connection_string = None
-        datasource_filter = None
+        if params.get('service'):
+            connection_string = 'postgresql:///?service=%s' % params['service']
 
-        if 'service=' in datasource:
-            # PostgreSQL connection service
-            m = re.search(r"service='([^']+)'", datasource)
-            if m is not None:
-                connection_string = 'postgresql:///?service=%s' % m.group(1)
-
-        elif 'dbname=' in datasource:
-            # PostgreSQL database
-            dbname, host, port, user, password = '', '', '', '', ''
-
-            m = re.search(r"dbname='(.+?)' \w+=", datasource)
-            if m is not None:
-                dbname = m.group(1)
-
-            m = re.search(r"host=(\S+)", datasource)
-            if m is not None:
-                host = m.group(1)
-
-            m = re.search(r"port=(\d+)", datasource)
-            if m is not None:
-                port = m.group(1)
-
-            m = re.search(r"user='(.+?)' \w+=", datasource)
-            if m is not None:
-                user = m.group(1)
-                # unescape \' and \\'
-                user = re.sub(r"\\'", "'", user)
-                user = re.sub(r"\\\\", r"\\", user)
-
-            m = re.search(r"password='(.+?)' \w+=", datasource)
-            if m is not None:
-                password = m.group(1)
-                # unescape \' and \\'
-                password = re.sub(r"\\'", "'", password)
-                password = re.sub(r"\\\\", r"\\", password)
+        elif params.get('dbname'):
+            dbname = params['dbname']
+            host = params.get('host')
+            port = params.get('port')
+            user = params.get('user')
+            password = params.get('password')
 
             # postgresql://user:password@host:port/dbname
             connection_string = 'postgresql://'
@@ -315,15 +370,9 @@ class QGSReader:
                 connection_string += "%s:%s@" % (
                     urlquote(user), urlquote(password)
                 )
-
             connection_string += "%s:%s/%s" % (host, port, dbname)
 
-        # sql appears last
-        m = re.search(r"sql=(.*)$", datasource)
-        if m is not None:
-            datasource_filter = html.unescape(m.group(1))
-
-        return connection_string, datasource_filter
+        return connection_string, params.get('sql')
 
     def __table_metadata(self, datasource, maplayer=None):
         """Parse QGIS datasource URI and return table metadata.
@@ -335,34 +384,35 @@ class QGSReader:
         if not datasource:
             return metadata
 
+        params = self.__parse_datasource(datasource)
+
         # parse schema, table and geometry column
-        m = re.search(r'table="([^"]+)"\."([^"]+)" \((\w+)\)', datasource)
-        if m is not None:
-            metadata['schema'] = m.group(1)
-            metadata['table_name'] = m.group(2)
-            metadata['geometry_column'] = m.group(3)
-        else:
-            m = re.search(r'table="([^"]+)"\."([^"]+)"', datasource)
-            if m is not None:
-                metadata['schema'] = m.group(1)
-                metadata['table_name'] = m.group(2)
+        if params.get('geom'):
+            metadata['geometry_column'] = params["geom"].strip('()')
+        if params.get('table'):
+            pattern = re.compile(
+                r'(?:from\s+)?'                       # optional "from"
+                r'(?:"(?P<schema_q>[^"]+)"|'          # quoted schema
+                r'(?P<schema_u>\w+))'                 # or unquoted schema
+                r'\.'                                 # dot separator
+                r'(?:"(?P<table_q>[^"]+)"|'           # quoted table
+                r'(?P<table_u>\w+))',                 # or unquoted table
+                re.IGNORECASE
+            )
+            match = pattern.search(params['table'].strip('()'))
+            if match:
+                metadata['schema'] = match.group('schema_q') or match.group('schema_u')
+                metadata['table_name'] = match.group('table_q') or match.group('table_u')
 
-        m = re.search(r"key='(.+?)' \w+=", datasource)
-        if m is not None:
-            metadata['primary_key'] = m.group(1)
-
-        m = re.search(r"type=([\w.]+)", datasource)
-        if m is not None:
-            metadata['geometry_type'] = m.group(1).upper()
+        metadata['primary_key'] = params.get('key')
+        if params.get('type'):
+            metadata['geometry_type'] = params['type'].upper()
         elif maplayer and maplayer.get('wkbType'):
             # Try to fall back to wkbType attr of maplayer element
             metadata['geometry_type'] = maplayer.get('wkbType').upper()
-        else:
-            metadata['geometry_type'] = None
 
-        m = re.search(r"srid=([\d.]+)", datasource)
-        if m is not None:
-            metadata['srid'] = int(m.group(1))
+        if params.get('srid'):
+            metadata['srid'] = int(params['srid'])
         elif maplayer:
             srid = maplayer.find('srs/spatialrefsys/srid')
             if srid is not None:
