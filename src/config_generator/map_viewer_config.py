@@ -8,7 +8,7 @@ import requests
 import traceback
 import urllib.parse
 
-from .external_layer_utils import resolve_external_layer
+from .external_layer_utils import resolve_external_layer, clear_capabilities_cache
 from .permissions_query import PermissionsQuery
 from .service_config import ServiceConfig
 
@@ -88,6 +88,8 @@ class MapViewerConfig(ServiceConfig):
         :param str cache_dir: Project metadata cache directory
         """
         super().__init__('mapViewer', schema_url, service_config, logger)
+
+        clear_capabilities_cache()
 
         self.tenant_path = tenant_path
         self.themes_reader = themes_reader

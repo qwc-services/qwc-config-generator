@@ -6,6 +6,9 @@ from qwc_services_core.cache import ExpiringDict
 
 capabilites_cache = ExpiringDict()
 
+def clear_capabilities_cache():
+    global capabilites_cache
+    capabilites_cache.cache = {}
 
 def getChildElement(parent, path):
     for part in path.split("/"):
