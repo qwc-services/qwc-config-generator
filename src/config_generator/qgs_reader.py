@@ -724,7 +724,10 @@ class QGSReader:
                 constraints = OrderedDict()
 
                 joinfield = fields.get(attr).get('joinfield')
-                if joinfield and meta['jointables'][joinfield['table']]['database'] is not None:
+                if joinfield and \
+                    meta['jointables'][joinfield['table']]['database'] is not None and\
+                    meta['jointables'][joinfield['table']]['table_name'] is not None \
+                :
                     jointable = joinfield['table']
                     jointablemeta = meta['jointables'][jointable]
                     if jointable not in joindbs:
