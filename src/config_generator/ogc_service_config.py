@@ -395,9 +395,9 @@ class OGCServiceConfig(ServiceConfig):
                 if is_public_role:
                     # add group layer if any sub layers are permitted
                     wms_layers.append(wms_layer)
-                elif layer_or_parent_restricted:
+                elif layer_or_parent_restricted or len(sublayers) == len(layer['layers']):
                     # add group layer if any sub layers are permitted
-                    # and group is not public
+                    # and group is not public, or if all sublayers are restricted and permitted for this role
                     wms_layers.append(wms_layer)
 
                 # add sub layers
