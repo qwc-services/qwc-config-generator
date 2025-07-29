@@ -728,7 +728,7 @@ class QGSReader:
                 joinfield = fields.get(attr).get('joinfield')
                 if joinfield and \
                     meta['jointables'][joinfield['table']]['database'] is not None and\
-                    meta['jointables'][joinfield['table']]['table_name'] is not None \
+                    meta['jointables'][joinfield['table']].get('table_name') is not None \
                 :
                     jointable = joinfield['table']
                     jointablemeta = meta['jointables'][jointable]
