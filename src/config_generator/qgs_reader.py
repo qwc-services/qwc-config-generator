@@ -201,10 +201,12 @@ class QGSReader:
     def print_templates(self):
         """Collect print templates from QGS.
         """
+        restrictedLayouts = [el.text for el in self.root.findall('./properties/WMSRestrictedComposers/value')]
         print_templates = []
         composer_template_map = {}
         for template in self.root.findall('.//Layout'):
-            composer_template_map[template.get('name')] = template
+            if not template.get('name') in restrictedLayouts:
+                composer_template_map[template.get('name')] = template
 
         for template in composer_template_map.values():
             template_name = template.get('name')
