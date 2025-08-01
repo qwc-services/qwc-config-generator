@@ -403,6 +403,8 @@ class MapViewerConfig(ServiceConfig):
         if not cap or not 'name' in cap:
             return None
 
+        project_metadata = self.themes_reader.project_metadata(service_name)
+
         root_layer = cap.get('root_layer', {})
 
         name = service_name
@@ -445,7 +447,7 @@ class MapViewerConfig(ServiceConfig):
         item['contact'] = cap.get('contact', {})
 
 
-        projectCrs = self.themes_reader.project_crs(service_name)
+        projectCrs = project_metadata['project_crs']
         item['mapCrs'] = cfg_item.get('mapCrs', projectCrs or themes_config.get('defaultMapCrs', 'EPSG:3857'))
         self.set_optional_config(cfg_item, 'additionalMouseCrs', item)
         featureReports = cfg_item.get("featureReport", {})
@@ -465,7 +467,7 @@ class MapViewerConfig(ServiceConfig):
 
         # Visibility presets
         internal_print_layers = cap.get('internal_print_layers', [])
-        visibilityPresets = self.themes_reader.visibility_presets(service_name)
+        visibilityPresets = self.themes_reader.project_metadata(service_name)['visibility_presets']
         lockedPreset = visibilityPresets.get(cfg_item.get('lockedVisibilityPreset'))
         if not lockedPreset:
             item['visibilityPresets'] = {}
@@ -508,7 +510,7 @@ class MapViewerConfig(ServiceConfig):
         newExternalLayers = []
         for layer in root_layer.get('layers', []):
             layers.append(self.collect_layers(
-                layer, search_layers, 1, collapseLayerGroupsBelowLevel, newExternalLayers, service_name, featureReports, lockedPreset))
+                layer, search_layers, 1, collapseLayerGroupsBelowLevel, newExternalLayers, project_metadata, featureReports, lockedPreset))
 
         # Inject crs in wmts resource string
         for entry in newExternalLayers:
@@ -529,23 +531,21 @@ class MapViewerConfig(ServiceConfig):
         for entry in item.get('backgroundLayers', []):
             bgLayerCrs[entry['name']] = item['mapCrs']
 
-        print_templates = cap.get('print_templates', [])
-        if print_templates:
-            # NOTE: copy print templates to not overwrite original config
-            print_templates = [
-                template.copy() for template in print_templates
-            ]
-            for print_template in print_templates:
-                if 'printLabelBlacklist' in cfg_item:
-                    # filter print labels
-                    labels = [
-                        label for label in print_template.get('labels', [])
-                        if label not in cfg_item['printLabelBlacklist']
-                    ]
-                    print_template['labels'] = labels
+        # NOTE: copy print templates to not overwrite original config
+        print_templates = [
+            template.copy() for template in project_metadata['print_templates']
+        ]
+        for print_template in print_templates:
+            if 'printLabelBlacklist' in cfg_item:
+                # filter print labels
+                labels = [
+                    label for label in print_template.get('labels', [])
+                    if label not in cfg_item['printLabelBlacklist']
+                ]
+                print_template['labels'] = labels
 
-                print_template['default'] = print_template['name'].split("/")[-1] == cfg_item.get('defaultPrintLayout')
-            item['print'] = print_templates
+            print_template['default'] = print_template['name'].split("/")[-1] == cfg_item.get('defaultPrintLayout')
+        item['print'] = print_templates
 
         self.set_optional_config(cfg_item, 'printLabelConfig', item)
         self.set_optional_config(cfg_item, 'printLabelForSearchResult', item)
@@ -567,7 +567,7 @@ class MapViewerConfig(ServiceConfig):
         item['searchProviders'] = search_providers
 
         # edit config
-        item['editConfig'] = self.edit_config(service_name, cfg_item, assets_dir)
+        item['editConfig'] = self.edit_config(service_name, cfg_item, project_metadata)
 
         self.set_optional_config(cfg_item, 'watermark', item)
         self.set_optional_config(cfg_item, 'config', item)
@@ -747,7 +747,7 @@ class MapViewerConfig(ServiceConfig):
         if field in cfg_item:
             item[field] = cfg_item.get(field)
 
-    def collect_layers(self, layer, search_layers, level, collapseBelowLevel, externalLayers, service_name, featureReports, lockedPreset):
+    def collect_layers(self, layer, search_layers, level, collapseBelowLevel, externalLayers, project_metadata, featureReports, lockedPreset):
         """Recursively collect layer tree from capabilities.
 
         :param obj layer: Layer or group layer
@@ -766,7 +766,7 @@ class MapViewerConfig(ServiceConfig):
             for sublayer in layer['layers']:
                 # recursively collect sub layer
                 sublayers.append(self.collect_layers(
-                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers, service_name, featureReports, lockedPreset))
+                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers, project_metadata, featureReports, lockedPreset))
 
             # abstract
             if 'abstract' in layer:
@@ -790,7 +790,7 @@ class MapViewerConfig(ServiceConfig):
             if lockedPreset and layer['name'] in lockedPreset:
                 item_layer['visibility'] = True
         else:
-            meta = self.themes_reader.layer_metadata(service_name, layer['name'])
+            meta = project_metadata['layer_metadata'].get(layer['name'], {})
 
             # layer
             item_layer['visibility'] = layer['visible']
@@ -873,110 +873,54 @@ class MapViewerConfig(ServiceConfig):
 
         return item_layer
 
-    def edit_config(self, map_name, cfg_item, assets_dir):
+    def edit_config(self, map_name, cfg_item, project_metadata):
         """Collect edit config for a map from ConfigDB.
 
         :param str map_name: Map name (matches WMS and QGIS project)
         :param obj cfg_item: Theme config item
-        :param str assets_dir: Assets dir
+        :param obj project_metadata: Theme project metadata
         """
         # NOTE: use ordered keys
         edit_config = OrderedDict()
 
-        Permission = self.config_models.model('permissions')
-        Resource = self.config_models.model('resources')
-
-        with self.config_models.session() as session:
-            # find map resource
-            query = session.query(Resource) \
-                .filter(Resource.type == 'map') \
-                .filter(Resource.name == map_name)
-            map_id = None
-            for map_obj in query.all():
-                map_id = map_obj.id
-
-            if map_id is None:
-                # map not found
-                return edit_config
-
-            # query writable data permissions
-            resource_types = [
-                'data',
-                'data_create', 'data_read', 'data_update', 'data_delete'
-            ]
-            datasets_query = session.query(Permission) \
-                .join(Permission.resource) \
-                .filter(Resource.parent_id == map_obj.id) \
-                .filter(Resource.type.in_(resource_types)) \
-                .distinct(Resource.name, Resource.type) \
-                .order_by(Resource.name)
-
-            edit_datasets = []
-            for permission in datasets_query.all():
-                edit_datasets.append(permission.resource.name)
-
-        if not edit_datasets:
-            # no edit datasets for this map
-            return edit_config
-
         # collect edit datasets
-        for layer_name in self.themes_reader.pg_layers(map_name):
-            if layer_name not in edit_datasets:
-                # skip layers not in datasets
+        for layer_name, layer_metadata in project_metadata['layer_metadata'].items():
+            if not layer_metadata.get('editable'):
+                # No edit metadata available
                 continue
 
             dataset_name = "%s.%s" % (map_name, layer_name)
 
-            try:
-                # get layer metadata from QGIS project
-                meta = self.themes_reader.layer_metadata(map_name, layer_name)
-            except Exception as e:
-                self.logger.error(
-                    "Could not get metadata for edit dataset '%s':\n%s" %
-                    (dataset_name, e)
-                )
-                self.logger.debug(traceback.format_exc())
-                continue
-
             # check geometry type
-            if meta.get('geometry_type') not in self.EDIT_GEOM_TYPES:
+            if layer_metadata.get('geometry_type') not in self.EDIT_GEOM_TYPES:
                 table = (
-                    "%s.%s" % (meta.get('schema'), meta.get('table_name'))
+                    "%s.%s" % (layer_metadata.get('schema'), layer_metadata.get('table_name'))
                 )
                 self.logger.warning(
-                    "Unsupported geometry type '%s' for edit dataset '%s' "
-                    "on table '%s'" %
-                    (meta.get('geometry_type', None), dataset_name, table)
+                    "Unsupported geometry type '%s' for edit dataset '%s' on table '%s'" %
+                    (layer_metadata.get('geometry_type'), dataset_name, table)
                 )
                 continue
 
             # NOTE: use ordered keys
             dataset = OrderedDict()
             dataset['layerName'] = layer_name
-            dataset['displayField'] = meta['displayField']
+            dataset['displayField'] = layer_metadata['displayField']
             dataset['editDataset'] = dataset_name
-            dataset['geomType'] = self.EDIT_GEOM_TYPES.get(meta['geometry_type'])
-            
-            nested_nrels = cfg_item.get('editConfig', {}).get(layer_name, {}).get('generate_nested_nrel_forms', False)
-            forms = self.themes_reader.collect_ui_forms(map_name, assets_dir, layer_name, nested_nrels)
-
-            if layer_name in forms:
-                dataset['form'] = forms[layer_name]
+            dataset['geomType'] = self.EDIT_GEOM_TYPES.get(layer_metadata['geometry_type'])
+            dataset['form'] = layer_metadata["edit_form"]
 
             # collect fields
             fields = []
-            for attr in meta.get('attributes'):
-                field = meta['fields'].get(attr, {})
-
-                alias = field.get('alias', attr)
+            for fieldname, field in layer_metadata['fields'].items():
                 data_type = self.EDIT_FIELD_TYPES.get(
                     field.get('data_type'), 'text'
                 )
 
                 # NOTE: use ordered keys
                 edit_field = OrderedDict()
-                edit_field['id'] = attr
-                edit_field['name'] = alias
+                edit_field['id'] = fieldname
+                edit_field['name'] = field['alias']
                 edit_field['type'] = data_type
                 edit_field['data_type'] = data_type
 
@@ -1001,7 +945,6 @@ class MapViewerConfig(ServiceConfig):
                 fields.append(edit_field)
 
             dataset['fields'] = fields
-
 
             edit_config[layer_name] = dataset
 
@@ -1040,7 +983,8 @@ class MapViewerConfig(ServiceConfig):
         except Exception as e:
             self.logger.error("Could not copy QWC2 index.html:\n%s" % e)
 
-    # permissions
+
+    # Permissions
 
     def permitted_background_layers(self, role):
         """Return permitted internal print layers for background layers from

@@ -68,7 +68,7 @@ class DataServiceConfig(ServiceConfig):
 
         return permissions
 
-    def available_datasets(self, session, quiet=False):
+    def available_datasets(self, session):
         """Collect all available datasets from ConfigDB, grouped by map name.
 
         :param Session session: DB session
@@ -83,8 +83,10 @@ class DataServiceConfig(ServiceConfig):
             .filter(Resource.type == 'map') \
             .order_by(Resource.name)
         for map_obj in query.all():
-            # Skip if map is not in processed wms services (i.e. leftover permission for since deleted map)
-            if map_obj.name not in self.themes_reader.wms_service_names():
+
+            project_metadata = self.themes_reader.project_metadata(map_obj.name)
+            if not project_metadata:
+                # Resource does not match any existing project
                 continue
 
             # collect unique datasets for each map resource
@@ -100,12 +102,8 @@ class DataServiceConfig(ServiceConfig):
             available_datasets[map_obj.name] = []
             invalid_datasets = list()
             for resource in datasets_query.all():
-                if not self.themes_reader.layer_metadata(map_obj.name, resource.name):
-                    invalid_datasets.append(resource.name)
-                else:
+                if project_metadata['layer_metadata'].get(resource.name, {}).get('editable'):
                     available_datasets[map_obj.name].append(resource.name)
-            if not quiet and invalid_datasets:
-                self.logger.warn("The following data resources did not match any layer in the QGS project %s: %s" % (map_obj.name, ",".join(invalid_datasets)))
 
         return available_datasets
 
@@ -121,14 +119,8 @@ class DataServiceConfig(ServiceConfig):
 
         for qgs_name, map_datasets in self.available_datasets(session).items():
 
-            pg_layers = self.themes_reader.pg_layers(qgs_name)
-
             for map_dataset in map_datasets:
-                # NOTE: only write resources for datasets which are pg_layers
-                if map_dataset not in pg_layers:
-                    continue
-
-                meta = self.themes_reader.layer_metadata(qgs_name, map_dataset)
+                meta = self.themes_reader.project_metadata(qgs_name)['layer_metadata'][map_dataset]
                 if autogen_keyvaltable_datasets:
                     keyvaltables.update(meta.get('keyvaltables', {}))
 
@@ -141,7 +133,7 @@ class DataServiceConfig(ServiceConfig):
                 dataset['table_name'] = meta.get('table_name')
                 dataset['primary_key'] = meta.get('primary_key')
 
-                if not dataset['primary_key'] in meta['attributes']:
+                if not dataset['primary_key'] in meta['fields']:
                     self.logger.warn("The dataset %s.%s does not appear to have a valid primary key" % (dataset['schema'], dataset['table_name']))
 
                 dataset['fields'] = []
@@ -185,7 +177,9 @@ class DataServiceConfig(ServiceConfig):
                 dataset['primary_key'] = value.get('primary_key')
                 dataset['fields'] = []
 
-                meta = self.themes_reader.layer_metadata(value.get('qgs_name'), value.get('layername'))
+                qgs_name = value.get('qgs_name')
+                map_dataset = value.get('layername')
+                meta = self.themes_reader.project_metadata(qgs_name)['layer_metadata'][map_dataset]
                 for key, attr_meta in meta.get('fields', {}).items():
                     if attr_meta.get('expression'):
                         # Skip expression field
@@ -305,7 +299,7 @@ class DataServiceConfig(ServiceConfig):
         is_public_role = (role == self.permissions_query.public_role())
 
         # collect edit dataset permissions for each map
-        for map_name, datasets in self.available_datasets(session, True).items():
+        for map_name, datasets in self.available_datasets(session).items():
 
             if self.permissions_default_allow:
                 map_restricted_for_public = map_name in public_restrictions['maps']
@@ -328,7 +322,7 @@ class DataServiceConfig(ServiceConfig):
                     continue
 
                 # get layer metadata from QGIS project
-                meta = self.themes_reader.layer_metadata(map_name, layer_name)
+                meta = self.themes_reader.project_metadata(map_name)['layer_metadata'][layer_name]
 
                 # NOTE: use ordered keys
                 dataset_permissions = OrderedDict()
@@ -345,7 +339,7 @@ class DataServiceConfig(ServiceConfig):
                         get(map_name, {}).get(layer_name, {})
                     )
                     attributes = [
-                        attr for attr in meta['attributes']
+                        attr for attr in meta['fields']
                         if attr not in restricted_attributes
                     ]
                 else:
@@ -364,7 +358,7 @@ class DataServiceConfig(ServiceConfig):
 
                         # collect all permitted attributes
                         attributes = [
-                            attr for attr in meta['attributes']
+                            attr for attr in meta['fields']
                             if attr not in restricted_attributes
                         ]
                     else:
@@ -374,7 +368,7 @@ class DataServiceConfig(ServiceConfig):
                             get(map_name, {}).get(layer_name, {}).keys()
                         )
                         attributes = [
-                            attr for attr in meta['attributes']
+                            attr for attr in meta['fields']
                             if attr in permitted_attributes
                         ]
 

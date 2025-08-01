@@ -55,18 +55,13 @@ class PrintServiceConfig(ServiceConfig):
         print_templates = []
 
         for service_name in self.themes_reader.wms_service_names():
-            cap = self.themes_reader.wms_capabilities(service_name)
-            if not cap or not 'name' in cap:
-                # skip empty capabilities
-                continue
-
+            project_metadata = self.themes_reader.project_metadata(service_name)
             # collect print templates
-            if 'print_templates' in cap:
-                for template in cap['print_templates']:
-                    # NOTE: use ordered keys
-                    print_template = OrderedDict()
-                    print_template['template'] = template['name']
+            for template in project_metadata['print_templates']:
+                # NOTE: use ordered keys
+                print_template = OrderedDict()
+                print_template['template'] = template['name']
 
-                    print_templates.append(print_template)
+                print_templates.append(print_template)
 
         return print_templates

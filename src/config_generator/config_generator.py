@@ -11,7 +11,6 @@ from datetime import datetime, UTC
 from pathlib import Path
 from shutil import move, copyfile, rmtree
 from urllib.parse import urljoin, urlparse
-from xml.etree import ElementTree
 
 from qwc_services_core.config_models import ConfigModels
 from qwc_services_core.database import DatabaseEngine
@@ -208,17 +207,14 @@ class ConfigGenerator():
         # or default back to the `/tmp/` directory
         self.config_path = generator_config.get(
             'config_path',
-            os.environ.get(
-               'OUTPUT_CONFIG_PATH', '/tmp/'
-               ))
+            os.environ.get('OUTPUT_CONFIG_PATH', '/tmp/')
+        )
         self.qwc_config_schema = generator_config.get('qwc_config_schema', 'qwc_config')
         self.tenant_path = os.path.join(self.config_path, self.tenant)
-        self.logger.info("Config destination: '%s'" % self.tenant_path)
+        self.logger.info("Config destination: %s" % self.tenant_path)
 
         self.temp_config_path = tempfile.mkdtemp(prefix='qwc_')
-        self.temp_tenant_path = os.path.join(
-            self.temp_config_path, self.tenant
-        )
+        self.temp_tenant_path = os.path.join(self.temp_config_path, self.tenant)
 
         self.do_validate_schema = str(generator_config.get(
             'validate_schema', True)).lower() != 'false'
@@ -241,26 +237,35 @@ class ConfigGenerator():
             self.logger.error(msg)
             raise Exception(msg)
 
-        # Preprocess QGS projects
-        self.preprocess_qgs_projects(generator_config, self.tenant)
-
-        # Search for QGS projects in scan dir and automatically generate theme items
-        self.search_qgs_projects(generator_config, config["themesConfig"])
-
-        # Search for QGS print layouts
-        print_layouts = self.search_print_layouts(generator_config)
-
-        # load metadata for all QWC2 theme items
-        capabilities_cache_dir = os.path.join(self.config_path, "__capabilities_cache")
-        self.theme_reader = ThemeReader(
-            generator_config, config["themesConfig"], self.logger, print_layouts,
-            use_cached_project_metadata, capabilities_cache_dir
-        )
-
         # lookup for additional service configs by name
         self.service_configs = {}
         for service_config in self.config.get('services', []):
             self.service_configs[service_config['name']] = service_config
+
+        # Read assets dir from mapViewerConfig
+        map_viewer_config = self.service_config('mapViewer')
+        qwc_base_dir = map_viewer_config['config']['qwc2_path']
+        viewer_config_json = map_viewer_config.get('generator_config', {}).get('qwc2_config', {}).get('qwc2_config_file')
+        try:
+            with open(viewer_config_json, 'r') as fh:
+                assets_dir = os.path.join(
+                    qwc_base_dir,
+                    json.load(fh).get('assetsPath', 'assets').lstrip('/')
+                )
+        except:
+            self.logger.warning("Failed to read assets path from viewer config.json, using default")
+            assets_dir = os.path.join(qwc_base_dir, 'assets')
+        self.logger.info(f"Assets destination: {assets_dir}")
+
+        # Search for QGS projects in scan dir and automatically generate theme items
+        self.search_qgs_projects(generator_config, config["themesConfig"])
+
+        # Load metadata for all QWC2 theme items
+        capabilities_cache_dir = os.path.join(self.config_path, "__capabilities_cache")
+        self.theme_reader = ThemeReader(
+            generator_config, self.logger, self.config_models, config["themesConfig"],
+            assets_dir, use_cached_project_metadata, capabilities_cache_dir
+        )
 
         # load schema-versions.json
         schema_versions = {}
@@ -648,44 +653,18 @@ class ConfigGenerator():
 
         return valid
 
-    def preprocess_qgs_projects(self, generator_config, tenant):
-        config_in_path = os.environ.get(
-            'INPUT_CONFIG_PATH', 'config-in/'
-        )
-
-        if os.path.exists(config_in_path) is False:
-            self.logger.warning(
-                "The specified path does not exist: " + config_in_path)
-            return
-
-        qgis_project_extension = generator_config.get(
-            'qgis_project_extension', '.qgs')
-        qgs_projects_dir = os.path.join(
-            config_in_path, tenant, "qgis_projects")
-        if os.path.exists(qgs_projects_dir):
-            self.logger.info(
-                "Searching for projects files in " + qgs_projects_dir)
-        else:
-            self.logger.debug(
-                "The qgis_projects sub directory does not exist: " +
-                qgs_projects_dir)
-            return
-
     def search_qgs_projects(self, generator_config, themes_config):
 
-        qgis_projects_base_dir = generator_config.get(
-            'qgis_projects_base_dir')
-        qgis_projects_scan_base_dir = generator_config.get(
-            'qgis_projects_scan_base_dir')
+        qgis_projects_base_dir = generator_config.get('qgis_projects_base_dir')
+        qgis_projects_scan_base_dir = generator_config.get('qgis_projects_scan_base_dir')
         group_scanned_projects_by_dir = generator_config.get('group_scanned_projects_by_dir', False)
         save_scanned_projects_in_config = generator_config.get('save_scanned_projects_in_config', False)
-        qgis_project_extension = generator_config.get(
-            'qgis_project_extension', '.qgs')
+        qgis_project_extension = generator_config.get('qgis_project_extension', '.qgs')
 
         if not qgis_projects_scan_base_dir:
             self.logger.info(
-                "Skipping scanning for projects" +
-                " (qgis_projects_scan_base_dir not set)")
+                "Skipping scanning for projects (qgis_projects_scan_base_dir not set)"
+            )
             return
 
         if os.path.exists(qgis_projects_scan_base_dir):
@@ -699,8 +678,7 @@ class ConfigGenerator():
 
         themes = themes_config.get("themes", {})
         # collect existing item urls
-        items = themes.get(
-            "items", [])
+        items = themes.get("items", [])
         has_default = False
         for item in items:
             if item.get("default", False):
@@ -757,6 +735,7 @@ class ConfigGenerator():
                 if not has_default:
                     theme_item["default"] = True
                     has_default = True
+
                 # Add theme to items or group
                 if group_scanned_projects_by_dir and (item.parent != base_path):
                     if list(filter(lambda group: group["title"] == item.parent.name, groups)):
@@ -834,77 +813,6 @@ class ConfigGenerator():
             else:
                 msg = "Missing or invalid themes configuration in tenantConfig.json"
                 self.logger.error(msg)
-
-    def search_print_layouts(self, generator_config):
-        qgis_print_layouts_dir = generator_config.get(
-            'qgis_print_layouts_dir', '/layouts')
-        qgis_print_layouts_tenant_subdir = generator_config.get(
-            'qgis_print_layouts_tenant_subdir', None)
-        subdirpath = None
-        if qgis_print_layouts_tenant_subdir:
-            subdirpath = os.path.join(
-                qgis_print_layouts_dir,
-                qgis_print_layouts_tenant_subdir.lstrip('/')
-            ).rstrip('/')
-            self.logger.info(
-                "<b>Searching for print layouts in %s</b>" % subdirpath)
-        else:
-            self.logger.info(
-                "<b>Searching for print layouts in %s</b>" % qgis_print_layouts_dir)
-
-        print_layouts = {}
-        legend_layout_names = []
-        for dirpath, dirs, files in os.walk(qgis_print_layouts_dir,
-                                        followlinks=True):
-            if subdirpath and not dirpath.startswith(subdirpath):
-                continue
-            relpath = dirpath[len(qgis_print_layouts_dir.rstrip('/')) + 1:]
-
-            for filename in files:
-                if Path(filename).suffix != ".qpt":
-                    continue
-
-                path = os.path.join(dirpath, filename)
-                with open(path, encoding='utf-8') as fh:
-                    doc = ElementTree.parse(fh)
-
-                layout = doc.getroot()
-                composer_map = doc.find(".//LayoutItem[@type='65639']")
-                if layout.tag != "Layout" or composer_map is None:
-                    self.logger.warning("Skipping invalid print template " + filename + " (may not contain a layout map element)")
-                    continue
-
-                size = composer_map.get('size').split(',')
-                position = composer_map.get('positionOnPage').split(',')
-                print_template = OrderedDict()
-                print_template['name'] = os.path.join(relpath, layout.get('name'))
-                print_map = OrderedDict()
-                print_map['name'] = "map0"
-                print_map['x'] = float(position[0])
-                print_map['y'] = float(position[1])
-                print_map['width'] = float(size[0])
-                print_map['height'] = float(size[1])
-                print_template['map'] = print_map
-
-                labels = []
-                for label in doc.findall(".//LayoutItem[@type='65641']"):
-                    if label.get('visibility') == '1' and label.get('id'):
-                        labels.append(label.get('id'))
-                if labels:
-                    print_template['labels'] = labels
-
-                self.logger.info("Found print template " + filename + " (" + layout.get('name') + ")")
-                print_layouts[print_template['name']] = print_template
-                if print_template['name'].endswith("_legend"):
-                    legend_layout_names.append(print_template['name'])
-
-        for legend_layout_name in legend_layout_names:
-            base = legend_layout_name[:-7] # strip _legend suffix
-            if base in print_layouts:
-                print_layouts[base]["legendLayout"] = legend_layout_name
-                del print_layouts[legend_layout_name]
-
-        return list(print_layouts.values())
 
     def get_logger(self):
         return self.logger

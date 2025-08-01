@@ -101,6 +101,7 @@ class OGCServiceConfig(ServiceConfig):
             cap = self.themes_reader.wms_capabilities(service_name)
             if not cap or not 'name' in cap:
                 continue
+            project_metadata = self.themes_reader.project_metadata(service_name)
 
             # NOTE: use ordered keys
             wms_service = OrderedDict()
@@ -123,12 +124,11 @@ class OGCServiceConfig(ServiceConfig):
                 cap['root_layer']
             )
 
-            if 'print_templates' in cap:
-                wms_service['print_templates'] = [
-                    template['name'] for template in cap['print_templates']
-                ] + [
-                    template['legendLayout'] for template in cap['print_templates'] if 'legendLayout' in template
-                ]
+            wms_service['print_templates'] = [
+                template['name'] for template in project_metadata['print_templates']
+            ] + [
+                template['legendLayout'] for template in project_metadata['print_templates'] if 'legendLayout' in template
+            ]
             if 'internal_print_layers' in cap:
                 wms_service['internal_print_layers'] = \
                     cap['internal_print_layers']
@@ -277,6 +277,7 @@ class OGCServiceConfig(ServiceConfig):
             cap = self.themes_reader.wms_capabilities(service_name)
             if not cap or not 'name' in cap:
                 continue
+            project_metadata = self.themes_reader.project_metadata(service_name)
 
             # NOTE: use ordered keys
             wms_permissions = OrderedDict()
@@ -299,7 +300,7 @@ class OGCServiceConfig(ServiceConfig):
 
             # print templates
             print_templates = self.permitted_print_templates(
-                service_name, cap, is_public_role, role_permissions,
+                service_name, project_metadata['print_templates'], is_public_role, role_permissions,
                 public_permissions, public_restrictions, map_restricted_for_public
             )
             if print_templates:
@@ -540,13 +541,13 @@ class OGCServiceConfig(ServiceConfig):
 
         return print_layers
 
-    def permitted_print_templates(self, service_name, cap, is_public_role,
+    def permitted_print_templates(self, service_name, print_templates, is_public_role,
                                   role_permissions, public_permissions,
                                   public_restrictions, map_restricted):
         """Return permitted print templates from capabilities and permissions.
 
         :param str service_name: Name of parent WMS service
-        :param obj cap: WMS Capabilities
+        :param list print_templates: Available print templates
         :param bool is_public_role: Whether current role is public
         :param obj role_permissions: Lookup for role permissions
         :param obj public_permissions: Lookup for public permissions
@@ -565,7 +566,6 @@ class OGCServiceConfig(ServiceConfig):
             public_restrictions['print_templates'].get(service_name, {}).keys()
         )
 
-        print_templates = cap.get('print_templates', [])
         if is_public_role:
             # collect all permitted print templates
             if self.permissions_default_allow:
