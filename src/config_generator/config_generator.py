@@ -309,7 +309,7 @@ class ConfigGenerator():
             'ogc': OGCServiceConfig(
                 generator_config, self.theme_reader, self.config_models,
                 self.schema_urls.get('ogc'), self.service_config('ogc'),
-                self.logger
+                self.logger, force_readonly_datasets
             ),
             'mapViewer': MapViewerConfig(
                 self.temp_tenant_path,

@@ -315,6 +315,78 @@ class PermissionsTests(unittest.TestCase):
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.data_datasets[?(@.name=='qwc_demo.edit_polygons' & @.deletable)]").find(perm)), 0)
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.data_datasets[?(@.name=='qwc_demo.edit_polygons')].attributes[?(@=='description')]").find(perm)), 1)
 
+    def test_wfs_permissions(self):
+        """ Test WFS permissions. """
+
+        ## Test that no WFS service permissions are generated if wfs_service is not permitted
+        self.cursor.execute(f"""
+            DELETE FROM qwc_config.permissions;
+            DELETE FROM qwc_config.resources;
+        """)
+        PermissionsTests.conn.commit()
+
+        perm = self.__run_config_generator({})
+
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wfs_services[?(@.name=='wfs_test')]").find(perm)), 0)
+        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wfs_services[?(@.name=='wfs_test')]").find(perm)), 0)
+
+        ## Test that WFS service permissions are generated only for admin if only permitted for admin
+        self.cursor.execute(f"""
+            DELETE FROM qwc_config.permissions;
+            DELETE FROM qwc_config.resources;
+            INSERT INTO qwc_config.resources (id, parent_id, type, name)
+            VALUES
+            (1, NULL, 'wfs_service', 'scan/wfs_test');
+            INSERT INTO qwc_config.permissions (id, role_id, resource_id, priority, write)
+            VALUES
+            (1, {ROLE_ADMIN}, 1, 0, FALSE)
+        """)
+        PermissionsTests.conn.commit()
+
+        perm = self.__run_config_generator({})
+
+        # wfs_service only permitted for admin
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wfs_services[?(@.name=='scan/wfs_test')]").find(perm)), 0)
+        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wfs_services[?(@.name=='scan/wfs_test')]").find(perm)), 1)
+
+        ## Test remaining permissions
+        self.cursor.execute(f"""
+            DELETE FROM qwc_config.permissions;
+            DELETE FROM qwc_config.resources;
+            INSERT INTO qwc_config.resources (id, parent_id, type, name)
+            VALUES
+            (1, NULL, 'wfs_service', 'scan/wfs_test'),
+            (2, 1, 'wfs_layer', 'ÖV: Haltestellen'),
+            (3, 1, 'wfs_layer', 'ÖV: Linien'),
+            (4, 1, 'wfs_layer_create', 'ÖV: Linien'),
+            (5, 3, 'attribute', 'beschreibung');
+            INSERT INTO qwc_config.permissions (id, role_id, resource_id, priority, write)
+            VALUES
+            (1, {ROLE_PUBLIC}, 1, 0, FALSE),
+            (2, {ROLE_ADMIN}, 2, 0, TRUE),
+            (3, {ROLE_PUBLIC}, 3, 0, FALSE),
+            (4, {ROLE_ADMIN}, 4, 0, FALSE),
+            (5, {ROLE_ADMIN}, 5, 0, FALSE);
+        """)
+        PermissionsTests.conn.commit()
+
+        perm = self.__run_config_generator({})
+
+        # Map and layers permitted for public, edit_polygons has public read-only permissions with restricted attribute
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wfs_services[?(@.name=='scan/wfs_test')]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Haltestellen')]").find(perm)), 0)
+        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Haltestellen')]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Linien')]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Linien')]").find(perm)), 1)
+
+        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Haltestellen' & @.readable==true)]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Linien' & @.readable==true)]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Linien' & @.creatable==true)]").find(perm)), 0)
+        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Linien' & @.creatable==true)]").find(perm)), 1)
+
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Linien')].attributes[?(@=='beschreibung')]").find(perm)), 0)
+        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Linien')].attributes[?(@=='beschreibung')]").find(perm)), 1)
+
     def test_public_permissions_default_restrict_no_permissions(self):
         """ Test permissions_default_allow=false and no permissions. """
 

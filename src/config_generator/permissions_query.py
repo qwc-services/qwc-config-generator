@@ -126,6 +126,7 @@ class PermissionsQuery:
         NOTE: use 'attribute' resource type for layer attributes,
               'data_attribute' for data attributes and
               'info_attribute' for FeatureInfo layer attributes
+              'wfs_attribute' for wfs_layer attributes
 
         :param str resource_type: QWC resource type
         :param Session session: DB session
@@ -142,6 +143,9 @@ class PermissionsQuery:
             # only info layer attributes
             resource_type = 'attribute'
             parent_filter = 'feature_info_layer'
+        elif resource_type == 'wfs_attribute':
+            resource_type = 'attribute'
+            parent_filter = 'wfs_layer'
 
         # query resource permissions
         query = self.resource_permissions_query(
@@ -164,6 +168,7 @@ class PermissionsQuery:
         NOTE: use 'attribute' resource type for layer attributes,
               'data_attribute' for data attributes and
               'info_attribute' for FeatureInfo layer attributes
+              'wfs_attribute' for wfs_layer attributes
 
         :param str resource_type: QWC resource type
         :param Session session: DB session
@@ -180,6 +185,10 @@ class PermissionsQuery:
             # only info layer attributes
             resource_type = 'attribute'
             parent_filter = 'feature_info_layer'
+        elif resource_type == 'wfs_attribute':
+            resource_type = 'attribute'
+            parent_filter = 'wfs_layer'
+
 
         # query public resource restrictions
         query = self.resource_restrictions_query(

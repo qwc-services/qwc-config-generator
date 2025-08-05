@@ -12,7 +12,7 @@ class OGCServiceConfig(ServiceConfig):
     """
 
     def __init__(self, generator_config, themes_reader, config_models,
-                 schema_url, service_config, logger):
+                 schema_url, service_config, logger, force_readonly_datasets):
         """Constructor
 
         :param obj generator_config: ConfigGenerator config
@@ -21,6 +21,7 @@ class OGCServiceConfig(ServiceConfig):
         :param str schema_url: JSON schema URL for service config
         :param obj service_config: Additional service config
         :param Logger logger: Logger
+        :param bool force_readonly_datasets: Whether to force read-only datasets
         """
         super().__init__('ogc', schema_url, service_config, logger)
 
@@ -33,6 +34,7 @@ class OGCServiceConfig(ServiceConfig):
         ).strip('/')
 
         self.themes_reader = themes_reader
+        self.force_readonly_datasets = force_readonly_datasets
 
         self.config_models = config_models
         self.permissions_query = PermissionsQuery(config_models, logger)
@@ -617,8 +619,10 @@ class OGCServiceConfig(ServiceConfig):
     def wfs_permissions(self, role, session):
         """Collect WFS Service permissions from capabilities and ConfigDB.
 
-        NOTE: the same map, layer and attribute resources and permission
-              in the ConfigDB are used for both WMS and WFS
+        NOTE: wfs_services are restricted by default and require
+              explicit permissions
+              layers of a permitted wfs_service are allowed by default
+              attributes are allowed by default
 
         :param str role: Role name
         :param Session session: DB session
@@ -631,25 +635,31 @@ class OGCServiceConfig(ServiceConfig):
 
         # collect role permissions from ConfigDB
         role_permissions = {
-            'maps': permitted_resources('map', role, session),
-            'layers': permitted_resources('layer', role, session),
-            'attributes': permitted_resources('attribute', role, session)
+            'wfs_service': permitted_resources('wfs_service', role, session),
+            'wfs_layer': permitted_resources('wfs_layer', role, session),
+            'wfs_layer_create': permitted_resources('wfs_layer_create', role, session),
+            'wfs_layer_update': permitted_resources('wfs_layer_update', role, session),
+            'wfs_layer_delete': permitted_resources('wfs_layer_delete', role, session),
+            'attributes': permitted_resources('wfs_attribute', role, session)
         }
 
         # collect public permissions from ConfigDB
         public_role = self.permissions_query.public_role()
         public_permissions = {
-            'maps': permitted_resources('map', public_role, session),
-            'layers': permitted_resources('layer', public_role, session),
-            'attributes':
-                permitted_resources('attribute', public_role, session)
+            'wfs_service': permitted_resources('wfs_service', public_role, session),
+            'wfs_layer': permitted_resources('wfs_layer', public_role, session),
+            'wfs_layer_create':
+                permitted_resources('wfs_layer_create', public_role, session),
+            'wfs_layer_update':
+                permitted_resources('wfs_layer_update', public_role, session),
+            'wfs_layer_delete':
+                permitted_resources('wfs_layer_delete', public_role, session)
         }
 
         # collect public restrictions from ConfigDB
         public_restrictions = {
-            'maps': non_public_resources('map', session),
-            'layers': non_public_resources('layer', session),
-            'attributes': non_public_resources('attribute', session)
+            'wfs_layer': non_public_resources('wfs_layer', session),
+            'attributes': non_public_resources('wfs_attribute', session)
         }
 
         # NOTE: replace special characters in layer/attribute names
@@ -659,30 +669,55 @@ class OGCServiceConfig(ServiceConfig):
         clean_attr_name = lambda attr_name: replace_unicode_pat.sub('', attr_name.replace(' ', '_'))
 
         for perm in (role_permissions, public_permissions, public_restrictions):
-            for service_name in perm['layers']:
-                perm['layers'][service_name] = dict([
-                    (clean_layer_name(layer_name), {}) for layer_name in perm['layers'][service_name]
-                ])
-            for service_name in perm['attributes']:
+            for resource in ['wfs_layer', 'wfs_layer_create', 'wfs_layer_update', 'wfs_layer_delete']:
+                for service_name in perm.get(resource, []):
+                    perm[resource][service_name] = dict([
+                        (clean_layer_name(layer_name), {}) for layer_name in perm[resource][service_name]
+                    ])
+            for service_name in perm.get('attributes', []):
                 perm['attributes'][service_name] = dict([
                     (clean_layer_name(layer_name_attrs[0]), dict([
                         (clean_attr_name(attr_name), {}) for attr_name in layer_name_attrs[1]
                     ])) for layer_name_attrs in perm['attributes'][service_name].items()
                 ])
 
+        # collect write permissions for role
+        # with highest priority for all datasets
+        role_writeable_services = {}
+        examined_services = {}
+        wfs_layer_permissions = self.permissions_query.resource_permissions(
+            'wfs_layer', None, role, session
+        )
+        for permission in wfs_layer_permissions:
+            # lookup service resource for dataset
+            if not permission.resource.parent_id:
+                continue
+            service_obj = self.permissions_query.get_resource(
+                permission.resource.parent_id
+            )
+            service_name = service_obj.name
+
+            if service_name not in role_writeable_services:
+                # init lookup for map
+                role_writeable_services[service_name] = set()
+                examined_services[service_name] = set()
+
+            layer = clean_layer_name(permission.resource.name)
+            if layer not in examined_services[service_name]:
+                # check permission with highest priority
+                if permission.write and not self.force_readonly_datasets:
+                    # mark as writable
+                    role_writeable_services[service_name].add(layer)
+                examined_services[service_name].add(layer)
+
         is_public_role = (role == self.permissions_query.public_role())
 
         for service_name in self.themes_reader.wfs_service_names():
-            # lookup permissions
-            if self.permissions_default_allow:
-                restricted_for_public = service_name in \
-                    public_restrictions['maps']
-            else:
-                restricted_for_public = service_name not in \
-                    public_permissions['maps']
-            permitted_for_role = service_name in role_permissions['maps']
-            if restricted_for_public and not permitted_for_role:
-                # WFS not permitted
+            # lookup wfs_service permission (wfs_service restricted by default)
+            service_restricted_for_public = service_name not in public_permissions['wfs_service']
+            service_permitted_for_role = service_name in role_permissions['wfs_service']
+            if service_restricted_for_public and not service_permitted_for_role:
+                # service not permitted
                 continue
 
             cap = self.themes_reader.wfs_capabilities(service_name)
@@ -696,7 +731,8 @@ class OGCServiceConfig(ServiceConfig):
             # collect WFS layers
             layers = self.collect_wfs_layer_permissions(
                 service_name, cap, is_public_role, role_permissions,
-                public_permissions, public_restrictions, restricted_for_public
+                public_permissions, public_restrictions,
+                service_restricted_for_public, role_writeable_services
             )
             wfs_permissions['layers'] = layers
 
@@ -707,7 +743,8 @@ class OGCServiceConfig(ServiceConfig):
 
     def collect_wfs_layer_permissions(self, service_name, cap, is_public_role,
                                       role_permissions, public_permissions,
-                                      public_restrictions, map_restricted):
+                                      public_restrictions, service_restricted_for_public,
+                                      role_writeable_services):
         """Return permitted WFS layers from capabilities and permissions.
 
         :param str service_name: Name of parent WFS service
@@ -716,91 +753,118 @@ class OGCServiceConfig(ServiceConfig):
         :param obj role_permissions: Lookup for role permissions
         :param obj public_permissions: Lookup for public permissions
         :param obj public_restrictions: Lookup for public restrictions
-        :param bool map_restricted: Whether parent map is restricted
+        :param bool service_restricted_for_public: Whether parent service is restricted
                                     for public
         """
         wfs_layers = []
 
         # collect WFS layer permissions and restrictions
         for layer in cap['wfs_layers']:
-            # lookup permissions
+
+            # Check WFS layer permission (layer permitted by default)
             if self.permissions_default_allow:
-                restricted_for_public = layer['name'] in \
-                    public_restrictions['layers'].get(service_name, {})
+                layer_restricted_for_public = layer['name'] in \
+                    public_restrictions['wfs_layer'].get(service_name, {})
             else:
-                restricted_for_public = layer['name'] not in \
-                    public_permissions['layers'].get(service_name, {})
+                layer_restricted_for_public = layer['name'] not in \
+                    public_permissions['wfs_layer'].get(service_name, {})
+            layer_permitted_for_role = layer['name'] in \
+                role_permissions['wfs_layer'].get(service_name, {})
 
-            role_permitted_layers = role_permissions[
-                'layers'].get(service_name, {})
-            all_layers_permitted = "*" in role_permitted_layers
-            permitted_for_role = all_layers_permitted or \
-                layer['name'] in role_permitted_layers
-            layer_or_map_restricted = restricted_for_public or map_restricted
-
-            if restricted_for_public and not permitted_for_role:
-                # WFS layer not permitted
+            layer_or_service_restricted = layer_restricted_for_public or service_restricted_for_public
+            if layer_restricted_for_public and not layer_permitted_for_role:
+                # wfs_layer not permitted at least for reading
                 continue
 
-            # NOTE: use ordered keys
-            wfs_layer = OrderedDict()
-            wfs_layer['name'] = layer['name']
+            layer_permissions = OrderedDict()
+            layer_permissions['name'] = layer['name']
+
+            # collect CRUD permissions
+            writable = layer['name'] in role_writeable_services.get(service_name, {})
+            creatable = writable
+            readable = True
+            updatable = writable
+            deletable = writable
+            additional_crud = False
+
+            # combine with detailed CRUD data permissions
+            if not self.force_readonly_datasets:
+                creatable |= layer['name'] in \
+                    role_permissions['wfs_layer_create'].get(service_name, {})
+                updatable |= layer['name'] in \
+                    role_permissions['wfs_layer_update'].get(service_name, {})
+                deletable |= layer['name'] in \
+                    role_permissions['wfs_layer_delete'].get(service_name, {})
+                writable |= (
+                    creatable and readable and updatable and deletable
+                )
+
+            if is_public_role or layer_or_service_restricted:
+                # collect all CRUD permissions
+                layer_permissions['writable'] = writable
+                layer_permissions['creatable'] = creatable
+                layer_permissions['readable'] = readable
+                layer_permissions['updatable'] = updatable
+                layer_permissions['deletable'] = deletable
+            else:
+                # collect additional CRUD permissions
+                if writable:
+                    layer_permissions['writable'] = writable
+                if creatable:
+                    layer_permissions['creatable'] = creatable
+                if updatable:
+                    layer_permissions['updatable'] = updatable
+                if deletable:
+                    layer_permissions['deletable'] = deletable
+
+                additional_crud = creatable or updatable or deletable
 
             # collect WFS attribute permissions
             # NOTE: attributes are always allowed by default
-            if is_public_role:
+            restricted_attributes = set(
+                public_restrictions['attributes'].
+                get(service_name, {}).get(layer['name'], {}).keys()
+            )
+            permitted_attributes = set(
+                role_permissions['attributes'].
+                get(service_name, {}).get(layer['name'], {}).keys()
+            )
+            if layer_or_service_restricted:
+                 # collect attributes which are unrestricted or permitted for role
+                restricted_attributes -= permitted_attributes
+
                 # collect all permitted attributes
-                restricted_attributes = (
-                    public_restrictions['attributes'].
-                    get(service_name, {}).get(layer['name'], {})
-                )
-                wfs_layer['attributes'] = [
+                layer_permissions['attributes'] = [
+                    attr for attr in layer['attributes']
+                    if attr not in restricted_attributes
+                ]
+            elif is_public_role:
+                # collect all attributes which are not restricted
+                layer_permissions['attributes'] = [
                     attr for attr in layer['attributes']
                     if attr not in restricted_attributes
                 ]
             else:
-                attributes = None
-
-                if layer_or_map_restricted:
-                    # collect restricted attributes not permitted for role
-                    restricted_attributes = set(
-                        public_restrictions['attributes'].
-                        get(service_name, {}).get(layer['name'], {}).keys()
-                    )
-                    permitted_attributes = set(
-                        role_permissions['attributes'].
-                        get(service_name, {}).get(layer['name'], {}).keys()
-                    )
-                    restricted_attributes -= permitted_attributes
-
-                    # collect all permitted attributes
-                    attributes = [
-                        attr for attr in layer['attributes']
-                        if attr not in restricted_attributes
-                    ]
-
-                else:
-                    # collect additional attributes
-                    permitted_attributes = (
-                        role_permissions['attributes'].
-                        get(service_name, {}).get(layer['name'], {}).keys()
-                    )
-                    attributes = [
-                        attr for attr in layer['attributes']
-                        if attr in permitted_attributes
-                    ]
-
+                # collect additional attributes which are restricted for public and permitted for role
+                permitted_attributes = (
+                    role_permissions['attributes'].
+                    get(service_name, {}).get(layer['name'], {}).keys()
+                )
+                attributes = [
+                    attr for attr in layer['attributes']
+                    if attr in permitted_attributes and attr in restricted_attributes
+                ]
                 if attributes:
-                    wfs_layer['attributes'] = attributes
+                    layer_permissions['attributes'] = attributes
 
             if is_public_role:
-                # add public layer
-                wfs_layers.append(wfs_layer)
-            elif layer_or_map_restricted:
-                # add layer permitted for role
-                wfs_layers.append(wfs_layer)
-            elif wfs_layer.get('attributes', []):
-                # add layer with additional attributes
-                wfs_layers.append(wfs_layer)
+                # add public dataset
+                wfs_layers.append(layer_permissions)
+            elif layer_or_service_restricted:
+                # add dataset permitted for role
+                wfs_layers.append(layer_permissions)
+            elif layer_permissions.get('attributes', []) or additional_crud:
+                # only add additional permissions
+                wfs_layers.append(layer_permissions)
 
         return wfs_layers

@@ -43,8 +43,6 @@ class ThemeReader():
         ).rstrip('/') + '/'
         self.ows_prefix = urlparse(self.default_qgis_server_url).path.rstrip('/') + '/'
 
-        self.generate_wfs_services = config.get('generate_wfs_services', False)
-
         self.__read_metadata_for_group(themes_config.get('themes', {}))
 
 
@@ -145,11 +143,7 @@ class ThemeReader():
         self.logger.info("<b>Reading theme %s</b>" % url)
 
         wms_capabilities = self.capabilities_reader.read_wms_service_capabilities(service_name, item, self.themes_config)
-
-        wfs_capabilities = {}
-        if self.generate_wfs_services:
-            wfs_capabilities = self.capabilities_reader.read_wfs_service_capabilities(service_name, item)
-
+        wfs_capabilities = self.capabilities_reader.read_wfs_service_capabilities(service_name, item)
         project_metadata = self.qgs_reader.read(service_name, item, self.__get_edit_datasets(service_name))
 
         self.theme_metadata[service_name] = {

@@ -24,6 +24,10 @@ jobs:
           sed -i 's|port=5432|port=5439|g' pg_service_local.conf
           sed -i -e 's|# ports:|ports:|g' -e 's|#   - "127.0.0.1|  - "127.0.0.1|g' docker-compose-example.yml
           sed -Ei "s|^(\s*POSTGRES_PASSWORD:).*$|\1 'waej7WuoOoth0wor'|" docker-compose-example.yml
+          # Copy additional test data
+          cp ../tests/testdata/{wfs_test.gpkg,wfs_test.qgs} volumes/qgs-resources/scan/
+          # Temporarily upgrade to qwc-base-db-migrate:latest
+          sed -i 's|image: sourcepole/qwc-base-db-migrate:latest-2025-lts|image: sourcepole/qwc-base-db-migrate:latest|' docker-compose-example.yml
           docker compose -f docker-compose-example.yml up -d qwc-postgis qwc-config-db-migrate qwc-qgis-server
 
       - name: Setting up Python
