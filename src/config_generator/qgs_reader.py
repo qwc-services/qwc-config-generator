@@ -275,14 +275,8 @@ class QGSReader:
             ) for dim in maplayer.findall("wmsDimensions/dimension")])
 
             # Edit metadata
-            layer_metadata["editable"] = editable
             if editable:
-                self.__layer_edit_metadata(root, layer_metadata, maplayer, layername, map_prefix, shortname_map)
-
-                # Generate form
-                layer_metadata["edit_form"] = self.__generate_edit_form(
-                    root, qgs_path, map_prefix, shortname_map, maplayer, layer_metadata, layername, theme_item
-                )
+                self.__layer_edit_metadata(root, layer_metadata, maplayer, layername, map_prefix, shortname_map, qgs_path, theme_item)
 
             layers_metadata[layername] = layer_metadata
 
@@ -297,7 +291,7 @@ class QGSReader:
         return layers_metadata
 
 
-    def __layer_edit_metadata(self, root, layer_metadata, maplayer, layername, map_prefix, shortnames):
+    def __layer_edit_metadata(self, root, layer_metadata, maplayer, layername, map_prefix, shortnames, qgs_path, theme_item):
         """ Read layer metadata relevant for editing from QGS. """
 
         provider = maplayer.find('provider').text
@@ -310,6 +304,8 @@ class QGSReader:
         if not layer_metadata.get('database') or not layer_metadata.get('table_name'):
             self.logger.warning(f"Skipping edit metadata for layer {layername}: could not parse datasource")
             return
+
+        layer_metadata["editable"] = True
 
         # Read joins
         joinfields = {}
@@ -382,6 +378,11 @@ class QGSReader:
         previewExpression = maplayer.find('previewExpression')
         m = re.match(r'^"([^"]+)"$', previewExpression.text if previewExpression is not None else "")
         layer_metadata["displayField"] = m.group(1) if m else None
+
+        # Generate form
+        layer_metadata["edit_form"] = self.__generate_edit_form(
+            root, qgs_path, map_prefix, shortnames, maplayer, layer_metadata, layername, theme_item
+        )
 
 
     def __datasource_metadata(self, datasource, maplayer=None):
