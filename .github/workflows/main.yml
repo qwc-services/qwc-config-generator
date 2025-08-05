@@ -28,6 +28,7 @@ jobs:
           cp ../tests/testdata/{wfs_test.gpkg,wfs_test.qgs} volumes/qgs-resources/scan/
           # Temporarily upgrade to qwc-base-db-migrate:latest
           sed -i 's|image: sourcepole/qwc-base-db-migrate:latest-2025-lts|image: sourcepole/qwc-base-db-migrate:latest|' docker-compose-example.yml
+          sed -i 's|curl -L https://qwc2.sourcepole.ch/data/qwc_geodb.backup > qwc_geodb.backup|curl -L https://qwc2.sourcepole.ch/data/qwc_geodb.new.backup > qwc_geodb.backup|' volumes/demo-data/setup-demo-data.sh
           docker compose -f docker-compose-example.yml up qwc-postgis qwc-config-db-migrate qwc-qgis-server
 
       - name: Setting up Python
