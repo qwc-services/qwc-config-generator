@@ -92,7 +92,7 @@ class DataServiceConfig(ServiceConfig):
             # collect unique datasets for each map resource
             resource_types = [
                 'data',
-                'data_create', 'data_read', 'data_update', 'data_delete'
+                'data_create', 'data_update', 'data_delete'
             ]
             datasets_query = session.query(Resource) \
                 .filter(Resource.parent_id == map_obj.id) \
@@ -198,7 +198,7 @@ class DataServiceConfig(ServiceConfig):
     def _dataset_permissions(self, role, session):
         """Collect edit dataset permissions from ConfigDB.
 
-        NOTE: maps and datasets are restricted by default and require
+        NOTE: datasets are restricted by default and require
               explicit permissions
               attributes are allowed by default
 
@@ -216,7 +216,6 @@ class DataServiceConfig(ServiceConfig):
             'maps': permitted_resources('map', role, session),
             'data': permitted_resources('data', role, session),
             'data_create': permitted_resources('data_create', role, session),
-            'data_read': permitted_resources('data_read', role, session),
             'data_update': permitted_resources('data_update', role, session),
             'data_delete': permitted_resources('data_delete', role, session),
             'attributes': permitted_resources('data_attribute', role, session)
@@ -229,8 +228,6 @@ class DataServiceConfig(ServiceConfig):
             'data': permitted_resources('data', public_role, session),
             'data_create':
                 permitted_resources('data_create', public_role, session),
-            'data_read':
-                permitted_resources('data_read', public_role, session),
             'data_update':
                 permitted_resources('data_update', public_role, session),
             'data_delete':
@@ -246,7 +243,7 @@ class DataServiceConfig(ServiceConfig):
         # collect permitted datasets for role from all data resource types
         resource_types = [
             'data',
-            'data_create', 'data_read', 'data_update', 'data_delete'
+            'data_create', 'data_update', 'data_delete'
         ]
         role_permitted_datasets = {}
         for resource_type in resource_types:
@@ -398,8 +395,6 @@ class DataServiceConfig(ServiceConfig):
                 creatable |= layer_name in \
                     role_permissions['data_create'].get(map_name, {})
                 readable |= layer_name in \
-                    role_permissions['data_read'].get(map_name, {}) \
-                    or layer_name in \
                     role_permissions['data_create'].get(map_name, {}) \
                     or layer_name in \
                     role_permissions['data_update'].get(map_name, {}) \

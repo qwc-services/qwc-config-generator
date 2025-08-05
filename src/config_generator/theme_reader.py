@@ -176,7 +176,7 @@ class ThemeReader():
             # query writable data permissions
             resource_types = [
                 'data',
-                'data_create', 'data_read', 'data_update', 'data_delete'
+                'data_create', 'data_update', 'data_delete'
             ]
             datasets_query = session.query(Permission) \
                 .join(Permission.resource) \
