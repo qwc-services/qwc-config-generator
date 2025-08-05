@@ -310,7 +310,6 @@ class PermissionsTests(unittest.TestCase):
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.data_datasets[?(@.name=='qwc_demo.edit_lines' & @.deletable==false)]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.data_datasets[?(@.name=='qwc_demo.edit_polygons')]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.data_datasets[?(@.name=='qwc_demo.edit_polygons' & @.creatable==true)]").find(perm)), 1)
-        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.data_datasets[?(@.name=='qwc_demo.edit_polygons' & @.readable==true)]").find(perm)), 1)
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.data_datasets[?(@.name=='qwc_demo.edit_polygons' & @.updatable)]").find(perm)), 0)
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.data_datasets[?(@.name=='qwc_demo.edit_polygons' & @.deletable)]").find(perm)), 0)
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.data_datasets[?(@.name=='qwc_demo.edit_polygons')].attributes[?(@=='description')]").find(perm)), 1)

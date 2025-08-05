@@ -174,10 +174,7 @@ class ThemeReader():
                 return []
 
             # query writable data permissions
-            resource_types = [
-                'data',
-                'data_create', 'data_update', 'data_delete'
-            ]
+            resource_types = ['data']
             datasets_query = session.query(Permission) \
                 .join(Permission.resource) \
                 .filter(Resource.parent_id == map_obj.id) \
