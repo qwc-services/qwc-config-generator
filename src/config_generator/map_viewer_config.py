@@ -580,6 +580,7 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'layerTreeHiddenSublayers', item)
         self.set_optional_config(cfg_item, 'predefinedFilters', item)
         self.set_optional_config(cfg_item, 'map3d', item)
+        self.set_optional_config(cfg_item, 'startupView', item)
 
         if not cfg_item.get('wmsOnly', False):
             item['thumbnail'] = self.get_thumbnail(cfg_item, service_name, cap, assets_dir)
