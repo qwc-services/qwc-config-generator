@@ -521,12 +521,11 @@ class QGSReader:
             constraints['keyvalrel'] = map_prefix + "." + layerName + ":" + key + ":" + value
             constraints['allowMulti'] = allowMulti
             keyvaltables[map_prefix + "." + layerName] = self.__datasource_metadata(layerSource)
-            keyvaltables[map_prefix + "." + layerName]['qgs_name'] = map_prefix
-            keyvaltables[map_prefix + "." + layerName]['layername'] = layerName
-            keyvaltables[map_prefix + "." + layerName]['fields'] = {
-                key: {},
-                value: {}
-            }
+            key_field = {"name": key}
+            self.__column_metadata(key_field, keyvaltables[map_prefix + "." + layerName], key, True)
+            value_field = {"name": value}
+            self.__column_metadata(value_field, keyvaltables[map_prefix + "." + layerName], value, True)
+            keyvaltables[map_prefix + "." + layerName]['fields'] = [key_field, value_field]
 
         elif edit_widget.get('type') == 'TextEdit':
             multilineOpt = element_attr(edit_widget.find("config/Option/Option[@name='IsMultiline']"), 'value')
@@ -544,7 +543,7 @@ class QGSReader:
 
         return constraints
 
-    def __column_metadata(self, field_metadata, datasource, column):
+    def __column_metadata(self, field_metadata, datasource, column, data_type_only = False):
         """ Get column metadata from database. """
 
         # build query SQL for tables and views
@@ -637,33 +636,34 @@ class QGSReader:
             data_type = row['data_type']
             field_metadata['data_type'] = data_type
 
-            # Constraints from data type
-            # NOTE: any existing QGIS field constraints take precedence
-            ranges = {
-                'smallint': {'min': -32768, 'max': 32767},
-                'integer': {'min': -2147483648, 'max': 2147483647},
-                'bigint': {'min': -9223372036854775808, 'max': 9223372036854775807}
-            }
-            constraints = field_metadata['constraints']
-            if (data_type in ['character', 'character varying'] and
-                    row['character_maximum_length']):
-                constraints['maxlength'] = row['character_maximum_length']
-            elif data_type == 'numeric' and row['numeric_precision']:
-                step = pow(10, -row['numeric_scale'])
-                max_value = pow(
-                    10, row['numeric_precision'] - row['numeric_scale']
-                ) - step
-                constraints['numeric_precision'] = row['numeric_precision']
-                constraints['numeric_scale'] = row['numeric_scale']
-                if not 'step' in constraints:
-                    constraints['step'] = step
-                ranges['numeric'] = {'min': -max_value, 'max': max_value}
+            if not data_type_only:
+                # Constraints from data type
+                # NOTE: any existing QGIS field constraints take precedence
+                ranges = {
+                    'smallint': {'min': -32768, 'max': 32767},
+                    'integer': {'min': -2147483648, 'max': 2147483647},
+                    'bigint': {'min': -9223372036854775808, 'max': 9223372036854775807}
+                }
+                constraints = field_metadata['constraints']
+                if (data_type in ['character', 'character varying'] and
+                        row['character_maximum_length']):
+                    constraints['maxlength'] = row['character_maximum_length']
+                elif data_type == 'numeric' and row['numeric_precision']:
+                    step = pow(10, -row['numeric_scale'])
+                    max_value = pow(
+                        10, row['numeric_precision'] - row['numeric_scale']
+                    ) - step
+                    constraints['numeric_precision'] = row['numeric_precision']
+                    constraints['numeric_scale'] = row['numeric_scale']
+                    if not 'step' in constraints:
+                        constraints['step'] = step
+                    ranges['numeric'] = {'min': -max_value, 'max': max_value}
 
-            if data_type in ranges:
-                if not 'min' in constraints:
-                    constraints['min'] = ranges[data_type]['min']
-                if not 'max' in constraints:
-                    constraints['max'] = ranges[data_type]['max']
+                if data_type in ranges:
+                    if not 'min' in constraints:
+                        constraints['min'] = ranges[data_type]['min']
+                    if not 'max' in constraints:
+                        constraints['max'] = ranges[data_type]['max']
 
 
     def __generate_edit_form(self, project, qgs_path, map_prefix, shortnames, maplayer, layer_metadata, layername, theme_item):

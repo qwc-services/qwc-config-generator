@@ -166,30 +166,16 @@ class DataServiceConfig(ServiceConfig):
                 added_datasets.add(dataset['name'])
                 datasets.append(dataset)
 
-        for key, value in keyvaltables.items():
-            if not key in added_datasets:
+        for dataset_name, dataset_config in keyvaltables.items():
+            if not dataset_name in added_datasets:
                 dataset = OrderedDict()
-                dataset['name'] = key
-                dataset['db_url'] = value.get('database')
-                dataset['datasource_filter'] = value.get('datasource_filter')
-                dataset['schema'] = value.get('schema')
-                dataset['table_name'] = value.get('table_name')
-                dataset['primary_key'] = value.get('primary_key')
-                dataset['fields'] = []
-
-                qgs_name = value.get('qgs_name')
-                map_dataset = value.get('layername')
-                meta = self.themes_reader.project_metadata(qgs_name)['layer_metadata'][map_dataset]
-                for key, attr_meta in meta.get('fields', {}).items():
-                    if attr_meta.get('expression'):
-                        # Skip expression field
-                        continue
-                    # NOTE: use ordered keys
-                    field = OrderedDict()
-                    field['name'] = key
-                    field['data_type'] = attr_meta.get('data_type')
-                    dataset['fields'].append(field)
-
+                dataset['name'] = dataset_name
+                dataset['db_url'] = dataset_config.get('database')
+                dataset['datasource_filter'] = dataset_config.get('datasource_filter')
+                dataset['schema'] = dataset_config.get('schema')
+                dataset['table_name'] = dataset_config.get('table_name')
+                dataset['primary_key'] = dataset_config.get('primary_key')
+                dataset['fields'] = dataset_config.get('fields')
                 dataset['readonlypermitted'] = True
                 datasets.append(dataset)
 
