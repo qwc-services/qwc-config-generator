@@ -58,8 +58,8 @@ class DnDFormGenerator:
         property.append(string)
         widget.append(property)
 
-    def __create_editor_widget(self, field, prefix=""):
-        editWidget = self.maplayer.find("fieldConfiguration/field[@name='%s']/editWidget" % field)
+    def __create_editor_widget(self, maplayer, field, prefix=""):
+        editWidget = maplayer.find("fieldConfiguration/field[@name='%s']/editWidget" % field)
         if (
             editWidget is None
             or editWidget.get("type") == "Hidden" or editWidget.get("type") == "RelationReference"
@@ -68,9 +68,9 @@ class DnDFormGenerator:
         if not editWidget.get("type"):
             self.logger.warning("Warning: field '%s' has empty widget type" % field)
             return None
-        editableField = self.maplayer.find("editable/field[@name='%s']" % field)
+        editableField = maplayer.find("editable/field[@name='%s']" % field)
         editable = editableField is None or editableField.get("editable") == "1"
-        constraintField = self.maplayer.find("constraints/constraint[@field='%s']" % field)
+        constraintField = maplayer.find("constraints/constraint[@field='%s']" % field)
         required = constraintField is not None and constraintField.get("notnull_strength") == "1"
         if editWidget.get("type") == "CheckBox":
             # Don't translate NOT NULL constraint into required for checkboxes
@@ -82,7 +82,7 @@ class DnDFormGenerator:
         self.__add_widget_property(widget, "required", None, None, "true" if required else "false", "property", "bool")
 
         # Compatibility with deprecated <filename>__upload convention
-        uploadField = self.maplayer.find("expressionfields/field[@name='%s__upload']" % field)
+        uploadField = maplayer.find("expressionfields/field[@name='%s__upload']" % field)
         if uploadField is not None:
             widget.set("class", "QLineEdit")
             widget.set("name", "%s__upload" % (prefix + field))
@@ -352,7 +352,7 @@ class DnDFormGenerator:
             elif child.tag == "attributeEditorField":
                 tabWidget = None
 
-                editorWidget = self.__create_editor_widget(child.get("name"))
+                editorWidget = self.__create_editor_widget(self.maplayer, child.get("name"))
                 if editorWidget is None:
                     continue
 
@@ -409,7 +409,7 @@ class DnDFormGenerator:
         row = 0
 
         for field in fields:
-            editorWidget = self.__create_editor_widget(field.get("name"))
+            editorWidget = self.__create_editor_widget(self.maplayer, field.get("name"))
             if editorWidget is None:
                 continue
 
