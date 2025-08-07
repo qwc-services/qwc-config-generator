@@ -524,7 +524,9 @@ class QGSReader:
             constraints['allowMulti'] = allowMulti
 
             kvlayer = root.find(".//maplayer[id='%s']" % layerId)
-            if kvlayer.find('provider').text != 'postgres':
+            if kvlayer is None:
+                self.logger.warning(f"Cannot generate keyvalrel config for field {field}: the referenced relation table {layerName} does not exist in the project")
+            elif kvlayer.find('provider').text != 'postgres':
                 self.logger.warning(f"Cannot generate keyvalrel config for field {field}: relation table {layerName} is not a postgres layer")
             else:
                 keyvaltable_metadata = self.__datasource_metadata(layerSource)
