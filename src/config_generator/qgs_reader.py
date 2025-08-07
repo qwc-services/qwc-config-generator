@@ -366,8 +366,10 @@ class QGSReader:
                 self.__column_metadata(
                     field, jointables[field['joinfield']['table']], field['joinfield']['field']
                 )
-            elif not field['expression']:
-                # NOTE: Don't query column metadata for virtual fields
+            elif field['expression']:
+                field['data_type'] = element_attr(
+                    maplayer.find("expressionfields/field[@name='%s']" % fieldname), 'typeName')
+            else:
                 self.__column_metadata(
                     field, layer_metadata, fieldname
                 )
