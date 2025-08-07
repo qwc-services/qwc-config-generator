@@ -772,10 +772,27 @@ class OGCServiceConfig(ServiceConfig):
             layer_permitted_for_role = layer['name'] in \
                 role_permissions['wfs_layer'].get(service_name, {})
 
-            layer_or_service_restricted = layer_restricted_for_public or service_restricted_for_public
+            # lookup permissions
+            if self.permissions_default_allow:
+                # NOTE: restricted if wfs_layer is restricted
+                layer_restricted_for_public = layer['name'] in \
+                    public_restrictions['wfs_layer'].get(service_name, {})
+            else:
+                # NOTE: restricted by default, permitted also if any of 'wfs_layer_create', wfs_layer_update', 'wfs_layer_delete' are permitted
+                layer_restricted_for_public = True
+                for resource_type in ['wfs_layer', 'wfs_layer_create', 'wfs_layer_update', 'wfs_layer_delete']:
+                    layer_restricted_for_public &= layer['name'] not in \
+                        public_permissions[resource_type].get(service_name, {})
+
+            layer_permitted_for_role = False
+            for resource_type in ['wfs_layer', 'wfs_layer_create', 'wfs_layer_update', 'wfs_layer_delete']:
+                layer_permitted_for_role |= layer['name'] in \
+                    role_permissions[resource_type].get(service_name, {})
+
             if layer_restricted_for_public and not layer_permitted_for_role:
                 # wfs_layer not permitted at least for reading
                 continue
+            layer_or_service_restricted = layer_restricted_for_public or service_restricted_for_public
 
             layer_permissions = OrderedDict()
             layer_permissions['name'] = layer['name']

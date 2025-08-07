@@ -173,8 +173,8 @@ class ThemeReader():
                 # map not found
                 return []
 
-            # query writable data permissions
-            resource_types = ['data']
+            # query data permissions
+            resource_types = ['data', 'data_create', 'data_update', 'data_delete']
             datasets_query = session.query(Permission) \
                 .join(Permission.resource) \
                 .filter(Resource.parent_id == map_obj.id) \

@@ -314,6 +314,30 @@ class PermissionsTests(unittest.TestCase):
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.data_datasets[?(@.name=='qwc_demo.edit_polygons' & @.deletable)]").find(perm)), 0)
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.data_datasets[?(@.name=='qwc_demo.edit_polygons')].attributes[?(@=='description')]").find(perm)), 1)
 
+
+        # Check that dataset is readable/creatable if only data_create is set
+        self.cursor.execute(f"""
+            DELETE FROM qwc_config.permissions;
+            DELETE FROM qwc_config.resources;
+            INSERT INTO qwc_config.resources (id, parent_id, type, name)
+            VALUES
+            (1, NULL, 'map', 'qwc_demo'),
+            (2, 1, 'data_create', 'edit_points');
+            INSERT INTO qwc_config.permissions (id, role_id, resource_id, priority, write)
+            VALUES
+            (1, {ROLE_PUBLIC}, 1, 0, FALSE),
+            (2, {ROLE_PUBLIC}, 2, 0, FALSE);
+        """)
+        PermissionsTests.conn.commit()
+
+        perm = self.__run_config_generator({})
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.data_datasets[?(@.name=='qwc_demo.edit_points' & @.writable==false)]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.data_datasets[?(@.name=='qwc_demo.edit_points' & @.creatable==true)]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.data_datasets[?(@.name=='qwc_demo.edit_points' & @.readable==true)]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.data_datasets[?(@.name=='qwc_demo.edit_points' & @.updatable==false)]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.data_datasets[?(@.name=='qwc_demo.edit_points' & @.deletable==false)]").find(perm)), 1)
+
+
     def test_wfs_permissions(self):
         """ Test WFS permissions. """
 
@@ -385,6 +409,29 @@ class PermissionsTests(unittest.TestCase):
 
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Linien')].attributes[?(@=='beschreibung')]").find(perm)), 0)
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Linien')].attributes[?(@=='beschreibung')]").find(perm)), 1)
+
+        # Check that wfs_layer is readable/creatable if only data_create is set
+        self.cursor.execute(f"""
+            DELETE FROM qwc_config.permissions;
+            DELETE FROM qwc_config.resources;
+            INSERT INTO qwc_config.resources (id, parent_id, type, name)
+            VALUES
+            (1, NULL, 'wfs_service', 'scan/wfs_test'),
+            (2, 1, 'wfs_layer_create', 'ÖV: Haltestellen');
+            INSERT INTO qwc_config.permissions (id, role_id, resource_id, priority, write)
+            VALUES
+            (1, {ROLE_PUBLIC}, 1, 0, FALSE),
+            (2, {ROLE_PUBLIC}, 2, 0, FALSE);
+        """)
+        PermissionsTests.conn.commit()
+
+        perm = self.__run_config_generator({})
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Haltestellen' & @.writable==false)]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Haltestellen' & @.creatable==true)]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Haltestellen' & @.readable==true)]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Haltestellen' & @.updatable==false)]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wfs_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV-_Haltestellen' & @.deletable==false)]").find(perm)), 1)
+
 
     def test_public_permissions_default_restrict_no_permissions(self):
         """ Test permissions_default_allow=false and no permissions. """

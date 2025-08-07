@@ -273,10 +273,14 @@ class DataServiceConfig(ServiceConfig):
             for layer_name in datasets:
 
                 # lookup permissions (dataset restricted by default)
-                dataset_restricted_for_public = layer_name not in \
-                    public_permissions['data'].get(map_name, {})
-                dataset_permitted_for_role = layer_name in \
-                    role_permissions['data'].get(map_name, {})
+                # NOTE: dataset readable is implicit if any of 'data_create', data_update', 'data_delete' is permitted
+                dataset_restricted_for_public = True
+                dataset_permitted_for_role = False
+                for resource_type in ['data', 'data_create', 'data_update', 'data_delete']:
+                    dataset_restricted_for_public &= layer_name not in \
+                        public_permissions[resource_type].get(map_name, {})
+                    dataset_permitted_for_role |= layer_name in \
+                        role_permissions[resource_type].get(map_name, {})
                 if dataset_restricted_for_public and not dataset_permitted_for_role:
                     # dataset not permitted
                     continue
