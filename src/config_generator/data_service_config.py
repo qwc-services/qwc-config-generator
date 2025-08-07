@@ -229,31 +229,32 @@ class DataServiceConfig(ServiceConfig):
         # collect write permissions for role
         # with highest priority for all datasets
         role_writeable_datasets = {}
-        examined_datasets = {}
-        data_permissions = self.permissions_query.resource_permissions(
-            'data', None, role, session
-        )
-        for permission in data_permissions:
-            # lookup map resource for dataset
-            if not permission.resource.parent_id:
-                continue
-            map_obj = self.permissions_query.get_resource(
-                permission.resource.parent_id
+        if not self.force_readonly_datasets:
+            examined_datasets = {}
+            data_permissions = self.permissions_query.resource_permissions(
+                'data', None, role, session
             )
-            map_name = map_obj.name
+            for permission in data_permissions:
+                # lookup map resource for dataset
+                if not permission.resource.parent_id:
+                    continue
+                map_obj = self.permissions_query.get_resource(
+                    permission.resource.parent_id
+                )
+                map_name = map_obj.name
 
-            if map_name not in role_writeable_datasets:
-                # init lookup for map
-                role_writeable_datasets[map_name] = set()
-                examined_datasets[map_name] = set()
+                if map_name not in role_writeable_datasets:
+                    # init lookup for map
+                    role_writeable_datasets[map_name] = set()
+                    examined_datasets[map_name] = set()
 
-            dataset = permission.resource.name
-            if dataset not in examined_datasets[map_name]:
-                # check permission with highest priority
-                if permission.write and not self.force_readonly_datasets:
-                    # mark as writable
-                    role_writeable_datasets[map_name].add(dataset)
-                examined_datasets[map_name].add(dataset)
+                dataset = permission.resource.name
+                if dataset not in examined_datasets[map_name]:
+                    # check permission with highest priority
+                    if permission.write:
+                        # mark as writable
+                        role_writeable_datasets[map_name].add(dataset)
+                    examined_datasets[map_name].add(dataset)
 
         is_public_role = (role == self.permissions_query.public_role())
 

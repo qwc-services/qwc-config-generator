@@ -684,31 +684,32 @@ class OGCServiceConfig(ServiceConfig):
         # collect write permissions for role
         # with highest priority for all datasets
         role_writeable_services = {}
-        examined_services = {}
-        wfs_layer_permissions = self.permissions_query.resource_permissions(
-            'wfs_layer', None, role, session
-        )
-        for permission in wfs_layer_permissions:
-            # lookup service resource for dataset
-            if not permission.resource.parent_id:
-                continue
-            service_obj = self.permissions_query.get_resource(
-                permission.resource.parent_id
+        if not self.force_readonly_datasets:
+            examined_services = {}
+            wfs_layer_permissions = self.permissions_query.resource_permissions(
+                'wfs_layer', None, role, session
             )
-            service_name = service_obj.name
+            for permission in wfs_layer_permissions:
+                # lookup service resource for dataset
+                if not permission.resource.parent_id:
+                    continue
+                service_obj = self.permissions_query.get_resource(
+                    permission.resource.parent_id
+                )
+                service_name = service_obj.name
 
-            if service_name not in role_writeable_services:
-                # init lookup for map
-                role_writeable_services[service_name] = set()
-                examined_services[service_name] = set()
+                if service_name not in role_writeable_services:
+                    # init lookup for map
+                    role_writeable_services[service_name] = set()
+                    examined_services[service_name] = set()
 
-            layer = clean_layer_name(permission.resource.name)
-            if layer not in examined_services[service_name]:
-                # check permission with highest priority
-                if permission.write and not self.force_readonly_datasets:
-                    # mark as writable
-                    role_writeable_services[service_name].add(layer)
-                examined_services[service_name].add(layer)
+                layer = clean_layer_name(permission.resource.name)
+                if layer not in examined_services[service_name]:
+                    # check permission with highest priority
+                    if permission.write:
+                        # mark as writable
+                        role_writeable_services[service_name].add(layer)
+                    examined_services[service_name].add(layer)
 
         is_public_role = (role == self.permissions_query.public_role())
 
