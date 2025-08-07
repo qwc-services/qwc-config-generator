@@ -637,7 +637,7 @@ class QGSReader:
 
             row = results.mappings().fetchone()
             if not row:
-                self.logger.warn(f"Failed to query column metadata of column {column}")
+                self.logger.warn(f"Failed to query column metadata of column {column} from table {datasource["schema"]}.{datasource["table_name"]}")
                 return
 
             # Field data type
