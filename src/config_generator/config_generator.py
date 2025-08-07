@@ -617,6 +617,9 @@ class ConfigGenerator():
                     path += "[%d]" % p
                 else:
                     path += ".%s" % p
+            context = config
+            for p in list(error.absolute_path)[:-1]:
+                context = context[p]
 
             # get concerned subconfig
             instance = error.instance
@@ -646,9 +649,10 @@ class ConfigGenerator():
             self.logger.warning("Location: %s" % path)
             self.logger.warning(
                 "Value: %s" %
-                json.dumps(
-                    instance, sort_keys=False, indent=2, ensure_ascii=False
-                )
+                json.dumps(instance, sort_keys=False, indent=2, ensure_ascii=False)
+            )
+            self.logger.warning(
+                "Context: %s" % json.dumps(context, sort_keys=False, indent=2, ensure_ascii=False)
             )
 
         return valid
