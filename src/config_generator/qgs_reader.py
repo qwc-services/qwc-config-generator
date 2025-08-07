@@ -356,7 +356,7 @@ class QGSReader:
                 maplayer.find("fieldConfiguration/field[@name='%s']/editWidget[@type='ValueRelation']/config/Option/Option[@name='FilterExpression']" % fieldname), 'value')
 
             # Widget constraints
-            field['constraints'] = self.__field_constraints(maplayer, fieldname, map_prefix, shortnames, layer_metadata["keyvaltables"])
+            field['constraints'] = self.__field_constraints(root, maplayer, fieldname, map_prefix, shortnames, layer_metadata["keyvaltables"])
 
             # Join field
             field['joinfield'] = joinfields.get(fieldname, None)
@@ -447,7 +447,7 @@ class QGSReader:
 
         return metadata
 
-    def __field_constraints(self, maplayer, field, map_prefix, shortnames, keyvaltables):
+    def __field_constraints(self, root, maplayer, field, map_prefix, shortnames, keyvaltables):
         """ Get field constraints from QGS edit widget config. """
 
         constraints = {}
@@ -508,6 +508,8 @@ class QGSReader:
                         "config/Option/Option[@name='Key']").get('value')
             value = edit_widget.find(
                         "config/Option/Option[@name='Value']").get('value')
+            layerId = edit_widget.find(
+                        "config/Option/Option[@name='Layer']").get('value')
             layerName = edit_widget.find(
                         "config/Option/Option[@name='LayerName']").get('value')
             layerSource = edit_widget.find(
@@ -520,12 +522,18 @@ class QGSReader:
 
             constraints['keyvalrel'] = map_prefix + "." + layerName + ":" + key + ":" + value
             constraints['allowMulti'] = allowMulti
-            keyvaltables[map_prefix + "." + layerName] = self.__datasource_metadata(layerSource)
-            key_field = {"name": key}
-            self.__column_metadata(key_field, keyvaltables[map_prefix + "." + layerName], key, True)
-            value_field = {"name": value}
-            self.__column_metadata(value_field, keyvaltables[map_prefix + "." + layerName], value, True)
-            keyvaltables[map_prefix + "." + layerName]['fields'] = [key_field, value_field]
+
+            kvlayer = root.find(".//maplayer[id='%s']" % layerId)
+            if kvlayer.find('provider').text != 'postgres':
+                self.logger.warning(f"Cannot generate keyvalrel config for field {field}: relation table {layerName} is not a postgres layer")
+            else:
+                keyvaltable_metadata = self.__datasource_metadata(layerSource)
+                keyvaltable_metadata['fields'] = []
+                for kvlayer_field in kvlayer.findall('fieldConfiguration/field'):
+                    kvlayer_field_metadata = {"name": kvlayer_field.get('name')}
+                    self.__column_metadata(kvlayer_field_metadata, keyvaltable_metadata, kvlayer_field_metadata['name'], True)
+                    keyvaltable_metadata['fields'].append(kvlayer_field_metadata)
+                keyvaltables[map_prefix + "." + layerName] = keyvaltable_metadata
 
         elif edit_widget.get('type') == 'TextEdit':
             multilineOpt = element_attr(edit_widget.find("config/Option/Option[@name='IsMultiline']"), 'value')
