@@ -341,7 +341,7 @@ class QGSReader:
             field = {}
 
             # Alias
-            field['alias'] = alias.get('name')
+            field['alias'] = alias.get('name') or fieldname
 
             # Default value
             field['defaultValue'] = element_attr(
