@@ -527,7 +527,14 @@ class QGSReader:
 
             kvlayer = root.find(".//maplayer[id='%s']" % layerId)
             if kvlayer is None:
-                self.logger.warning(f"Cannot generate keyvalrel config for field {field}: the referenced relation table {layerName} does not exist in the project")
+                # Try to resolve by layer name
+                for ml in root.findall(".//maplayer"):
+                    mlname = ml.find("layername")
+                    if mlname is not None and mlname.text == layerName:
+                        kvlayer = ml
+                        break
+                if kvlayer is None:
+                    self.logger.warning(f"Cannot generate keyvalrel config for field {field}: the referenced relation table {layerName} does not exist in the project")
             elif kvlayer.find('provider').text != 'postgres':
                 self.logger.warning(f"Cannot generate keyvalrel config for field {field}: relation table {layerName} is not a postgres layer")
             else:
