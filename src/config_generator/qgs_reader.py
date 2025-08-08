@@ -18,7 +18,7 @@ from .dnd_form_generator import DnDFormGenerator
 
 def element_attr(element, attr, default=None):
     """ Safely queries the attribute of an element which may be none. """
-    return element.get(attr, None) if element is not None else default
+    return element.get(attr, default) if element is not None else default
 
 
 class QGSReader:
