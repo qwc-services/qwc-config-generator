@@ -378,7 +378,8 @@ class QGSReader:
 
         # Display field
         previewExpression = maplayer.find('previewExpression')
-        m = re.match(r'^"([^"]+)"$', previewExpression.text if previewExpression is not None else "")
+        if previewExpression is not None:
+            m = re.match(r'^"([^"]+)"$', previewExpression.text if previewExpression.text is not None else "")
         layer_metadata["displayField"] = m.group(1) if m else None
 
         # Generate form
