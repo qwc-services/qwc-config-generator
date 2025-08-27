@@ -71,6 +71,10 @@
     {
       "service": "search",
       "schema_url": "https://github.com/qwc-services/qwc-fulltext-search-service/raw/master/schemas/qwc-search-service.json"
+    },
+    {
+      "service": "tileinfo",
+      "schema_url": "https://raw.githubusercontent.com/qwc-services/qwc-3d-tile-info-service/refs/heads/main/schemas/qwc-3d-tile-info-service.json"
     }
   ]
 }
