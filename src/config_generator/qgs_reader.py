@@ -758,6 +758,7 @@ class QGSReader:
         state = 'key'  # can be 'key', 'before_value', 'value'
         quote_char = None
         escape = False
+        in_dquote = False
 
         def commit():
             nonlocal key, value, state, quote_char
@@ -767,6 +768,7 @@ class QGSReader:
             value = ''
             state = 'key'
             quote_char = None
+            in_dquote = False
 
         i = 0
         while i < len(datasource):
@@ -791,6 +793,8 @@ class QGSReader:
                 elif not c.isspace():
                     state = 'value'
                     value += c
+                    if c == '"':
+                        in_dquote = True
 
             elif state == 'value':
                 if escape:
@@ -804,10 +808,12 @@ class QGSReader:
                     else:
                         value += c
                 else:
-                    if c.isspace():
+                    if c.isspace() and not in_dquote:
                         commit()
                     else:
                         value += c
+                        if c == '"':
+                            in_dquote = not in_dquote
             i += 1
 
         # Final token
