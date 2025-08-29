@@ -373,6 +373,7 @@ class DnDFormGenerator:
                     labelWidget.set("class", "QLabel")
                     label = aliases.get(child.get("name"), child.get("name"))
                     self.__add_widget_property(labelWidget, "text", None, None, label)
+                    self.__add_widget_property(labelWidget, "fieldLabel", None, None, "true", "property", "bool")
                     self.__add_label_style_properties(labelWidget, child.find("labelStyle"))
                     labelItem.append(labelWidget)
                 else:
