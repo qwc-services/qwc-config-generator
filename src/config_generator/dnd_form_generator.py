@@ -174,13 +174,13 @@ class DnDFormGenerator:
             key = editWidget.find("config/Option/Option[@name='Key']").get('value')
             value = editWidget.find("config/Option/Option[@name='Value']").get('value')
             layer = editWidget.find("config/Option/Option[@name='LayerName']").get('value')
-            allowMulti = editWidget.find("config/Option/Option[@name='AllowMulti']").get('value')
+            allowMulti = editWidget.find("config/Option/Option[@name='AllowMulti']").get('value') == "true"
             # Lookup shortname
             layer = self.shortnames.get(layer, layer)
             widget.set("name", "kvrel__{field}__{kvtable}__{keyfield}__{valuefield}".format(
                 field=prefix + field, kvtable=layer, keyfield=key, valuefield=value
             ))
-            widget.set("allowMulti", allowMulti)
+            self.__add_widget_property(widget, "allowMulti", None, None, "true" if allowMulti else "false", "property", "bool")
             return widget
         elif editWidget.get("type") == "ExternalResource":
             widget.set("class", "QLineEdit")
