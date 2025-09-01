@@ -14,7 +14,7 @@ class ThemeReader():
     Reads project metadata for all theme items in the QWC2 theme configuration.
     """
 
-    def __init__(self, config, logger, config_models, themes_config, assets_dir, use_cached_project_metadata, cache_dir):
+    def __init__(self, config, logger, config_models, themes_config, assets_dir, translations_dir, use_cached_project_metadata, cache_dir):
         """Constructor
 
         :param obj config: ConfigGenerator config
@@ -22,6 +22,7 @@ class ThemeReader():
         :param ConfigModels config_models: Helper for ORM models
         :param dict themes_config: themes config
         :param str assets_dir: Viewer assets directory
+        :param str translations_dir: Viewer translations directory
         :param bool use_cached_project_metadata: Whether to use cached project metadata if available
         :param str cache_dir: Project metadata cache directory
         """
@@ -36,7 +37,7 @@ class ThemeReader():
         global_print_layouts = self.__search_global_print_layouts()
 
         self.capabilities_reader = CapabilitiesReader(config, logger, use_cached_project_metadata, cache_dir)
-        self.qgs_reader = QGSReader(config, logger, assets_dir, use_cached_project_metadata, global_print_layouts)
+        self.qgs_reader = QGSReader(config, logger, assets_dir, translations_dir, use_cached_project_metadata, global_print_layouts)
 
         self.default_qgis_server_url = config.get(
             'default_qgis_server_url', 'http://localhost:8001/ows/'

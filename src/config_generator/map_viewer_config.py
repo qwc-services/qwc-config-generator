@@ -445,6 +445,7 @@ class MapViewerConfig(ServiceConfig):
         item['keywords'] = cap.get('keywords', '')
         item['onlineResource'] = cap.get('onlineResource', '')
         item['contact'] = cap.get('contact', {})
+        item['translations'] = project_metadata['translations']
 
 
         projectCrs = project_metadata['project_crs']

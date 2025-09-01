@@ -248,14 +248,21 @@ class ConfigGenerator():
         viewer_config_json = map_viewer_config.get('generator_config', {}).get('qwc2_config', {}).get('qwc2_config_file')
         try:
             with open(viewer_config_json, 'r') as fh:
+                viewer_config = json.load(fh)
                 assets_dir = os.path.join(
                     qwc_base_dir,
-                    json.load(fh).get('assetsPath', 'assets').lstrip('/')
+                    viewer_config.get('assetsPath', 'assets').lstrip('/')
+                )
+                translations_dir = os.path.join(
+                    qwc_base_dir,
+                    viewer_config.get('translationsPath', 'translations').lstrip('/')
                 )
         except:
-            self.logger.warning("Failed to read assets path from viewer config.json, using default")
+            self.logger.warning("Failed to read assets/translations path from viewer config.json, using default")
             assets_dir = os.path.join(qwc_base_dir, 'assets')
+            translations_dir = os.path.join(qwc_base_dir, 'translations')
         self.logger.info(f"Assets destination: {assets_dir}")
+        self.logger.info(f"Translations destination: {translations_dir}")
 
         # Search for QGS projects in scan dir and automatically generate theme items
         self.search_qgs_projects(generator_config, config["themesConfig"])
@@ -264,7 +271,7 @@ class ConfigGenerator():
         capabilities_cache_dir = os.path.join(self.config_path, "__capabilities_cache")
         self.theme_reader = ThemeReader(
             generator_config, self.logger, self.config_models, config["themesConfig"],
-            assets_dir, use_cached_project_metadata, capabilities_cache_dir
+            assets_dir, translations_dir, use_cached_project_metadata, capabilities_cache_dir
         )
 
         # load schema-versions.json

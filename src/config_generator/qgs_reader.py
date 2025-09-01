@@ -1,5 +1,6 @@
 import html
 import io
+import json
 import math
 import os
 import re
@@ -24,24 +25,32 @@ def element_attr(element, attr, default=None):
 class QGSReader:
     """ Read QGIS projects and extract data for QWC config """
 
-    def __init__(self, config, logger, assets_dir, use_cached_project_metadata, global_print_layouts):
+    def __init__(self, config, logger, assets_dir, translations_dir, use_cached_project_metadata, global_print_layouts):
         """Constructor
 
         :param obj config: Config generator config
         :param Logger logger: Application logger
         :param string assets_dir: Assets directory
+        :param str translations_dir: Viewer translations directory
         :param bool use_cached_project_metadata: Whether to use cached project metadata
         :param list global_print_layouts: Global print layouts
         """
         self.config = config
         self.logger = logger
         self.assets_dir = assets_dir
+        self.translations_dir = translations_dir
         self.use_cached_project_metadata = use_cached_project_metadata
         self.global_print_layouts = global_print_layouts
 
         self.qgs_resources_path = config.get('qgis_projects_base_dir', '/tmp/')
         self.qgs_ext = config.get('qgis_project_extension', '.qgs')
         self.nested_nrels = config.get('generate_nested_nrel_forms', False)
+        try:
+            with open(os.path.join(self.translations_dir, 'tsconfig.json')) as fh:
+                self.viewer_languages = json.load(fh)['languages']
+        except:
+            self.logger.warning("Failed to detect viewer languages from tsconfig.json")
+            self.viewer_languages = ["en-US"]
 
         self.db_engine = DatabaseEngine()
 
@@ -57,8 +66,9 @@ class QGSReader:
         try:
             if map_prefix.startswith("pg/"):
                 parts = map_prefix.split("/")
-                qgs_path = self.qgs_resources_path
+                qgs_dir = self.qgs_resources_path
                 qgs_filename = 'postgresql:///?service=qgisprojects&schema=%s&project=%s' % (parts[1], parts[2])
+                projectname = parts[2]
 
                 qgis_projects_db = self.db_engine.db_engine("postgresql:///?service=qgisprojects")
 
@@ -84,6 +94,8 @@ class QGSReader:
             else:
                 qgs_filename = map_prefix + self.qgs_ext
                 qgs_path = os.path.join(self.qgs_resources_path, qgs_filename)
+                qgs_dir = os.path.dirname(qgs_path)
+                projectname = os.path.basename(qgs_path).removesuffix(self.qgs_ext)
                 if not os.path.exists(qgs_path):
                     self.logger.error("Could not find QGS project '%s'" % qgs_filename)
                     return None
@@ -131,9 +143,10 @@ class QGSReader:
 
         return {
             "project_crs": self.__project_crs(root),
+            "translations": self.__theme_translations(qgs_dir, projectname),
             "print_templates": self.__print_templates(root, shortname_map),
             "visibility_presets": self.__visibility_presets(root),
-            "layer_metadata": self.__layer_metadata(root, shortname_map, map_prefix, edit_datasets, theme_item, qgs_path)
+            "layer_metadata": self.__layer_metadata(root, shortname_map, map_prefix, edit_datasets, theme_item, qgs_dir),
         }
 
 
@@ -142,6 +155,28 @@ class QGSReader:
         authid = root.find('./projectCrs/spatialrefsys/authid')
         return authid.text if authid is not None else None
 
+    def __theme_translations(self, qgs_dir, projectname):
+        """ Read theme portion of translations from <projectname>_<lang>.json. """
+        all_translations = {}
+
+        for language in self.viewer_languages:
+            translations = {}
+
+            json_file = os.path.join(qgs_dir, f"{projectname}_{language}.json")
+            if not os.path.exists(json_file):
+                json_file = os.path.join(qgs_dir, f"{projectname}_{language[0:2]}.json")
+            if os.path.exists(json_file):
+                self.logger.info('Reading project translations %s' % json_file)
+                try:
+                    with open(json_file) as fh:
+                        translations = json.load(fh)['theme']
+                except Exception as e:
+                    self.logger.info('Failed to read project translations %s: %s' % (json_file, str(e)))
+
+            if translations:
+                all_translations[language] = translations
+
+        return all_translations
 
     def __print_templates(self, root, shortname_map):
         """ Collect print templates from QGS and merge with global print layouts. """
@@ -248,7 +283,7 @@ class QGSReader:
         return result
 
 
-    def __layer_metadata(self, root, shortname_map, map_prefix, edit_datasets, theme_item, qgs_path):
+    def __layer_metadata(self, root, shortname_map, map_prefix, edit_datasets, theme_item, qgs_dir):
         """ Read additional layer metadata from QGS. """
         layers_metadata = {}
         # Collect metadata for layers
@@ -276,7 +311,7 @@ class QGSReader:
 
             # Edit metadata
             if editable:
-                self.__layer_edit_metadata(root, layer_metadata, maplayer, layername, map_prefix, shortname_map, qgs_path, theme_item)
+                self.__layer_edit_metadata(root, layer_metadata, maplayer, layername, map_prefix, shortname_map, qgs_dir, theme_item)
 
             layers_metadata[layername] = layer_metadata
 
@@ -291,7 +326,7 @@ class QGSReader:
         return layers_metadata
 
 
-    def __layer_edit_metadata(self, root, layer_metadata, maplayer, layername, map_prefix, shortnames, qgs_path, theme_item):
+    def __layer_edit_metadata(self, root, layer_metadata, maplayer, layername, map_prefix, shortnames, qgs_dir, theme_item):
         """ Read layer metadata relevant for editing from QGS. """
 
         provider = maplayer.find('provider').text
@@ -384,7 +419,7 @@ class QGSReader:
 
         # Generate form
         layer_metadata["edit_form"] = self.__generate_edit_form(
-            root, qgs_path, map_prefix, shortnames, maplayer, layer_metadata, layername, theme_item
+            root, qgs_dir, map_prefix, shortnames, maplayer, layer_metadata, layername, theme_item
         )
 
 
@@ -686,7 +721,7 @@ class QGSReader:
                         constraints['max'] = ranges[data_type]['max']
 
 
-    def __generate_edit_form(self, project, qgs_path, map_prefix, shortnames, maplayer, layer_metadata, layername, theme_item):
+    def __generate_edit_form(self, project, qgs_dir, map_prefix, shortnames, maplayer, layer_metadata, layername, theme_item):
         """ Copy / generate edit from from QGIS form settings. """
 
         projectname = os.path.basename(map_prefix)
@@ -708,7 +743,7 @@ class QGSReader:
             if editform is not None:
                 formpath = editform.text
                 if not os.path.isabs(formpath):
-                    formpath = os.path.join(os.path.dirname(qgs_path), formpath)
+                    formpath = os.path.join(qgs_dir, formpath)
                 try:
                     os.makedirs(outputdir, exist_ok=True)
                     shutil.copy(formpath, outputfile)
