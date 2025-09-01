@@ -131,9 +131,7 @@ class OGCServiceConfig(ServiceConfig):
             ] + [
                 template['legendLayout'] for template in project_metadata['print_templates'] if 'legendLayout' in template
             ]
-            if 'internal_print_layers' in cap:
-                wms_service['internal_print_layers'] = \
-                    cap['internal_print_layers']
+            wms_service['internal_print_layers'] = list(set(cap.get('internal_print_layers', [])))
 
             wms_services.append(wms_service)
 
@@ -491,7 +489,7 @@ class OGCServiceConfig(ServiceConfig):
             public_restrictions['layers'].get(service_name, {}).keys()
         )
 
-        internal_print_layers = cap.get('internal_print_layers', [])
+        internal_print_layers = list(set(cap.get('internal_print_layers', [])))
         if is_public_role:
             # collect all permitted print layers
             if self.permissions_default_allow:
