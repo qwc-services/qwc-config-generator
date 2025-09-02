@@ -183,18 +183,19 @@ class MapViewerConfig(ServiceConfig):
             )
             # NOTE: Data permissions collected by Data service config
             permissions['data_datasets'] = []
-            permissions['viewer_tasks'] = self.permitted_viewer_tasks(
-                role, session
-            )
-            permissions['theme_info_links'] = self.permitted_theme_info_links(
-                role, session
-            )
+
+            permissions['viewer_tasks'] = sorted(list(self.permitted_resources(
+                'viewer_task', role, session
+            ).keys()))
+            permissions['theme_info_links'] = sorted(list(self.permitted_resources(
+                'theme_info_link', role, session
+            ).keys()))
             permissions['plugin_data'] = self.permitted_plugin_data_resources(
                 role, session
             )
-            permissions['tilesets_3d'] = self.permitted_3d_tilesets(
-                role, session
-            )
+            permissions['tilesets_3d'] = sorted(list(self.permitted_resources(
+                'tileset3d', role, session
+            ).keys()))
 
         return permissions
 
@@ -210,7 +211,10 @@ class MapViewerConfig(ServiceConfig):
         cfg_qwc2_config = cfg_generator_config.get('qwc2_config', {})
 
         # collect restricted menu items from ConfigDB
-        qwc2_config['restricted_viewer_tasks'] = self.restricted_viewer_tasks()
+        with self.config_models.session() as session:
+            qwc2_config['restricted_viewer_tasks'] = sorted(list(self.permissions_query.non_public_resources(
+                'viewer_task', session
+            )))
 
         # read QWC2 config.json
         config = OrderedDict()
@@ -243,15 +247,6 @@ class MapViewerConfig(ServiceConfig):
         qwc2_config['config'] = config
 
         return qwc2_config
-
-    def restricted_viewer_tasks(self):
-        """Collect restricted viewer tasks from ConfigDB."""
-        with self.config_models.session() as session:
-            viewer_tasks = self.permissions_query.non_public_resources(
-                'viewer_task', session
-            )
-
-        return sorted(list(viewer_tasks))
 
     def qwc2_themes(self, assets_dir):
         """Collect QWC2 themes configuration from capabilities,
@@ -1010,32 +1005,6 @@ class MapViewerConfig(ServiceConfig):
 
         return background_layers
 
-    def permitted_viewer_tasks(self, role, session):
-        """Return permitted viewer tasks from ConfigDB.
-
-        :param str role: Role name
-        :param Session session: DB session
-        """
-        # collect role permissions from ConfigDB
-        viewer_tasks = self.permitted_resources(
-            'viewer_task', role, session
-        ).keys()
-
-        return sorted(list(viewer_tasks))
-
-    def permitted_theme_info_links(self, role, session):
-        """Return permitted theme info links from ConfigDB.
-
-        :param str role: Role name
-        :param Session session: DB session
-        """
-        # collect role permissions from ConfigDB
-        theme_info_links = self.permitted_resources(
-            'theme_info_link', role, session
-        ).keys()
-
-        return sorted(list(theme_info_links))
-
     def permitted_plugin_data_resources(self, role, session):
         """Return permitted plugin data resources from ConfigDB.
 
@@ -1062,16 +1031,3 @@ class MapViewerConfig(ServiceConfig):
         return sorted(
             plugin_permissions, key=lambda plugin: plugin.get('name')
         )
-
-    def permitted_3d_tilesets(self, role, session):
-        """Return permitted 3d tilesets from ConfigDB.
-
-        :param str role: Role name
-        :param Session session: DB session
-        """
-        # collect role permissions from ConfigDB
-        tilesets_3d = self.permitted_resources(
-            'tileset3d', role, session
-        ).keys()
-
-        return sorted(list(tilesets_3d))
