@@ -187,6 +187,9 @@ class MapViewerConfig(ServiceConfig):
             permissions['viewer_tasks'] = sorted(list(self.permitted_resources(
                 'viewer_task', role, session
             ).keys()))
+            permissions['viewer_assets'] = sorted(list(self.permitted_resources(
+                'viewer_asset', role, session
+            ).keys()))
             permissions['theme_info_links'] = sorted(list(self.permitted_resources(
                 'theme_info_link', role, session
             ).keys()))
@@ -214,6 +217,9 @@ class MapViewerConfig(ServiceConfig):
         with self.config_models.session() as session:
             qwc2_config['restricted_viewer_tasks'] = sorted(list(self.permissions_query.non_public_resources(
                 'viewer_task', session
+            )))
+            qwc2_config['restricted_viewer_assets'] = sorted(list(self.permissions_query.non_public_resources(
+                'viewer_asset', session
             )))
 
         # read QWC2 config.json
