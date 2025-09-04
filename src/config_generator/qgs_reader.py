@@ -201,6 +201,7 @@ class QGSReader:
 
                             if len(context_name_parts) == 3:
                                 ts_path = f"layertree"
+                                key = layername
                             elif len(context_name_parts) == 4 and context_name_parts[3] == "fieldaliases":
                                 ts_path = f"layers.{layername}.fields"
                             elif len(context_name_parts) == 4 and context_name_parts[3] == "formcontainers":
@@ -220,7 +221,7 @@ class QGSReader:
                             source = message.find('./source')
                             translation = message.find('./translation')
                             if source is not None and translation is not None and translation.get('type', '') != "unfinished":
-                                context_ts[source.text] = translation.text
+                                context_ts[key or source.text] = translation.text
 
                 except Exception as e:
                     self.logger.info('Failed to auxiliary project translations %s: %s' % (ts_file, str(e)))
