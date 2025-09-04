@@ -510,9 +510,13 @@ class MapViewerConfig(ServiceConfig):
 
         externalLayers = cfg_item.get("externalLayers") if "externalLayers" in cfg_item else []
         newExternalLayers = []
+        layer_titles = {}
         for layer in root_layer.get('layers', []):
-            layers.append(self.collect_layers(
-                layer, search_layers, 1, collapseLayerGroupsBelowLevel, newExternalLayers, project_metadata, featureReports, lockedPreset))
+            sublayer = self.collect_layers(
+                layer, search_layers, 1, collapseLayerGroupsBelowLevel, newExternalLayers, project_metadata, featureReports, lockedPreset, layer_titles
+            )
+            if sublayer:
+                layers.append(sublayer)
 
         # Inject crs in wmts resource string
         for entry in newExternalLayers:
@@ -569,7 +573,7 @@ class MapViewerConfig(ServiceConfig):
         item['searchProviders'] = search_providers
 
         # edit config
-        item['editConfig'] = self.edit_config(service_name, cfg_item, project_metadata)
+        item['editConfig'] = self.edit_config(service_name, cfg_item, project_metadata, layer_titles)
 
         self.set_optional_config(cfg_item, 'watermark', item)
         self.set_optional_config(cfg_item, 'config', item)
@@ -750,7 +754,7 @@ class MapViewerConfig(ServiceConfig):
         if field in cfg_item:
             item[field] = cfg_item.get(field)
 
-    def collect_layers(self, layer, search_layers, level, collapseBelowLevel, externalLayers, project_metadata, featureReports, lockedPreset):
+    def collect_layers(self, layer, search_layers, level, collapseBelowLevel, externalLayers, project_metadata, featureReports, lockedPreset, layer_titles):
         """Recursively collect layer tree from capabilities.
 
         :param obj layer: Layer or group layer
@@ -762,6 +766,7 @@ class MapViewerConfig(ServiceConfig):
         item_layer['name'] = layer['name']
         if 'title' in layer:
             item_layer['title'] = layer['title']
+            layer_titles[layer['name']] = layer['title']
 
         if 'layers' in layer:
             # group layer
@@ -888,7 +893,7 @@ class MapViewerConfig(ServiceConfig):
 
         return item_layer
 
-    def edit_config(self, map_name, cfg_item, project_metadata):
+    def edit_config(self, map_name, cfg_item, project_metadata, layer_titles):
         """Collect edit config for a map from ConfigDB.
 
         :param str map_name: Map name (matches WMS and QGIS project)
@@ -920,6 +925,7 @@ class MapViewerConfig(ServiceConfig):
             # NOTE: use ordered keys
             dataset = OrderedDict()
             dataset['layerName'] = layer_name
+            dataset['layerTitle'] = layer_titles.get(layer_name)
             dataset['displayField'] = layer_metadata['displayField']
             dataset['editDataset'] = dataset_name
             dataset['geomType'] = self.EDIT_GEOM_TYPES.get(layer_metadata['geometry_type'])
