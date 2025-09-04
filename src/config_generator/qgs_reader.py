@@ -174,7 +174,7 @@ class QGSReader:
                     self.logger.info('Failed to read project translations %s: %s' % (json_file, str(e)))
 
             if translations:
-                all_translations[language] = translations
+                all_translations[language] = {'theme': translations}
 
         return all_translations
 
