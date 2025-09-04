@@ -202,13 +202,9 @@ class CapabilitiesReader():
             capabilities['root_layer'] = self.collect_wms_layers(
                 root_layer, layer_names, internal_print_layers, ns, np, default_root_name
             )
-            # collect geometryless WMS layers
-            geometryless_layers = self.collect_geometryless_layers(
-                root_layer, internal_print_layers, ns, np, default_root_name
-            )
             if capabilities['root_layer'] is None:
                 self.logger.warning(
-                    "No (non geometryless) layers found for %s: %s" %
+                    "No layers found for %s: %s" %
                     (full_url, response.content)
                 )
                 return {}
@@ -242,9 +238,6 @@ class CapabilitiesReader():
 
             if internal_print_layers:
                 capabilities['internal_print_layers'] = internal_print_layers
-
-            if geometryless_layers:
-                capabilities['geometryless_layers'] = geometryless_layers
 
             return capabilities
         except Exception as e:
@@ -340,12 +333,6 @@ class CapabilitiesReader():
             wms_layer['layers'] = group_layers
         else:
             # layer
-            if (
-                layer.get('geometryType') == 'WKBNoGeometry'
-                or layer.get('geometryType') == 'NoGeometry'
-            ):
-                # skip layer without geometry
-                return None
 
             # collect attributes
             attributes = {}
@@ -425,7 +412,11 @@ class CapabilitiesReader():
             wms_layer['display_field'] = layer.get('displayField')
 
         # get default CRS (first CRS)
-        wms_layer['crs'] = layer.find('%sCRS' %np, ns).text
+        crsEl = layer.find('%sCRS' %np, ns)
+        if crsEl is not None:
+            wms_layer['crs'] = crsEl.text
+        else:
+            wms_layer['crs'] = None
 
         # NOTE: get geographic bounding box, as default CRS may have
         #       inverted axis order with WMS 1.3.0
@@ -439,58 +430,6 @@ class CapabilitiesReader():
             ]
 
         return wms_layer
-
-    def collect_geometryless_layers(self, layer, internal_print_layers, ns, np,
-                           fallback_name="", geometryless_layer_names=set()):
-        """Recursively collect layer names of geometryless layers from
-        WMS GetProjectSettings.
-
-        :param Element layer: GetProjectSettings layer node
-        :param list(str) internal_print_layers: List of internal print layers
-                                                to filter
-        :param obj ns: Namespace dict
-        :param str np: Namespace prefix
-        :param str fallback_name: Layer name if empty in GetProjectSettings
-        :param set geometryless_layer_names: A set of geometryless layer names
-        """
-        # NOTE: use ordered keys
-        layer_name_tag = layer.find('%sName' % np, ns)
-        if layer_name_tag is not None:
-            layer_name = layer_name_tag.text
-        else:
-            layer_name = fallback_name
-
-        # collect sub layers if group layer
-        group_layers = set()
-        for sub_layer in layer.findall('%sLayer' % np, ns):
-            sub_layer_name = sub_layer.find('%sName' % np, ns).text
-
-            if sub_layer_name in internal_print_layers:
-                continue
-
-            sub_wms_layer = self.collect_geometryless_layers(
-                sub_layer, internal_print_layers, ns, np
-            )
-            if sub_wms_layer is not None and isinstance(sub_wms_layer, list):
-                group_layers.update(sub_wms_layer)
-            elif sub_wms_layer is not None:
-                group_layers.add(sub_wms_layer)
-
-        if group_layers:
-            # group layer
-            geometryless_layer_names.update(group_layers)
-        else:
-            # layer
-            if (
-                layer.get('geometryType') == 'WKBNoGeometry'
-                or layer.get('geometryType') == 'NoGeometry'
-            ):
-                # skip layer without geometry
-                return layer_name
-            else:
-                return None
-
-        return list(geometryless_layer_names)
 
     # WFS Capabilities
 

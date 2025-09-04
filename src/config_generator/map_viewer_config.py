@@ -768,8 +768,15 @@ class MapViewerConfig(ServiceConfig):
             sublayers = []
             for sublayer in layer['layers']:
                 # recursively collect sub layer
-                sublayers.append(self.collect_layers(
-                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers, project_metadata, featureReports, lockedPreset))
+                item_sublayer = self.collect_layers(
+                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers, project_metadata, featureReports, lockedPreset, layer_titles
+                )
+                if item_sublayer:
+                    sublayers.append(item_sublayer)
+
+            # Omit empty group
+            if not sublayers:
+                return None
 
             # abstract
             if 'abstract' in layer:
@@ -793,11 +800,16 @@ class MapViewerConfig(ServiceConfig):
             if lockedPreset and layer['name'] in lockedPreset:
                 item_layer['visibility'] = True
         else:
+
+            geometryType = layer.get('geometryType')
+            if geometryType == 'WKBNoGeometry' or geometryType == 'NoGeometry':
+                return None
+
             meta = project_metadata['layer_metadata'].get(layer['name'], {})
 
             # layer
             item_layer['visibility'] = layer['visible']
-            item_layer['geometryType'] = layer['geometryType']
+            item_layer['geometryType'] = geometryType
             item_layer['category_sublayer'] = layer['category_sublayer']
             item_layer['queryable'] = layer['queryable']
             item_layer['styles'] = layer['styles']
