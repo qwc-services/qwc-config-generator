@@ -21,6 +21,19 @@ def element_attr(element, attr, default=None):
     """ Safely queries the attribute of an element which may be none. """
     return element.get(attr, default) if element is not None else default
 
+def deep_merge(d1, d2):
+    """Recursively merge two dictionaries."""
+    result = d1.copy()
+    for k, v in d2.items():
+        if (
+            k in result
+            and isinstance(result[k], dict)
+            and isinstance(v, dict)
+        ):
+            result[k] = deep_merge(result[k], v)
+        else:
+            result[k] = v
+    return result
 
 class QGSReader:
     """ Read QGIS projects and extract data for QWC config """
@@ -134,16 +147,20 @@ class QGSReader:
 
         # Build layername -> shortname lookup
         shortname_map = {}
+        id_name_map = {}
         for maplayer in root.findall('.//maplayer'):
             layernameEl = maplayer.find('layername')
-            shortnameEl = maplayer.find('shortname')
             if layernameEl is not None:
+                shortnameEl = maplayer.find('shortname')
+                idEl = maplayer.find('id')
                 shortname = shortnameEl.text if shortnameEl is not None else layernameEl.text
                 shortname_map[layernameEl.text] = shortname
+                if idEl is not None:
+                    id_name_map[idEl.text] = shortname
 
         return {
             "project_crs": self.__project_crs(root),
-            "translations": self.__theme_translations(qgs_dir, projectname),
+            "translations": self.__theme_translations(qgs_dir, projectname, id_name_map),
             "print_templates": self.__print_templates(root, shortname_map),
             "visibility_presets": self.__visibility_presets(root),
             "layer_metadata": self.__layer_metadata(root, shortname_map, map_prefix, edit_datasets, theme_item, qgs_dir),
@@ -155,26 +172,72 @@ class QGSReader:
         authid = root.find('./projectCrs/spatialrefsys/authid')
         return authid.text if authid is not None else None
 
-    def __theme_translations(self, qgs_dir, projectname):
+    def __theme_translations(self, qgs_dir, projectname, id_name_map):
         """ Read theme portion of translations from <projectname>_<lang>.json. """
         all_translations = {}
 
         for language in self.viewer_languages:
             translations = {}
 
+            ts_file = os.path.join(qgs_dir, f"{projectname}_{language}.ts")
+            if not os.path.exists(ts_file):
+                ts_file = os.path.join(qgs_dir, f"{projectname}_{language[0:2]}.ts")
+            if os.path.exists(ts_file):
+                self.logger.info('Reading project translations %s' % ts_file)
+                try:
+                    ts_document = ElementTree.parse(ts_file)
+
+                    # Build translation string lookup
+                    for context in ts_document.findall("./context"):
+                        context_name = context.find('./name')
+                        if context_name is None:
+                            continue
+
+                        context_name_parts = context_name.text.split(":")
+                        key = None
+                        if len(context_name_parts) >= 3 and context_name_parts[0] == "project" and context_name_parts[1] == "layers":
+                            # replace layer id with layer name
+                            layername = id_name_map[context_name_parts[2]]
+
+                            if len(context_name_parts) == 3:
+                                ts_path = f"layertree"
+                            elif len(context_name_parts) == 4 and context_name_parts[3] == "fieldaliases":
+                                ts_path = f"layers.{layername}.fields"
+                            elif len(context_name_parts) == 4 and context_name_parts[3] == "formcontainers":
+                                ts_path = f"layers.{layername}.form"
+                        elif len(context_name_parts) == 2 and context_name_parts[0] == "project" and context_name_parts[1] == "layergroups":
+                            ts_path = f"layertree"
+                        else:
+                            # Unknown ts context
+                            continue
+
+                        context_ts = translations
+                        for entry in ts_path.split("."):
+                            context_ts[entry] = context_ts.get(entry, {})
+                            context_ts = context_ts[entry]
+
+                        for message in context.findall("./message"):
+                            source = message.find('./source')
+                            translation = message.find('./translation')
+                            if source is not None and translation is not None and translation.get('type', '') != "unfinished":
+                                context_ts[source.text] = translation.text
+
+                except Exception as e:
+                    self.logger.info('Failed to auxiliary project translations %s: %s' % (ts_file, str(e)))
+
             json_file = os.path.join(qgs_dir, f"{projectname}_{language}.json")
             if not os.path.exists(json_file):
                 json_file = os.path.join(qgs_dir, f"{projectname}_{language[0:2]}.json")
             if os.path.exists(json_file):
-                self.logger.info('Reading project translations %s' % json_file)
+                self.logger.info('Reading auxiliary project translations %s' % json_file)
                 try:
                     with open(json_file) as fh:
-                        translations = json.load(fh)['theme']
+                        translations = deep_merge(translations, json.load(fh))
                 except Exception as e:
-                    self.logger.info('Failed to read project translations %s: %s' % (json_file, str(e)))
+                    self.logger.info('Failed to read auxiliary project translations %s: %s' % (json_file, str(e)))
 
             if translations:
-                all_translations[language] = {'theme': translations}
+                all_translations[language] = translations
 
         return all_translations
 
