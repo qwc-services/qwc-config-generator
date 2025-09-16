@@ -232,7 +232,26 @@ def get_external_wms_layer(resource, url, layerName, infoFormat, logger, timeout
     }
 
 
-def get_external_wmts_layer(resource, capabilitiesUrl, layerName, crs, logger, timeout, use_cached_project_metadata, cache_dir):
+def get_external_wmts_layer(resource, url, layerName, crs, logger, timeout, use_cached_project_metadata, cache_dir):
+
+    urlobj = urllib.parse.urlparse(url)
+    params = dict(urllib.parse.parse_qsl(urlobj.query))
+
+    version = "1.0.0"
+    for key in list(params.keys()):
+        if key.lower() == "version":
+            version = params[key]
+            del params[key]
+            params["VERSION"] = version
+        # Filter service and request from calledServiceUrl, but keep other parameters
+        if key.lower() in ["service", "request"]:
+            del params[key]
+
+    urlobj = urlobj._replace(query=urllib.parse.urlencode(params))
+
+    params.update({'SERVICE': 'WMTS', 'REQUEST': 'GetCapabilities', 'VERSION': version})
+    capUrlObj = urlobj._replace(query=urllib.parse.urlencode(params))
+    capabilitiesUrl = urllib.parse.urlunparse(capUrlObj)
 
     capabilitiesXml = fetch_capabilities(capabilitiesUrl, resource, logger, timeout, use_cached_project_metadata, cache_dir)
     if not capabilitiesXml:
