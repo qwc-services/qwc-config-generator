@@ -523,7 +523,7 @@ class MapViewerConfig(ServiceConfig):
             if entry["name"].startswith("wmts:"):
                 urlobj = urllib.parse.urlparse(entry["name"][5:])
                 params = dict(urllib.parse.parse_qsl(urlobj.query))
-                params["crs"] = item['mapCrs']
+                params["crs"] = params.get('crs') or params.get('CRS') or item['mapCrs']
                 urlobj = urlobj._replace(query=urllib.parse.urlencode(params))
                 entry["name"] = "wmts:" + urllib.parse.urlunparse(urlobj)
 
