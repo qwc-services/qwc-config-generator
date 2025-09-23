@@ -38,32 +38,24 @@ def deep_merge(d1, d2):
 class QGSReader:
     """ Read QGIS projects and extract data for QWC config """
 
-    def __init__(self, config, logger, assets_dir, translations_dir, use_cached_project_metadata, global_print_layouts):
+    def __init__(self, config, logger, assets_dir, use_cached_project_metadata, global_print_layouts):
         """Constructor
 
         :param obj config: Config generator config
         :param Logger logger: Application logger
         :param string assets_dir: Assets directory
-        :param str translations_dir: Viewer translations directory
         :param bool use_cached_project_metadata: Whether to use cached project metadata
         :param list global_print_layouts: Global print layouts
         """
         self.config = config
         self.logger = logger
         self.assets_dir = assets_dir
-        self.translations_dir = translations_dir
         self.use_cached_project_metadata = use_cached_project_metadata
         self.global_print_layouts = global_print_layouts
 
         self.qgs_resources_path = config.get('qgis_projects_base_dir', '/tmp/')
         self.qgs_ext = config.get('qgis_project_extension', '.qgs')
         self.nested_nrels = config.get('generate_nested_nrel_forms', False)
-        try:
-            with open(os.path.join(self.translations_dir, 'tsconfig.json')) as fh:
-                self.viewer_languages = json.load(fh)['languages']
-        except:
-            self.logger.warning("Failed to detect viewer languages from tsconfig.json")
-            self.viewer_languages = ["en-US"]
 
         self.db_engine = DatabaseEngine()
 
@@ -147,20 +139,15 @@ class QGSReader:
 
         # Build layername -> shortname lookup
         shortname_map = {}
-        id_name_map = {}
         for maplayer in root.findall('.//maplayer'):
             layernameEl = maplayer.find('layername')
             if layernameEl is not None:
                 shortnameEl = maplayer.find('shortname')
-                idEl = maplayer.find('id')
                 shortname = shortnameEl.text if shortnameEl is not None else layernameEl.text
                 shortname_map[layernameEl.text] = shortname
-                if idEl is not None:
-                    id_name_map[idEl.text] = shortname
 
         return {
             "project_crs": self.__project_crs(root),
-            "translations": self.__theme_translations(qgs_dir, projectname, id_name_map),
             "print_templates": self.__print_templates(root, shortname_map),
             "visibility_presets": self.__visibility_presets(root),
             "layer_metadata": self.__layer_metadata(root, shortname_map, map_prefix, edit_datasets, theme_item, qgs_dir),
@@ -171,76 +158,6 @@ class QGSReader:
         """ Read project CRS from QGS. """
         authid = root.find('./projectCrs/spatialrefsys/authid')
         return authid.text if authid is not None else None
-
-    def __theme_translations(self, qgs_dir, projectname, id_name_map):
-        """ Read theme portion of translations from <projectname>_<lang>.json. """
-        all_translations = {}
-
-        for language in self.viewer_languages:
-            translations = {}
-
-            ts_file = os.path.join(qgs_dir, f"{projectname}_{language}.ts")
-            if not os.path.exists(ts_file):
-                ts_file = os.path.join(qgs_dir, f"{projectname}_{language[0:2]}.ts")
-            if os.path.exists(ts_file):
-                self.logger.info('Reading project translations %s' % ts_file)
-                try:
-                    ts_document = ElementTree.parse(ts_file)
-
-                    # Build translation string lookup
-                    for context in ts_document.findall("./context"):
-                        context_name = context.find('./name')
-                        if context_name is None:
-                            continue
-
-                        context_name_parts = context_name.text.split(":")
-                        key = None
-                        if len(context_name_parts) >= 3 and context_name_parts[0] == "project" and context_name_parts[1] == "layers":
-                            # replace layer id with layer name
-                            layername = id_name_map[context_name_parts[2]]
-
-                            if len(context_name_parts) == 3:
-                                ts_path = f"layertree"
-                                key = layername
-                            elif len(context_name_parts) == 4 and context_name_parts[3] == "fieldaliases":
-                                ts_path = f"layers.{layername}.fields"
-                            elif len(context_name_parts) == 4 and context_name_parts[3] == "formcontainers":
-                                ts_path = f"layers.{layername}.form"
-                        elif len(context_name_parts) == 2 and context_name_parts[0] == "project" and context_name_parts[1] == "layergroups":
-                            ts_path = f"layertree"
-                        else:
-                            # Unknown ts context
-                            continue
-
-                        context_ts = translations
-                        for entry in ts_path.split("."):
-                            context_ts[entry] = context_ts.get(entry, {})
-                            context_ts = context_ts[entry]
-
-                        for message in context.findall("./message"):
-                            source = message.find('./source')
-                            translation = message.find('./translation')
-                            if source is not None and translation is not None and translation.get('type', '') != "unfinished":
-                                context_ts[key or source.text] = translation.text
-
-                except Exception as e:
-                    self.logger.info('Failed to auxiliary project translations %s: %s' % (ts_file, str(e)))
-
-            json_file = os.path.join(qgs_dir, f"{projectname}_{language}.json")
-            if not os.path.exists(json_file):
-                json_file = os.path.join(qgs_dir, f"{projectname}_{language[0:2]}.json")
-            if os.path.exists(json_file):
-                self.logger.info('Reading auxiliary project translations %s' % json_file)
-                try:
-                    with open(json_file) as fh:
-                        translations = deep_merge(translations, json.load(fh))
-                except Exception as e:
-                    self.logger.info('Failed to read auxiliary project translations %s: %s' % (json_file, str(e)))
-
-            if translations:
-                all_translations[language] = translations
-
-        return all_translations
 
     def __print_templates(self, root, shortname_map):
         """ Collect print templates from QGS and merge with global print layouts. """

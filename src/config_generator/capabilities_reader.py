@@ -2,6 +2,7 @@ from collections import OrderedDict
 from urllib.parse import urljoin, urlparse
 from xml.etree import ElementTree
 
+import json
 import os
 import posixpath
 import re
@@ -622,3 +623,36 @@ class CapabilitiesReader():
             )
             self.logger.debug(traceback.format_exc())
             return {}
+
+    def read_project_translations(self, service_name, viewer_languages):
+        """ Read translations from QGIS Server.
+        :param str service_name: service name
+        :param list viewer_languages: viewer languages
+
+        """
+        all_translations = {}
+        for language in viewer_languages:
+            try:
+                full_url = urljoin(
+                    self.default_qgis_server_url,
+                    posixpath.join(self.qgis_server_url_tenant_suffix, service_name)
+                )
+                params = {
+                    'SERVICE': 'GetTranslations',
+                    'LANG': language
+                }
+                document = self.fetch_cached(full_url, params, "GetTranslations_" + language, "GetTranslations " + language, True)
+                if not document:
+                    return {}
+                all_translations[language] = json.loads(document)
+                if all_translations[language]:
+                    self.logger.info("Read " + language + " translations for " + service_name)
+
+            except Exception as e:
+                self.logger.error(
+                    "Could not parse GetTranslations from %s:\n%s" %
+                    (full_url, e)
+                )
+                self.logger.debug(traceback.format_exc())
+
+        return all_translations

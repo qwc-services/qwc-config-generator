@@ -1,3 +1,4 @@
+import json
 import os
 from collections import OrderedDict
 from pathlib import Path
@@ -36,8 +37,15 @@ class ThemeReader():
 
         global_print_layouts = self.__search_global_print_layouts()
 
+        try:
+            with open(os.path.join(translations_dir, 'tsconfig.json')) as fh:
+                self.viewer_languages = json.load(fh)['languages']
+        except:
+            self.logger.warning("Failed to detect viewer languages from tsconfig.json")
+            self.viewer_languages = ["en-US"]
+
         self.capabilities_reader = CapabilitiesReader(config, logger, use_cached_project_metadata, cache_dir)
-        self.qgs_reader = QGSReader(config, logger, assets_dir, translations_dir, use_cached_project_metadata, global_print_layouts)
+        self.qgs_reader = QGSReader(config, logger, assets_dir, use_cached_project_metadata, global_print_layouts)
 
         self.default_qgis_server_url = config.get(
             'default_qgis_server_url', 'http://localhost:8001/ows/'
@@ -145,6 +153,7 @@ class ThemeReader():
 
         wms_capabilities = self.capabilities_reader.read_wms_service_capabilities(service_name, item, self.themes_config)
         wfs_capabilities = self.capabilities_reader.read_wfs_service_capabilities(service_name, item)
+        project_translations = self.capabilities_reader.read_project_translations(service_name, self.viewer_languages)
         project_metadata = self.qgs_reader.read(service_name, item, self.__get_edit_datasets(service_name))
 
         self.theme_metadata[service_name] = {
@@ -152,6 +161,7 @@ class ThemeReader():
             'url': url,
             'wms_capabilities': wms_capabilities,
             'wfs_capabilities': wfs_capabilities,
+            'project_translations': project_translations,
             'project_metadata': project_metadata
         }
 
@@ -206,6 +216,10 @@ class ThemeReader():
     def wfs_capabilities(self, service_name):
         """ Return the WFS servcice capabilities for the specified OWS service. """
         return self.theme_metadata.get(service_name, {}).get('wfs_capabilities', {})
+
+    def project_translations(self, service_name):
+        """ Return the QGS project translations for the specified OWS service. """
+        return self.theme_metadata.get(service_name, {}).get('project_translations', {})
 
     def project_metadata(self, service_name):
         """ Return the QGS project metadata for the specified OWS service. """
