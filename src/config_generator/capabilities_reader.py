@@ -643,16 +643,12 @@ class CapabilitiesReader():
                 }
                 document = self.fetch_cached(full_url, params, "GetTranslations_" + language, "GetTranslations " + language, True)
                 if not document:
-                    return {}
+                    continue
                 all_translations[language] = json.loads(document)
                 if all_translations[language]:
                     self.logger.info("Read " + language + " translations for " + service_name)
 
             except Exception as e:
-                self.logger.error(
-                    "Could not parse GetTranslations from %s:\n%s" %
-                    (full_url, e)
-                )
-                self.logger.debug(traceback.format_exc())
+                continue
 
         return all_translations
