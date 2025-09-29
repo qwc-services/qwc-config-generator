@@ -247,6 +247,13 @@ class QGSReader:
                     layerMap[layerId.text] = mapLayer.find('shortname').text
                 elif mapLayer.find('layername') is not None:
                     layerMap[layerId.text] = mapLayer.find('layername').text
+        for group in root.findall('.//layer-tree-group'):
+            if group.get('name'):
+                shortname = group.find('./shortname')
+                if shortname is not None:
+                    layerMap[group.get('name')] = shortname.text
+                else:
+                    layerMap[group.get('name')] = group.get('name')
 
         result = {}
         for visibilityPreset in visibilityPresets.findall('./visibility-preset'):
@@ -259,7 +266,7 @@ class QGSReader:
             for checkedGroupNode in visibilityPreset.findall('./checked-group-nodes/checked-group-node'):
                 groupid = checkedGroupNode.get('id')
                 if groupid is not None:
-                    result[name][groupid] = ""
+                    result[name][layerMap[groupid]] = ""
 
         return result
 
