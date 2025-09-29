@@ -26,6 +26,7 @@ from .print_service_config import PrintServiceConfig
 from .search_service_config import SearchServiceConfig
 from .document_service_config import DocumentServiceConfig
 from .legend_service_config import LegendServiceConfig
+from .mapinfo_service_config import MapInfoServiceConfig
 from .service_config import ServiceConfig
 from .permissions_query import PermissionsQuery
 
@@ -351,6 +352,10 @@ class ConfigGenerator():
                 generator_config, self.theme_reader, self.config_models,
                 self.schema_urls.get('data'), self.service_config('data'),
                 self.logger, force_readonly_datasets
+            ),
+            'mapinfo': MapInfoServiceConfig(
+                generator_config, self.config_models, self.schema_urls.get('mapinfo'),
+                self.service_config('mapinfo'), self.logger
             ),
             'ext': ExtServiceConfig(
                 self.config_models, self.schema_urls.get('ext'),
