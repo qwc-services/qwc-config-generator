@@ -1,10 +1,6 @@
 from collections import OrderedDict
 
-from .permissions_query import PermissionsQuery
 from .service_config import ServiceConfig
-
-import os
-import glob
 
 
 class LegendServiceConfig(ServiceConfig):
@@ -27,7 +23,6 @@ class LegendServiceConfig(ServiceConfig):
         super().__init__('legend', schema_url, service_config, logger)
 
         self.config_models = config_models
-        self.permissions_query = PermissionsQuery(config_models, logger)
 
         # get default QGIS server URL from ConfigGenerator config
         self.default_qgis_server_url = generator_config.get(
