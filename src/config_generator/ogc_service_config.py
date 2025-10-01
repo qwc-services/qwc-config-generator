@@ -108,6 +108,7 @@ class OGCServiceConfig(ServiceConfig):
             # NOTE: use ordered keys
             wms_service = OrderedDict()
             wms_service['name'] = cap['name']
+            wms_service['title'] = cap.get('title')
 
             if not cap['wms_url'].startswith(self.default_qgis_server_url):
                 wms_service['wms_url'] = cap['wms_url']
