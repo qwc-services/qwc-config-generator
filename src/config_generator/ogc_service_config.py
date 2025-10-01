@@ -179,6 +179,7 @@ class OGCServiceConfig(ServiceConfig):
             # NOTE: use ordered keys
             wfs_service = OrderedDict()
             wfs_service['name'] = cap['name']
+            wfs_service['title'] = cap.get('title')
 
             if not cap['wfs_url'].startswith(self.default_qgis_server_url):
                 wfs_service['wfs_url'] = cap['wfs_url']
