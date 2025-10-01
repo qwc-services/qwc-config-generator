@@ -506,6 +506,8 @@ class CapabilitiesReader():
             service_title = root.find('%sServiceIdentification/%sTitle' % (np_ows, np_ows), ns)
             if service_title is not None:
                 capabilities['title'] = service_title.text
+                if capabilities['title'] == "Untitled":
+                    capabilities['title'] = re.sub('.*/', '', service_name)
 
             # get service abstract
             service_abstract = root.find('%sServiceIdentification/%sAbstract' % (np_ows, np_ows), ns)
