@@ -164,6 +164,10 @@ class ThemeReader():
             'project_translations': project_translations,
             'project_metadata': project_metadata
         }
+        # Use title specified in themes configuration
+        if item.get('title'):
+            self.theme_metadata[service_name]['wms_capabilities']['title'] = item['title']
+            self.theme_metadata[service_name]['wfs_capabilities']['title'] = item['title']
 
     def __get_edit_datasets(self, service_name):
         """ Return edit datasets from permissions for the specified service. """
