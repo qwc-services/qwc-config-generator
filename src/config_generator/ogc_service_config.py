@@ -109,6 +109,7 @@ class OGCServiceConfig(ServiceConfig):
             wms_service = OrderedDict()
             wms_service['name'] = cap['name']
             wms_service['title'] = cap.get('title')
+            wms_service['hidden_in_landing_page'] = self.themes_reader.project_hidden_in_landing_page(service_name)
 
             if not cap['wms_url'].startswith(self.default_qgis_server_url):
                 wms_service['wms_url'] = cap['wms_url']
@@ -181,6 +182,7 @@ class OGCServiceConfig(ServiceConfig):
             wfs_service = OrderedDict()
             wfs_service['name'] = cap['name']
             wfs_service['title'] = cap.get('title')
+            wfs_service['hidden_in_landing_page'] = self.themes_reader.project_hidden_in_landing_page(service_name)
 
             if not cap['wfs_url'].startswith(self.default_qgis_server_url):
                 wfs_service['wfs_url'] = cap['wfs_url']

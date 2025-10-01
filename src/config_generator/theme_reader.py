@@ -162,7 +162,8 @@ class ThemeReader():
             'wms_capabilities': wms_capabilities,
             'wfs_capabilities': wfs_capabilities,
             'project_translations': project_translations,
-            'project_metadata': project_metadata
+            'project_metadata': project_metadata,
+            'hidden_in_ows_landing_page': item.get('hidden_in_ows_landing_page', False)
         }
         # Use title specified in themes configuration
         if item.get('title'):
@@ -228,6 +229,10 @@ class ThemeReader():
     def project_metadata(self, service_name):
         """ Return the QGS project metadata for the specified OWS service. """
         return self.theme_metadata.get(service_name, {}).get('project_metadata', {})
+
+    def project_hidden_in_landing_page(self, service_name):
+        """ Return whether the project should be hidden in the langing page. """
+        return self.theme_metadata.get(service_name, {}).get('hidden_in_ows_landing_page')
 
     def service_name(self, url):
         """Return service name as relative path to default QGIS server URL.
