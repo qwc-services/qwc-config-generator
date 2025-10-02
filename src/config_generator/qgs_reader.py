@@ -247,13 +247,19 @@ class QGSReader:
                     layerMap[layerId.text] = mapLayer.find('shortname').text
                 elif mapLayer.find('layername') is not None:
                     layerMap[layerId.text] = mapLayer.find('layername').text
-        for group in root.findall('.//layer-tree-group'):
-            if group.get('name'):
-                shortname = group.find('./shortname')
-                if shortname is not None:
-                    layerMap[group.get('name')] = shortname.text
-                else:
-                    layerMap[group.get('name')] = group.get('name')
+
+        def map_tree_groups(parent, parent_path =[]):
+            for group in parent.findall('.//layer-tree-group'):
+                if group.get('name'):
+                    path = list(parent_path) + [group.get('name')]
+                    shortname = group.find('./shortname')
+                    if shortname is not None:
+                        layerMap["/".join(path)] = shortname.text
+                    else:
+                        layerMap["/".join(path)] = group.get('name')
+                    map_tree_groups(group, path)
+
+        map_tree_groups(root)
 
         result = {}
         for visibilityPreset in visibilityPresets.findall('./visibility-preset'):
