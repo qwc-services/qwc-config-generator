@@ -47,6 +47,8 @@ class CapabilitiesReader():
             "project_settings_read_timeout", 60
         )
 
+        self.have_get_translations = None
+
 
     def fetch_cached(self, request_url, params, cache_name, description, silent=False):
         document = None
@@ -632,6 +634,25 @@ class CapabilitiesReader():
         :param list viewer_languages: viewer languages
 
         """
+        if self.have_get_translations == None:
+            # Send one request to check whether GetTranslations is available
+            response = requests.get(
+                urljoin(
+                    self.default_qgis_server_url,
+                    posixpath.join(self.qgis_server_url_tenant_suffix, service_name)
+                ),
+                params={'SERVICE': 'GetTranslations', 'LANG': 'en-US'},
+                timeout=self.project_settings_read_timeout
+            )
+            if b'Service unknown or unsupported.' in response.content:
+                self.logger.info("Cannot read project translations, the QGIS Server GetTranslations plugin is not installed")
+                self.have_get_translations = False
+            else:
+                self.have_get_translations = True
+
+        if not self.have_get_translations:
+            return {}
+
         all_translations = {}
         for language in viewer_languages:
             try:
