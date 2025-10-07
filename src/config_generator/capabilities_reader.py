@@ -277,13 +277,13 @@ class CapabilitiesReader():
             layer_name = fallback_name
 
         if "," in layer_name:
-            self.logger.warning(
+            self.logger.critical(
                 f"The layer '{layer_name}' contains a comma! "
                 "The WMS name of a layer must not contain a comma! "
                 "Either remove the comma or specify 'short_name' in the QGIS project."
             )
         if layer_name in layer_names:
-            self.logger.warning(
+            self.logger.critical(
                 f"Duplicate layer name '{layer_name}'! "
                 "Please rename the duplicate occurrences."
             )
