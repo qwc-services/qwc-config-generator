@@ -138,7 +138,7 @@ class CapabilitiesReader():
             if root_layer is None:
                 self.logger.warning(
                     "No root layer found for %s: %s" %
-                    (full_url, response.content)
+                    (full_url, document)
                 )
                 return {}
 
@@ -490,7 +490,7 @@ class CapabilitiesReader():
             if feature_type_list is None:
                 self.logger.warning(
                     "No FeatureTypeList found for %s: %s" %
-                    (full_url, response.content)
+                    (full_url, document)
                 )
                 return {}
 
