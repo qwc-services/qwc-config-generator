@@ -76,8 +76,9 @@ class PermissionsTests(unittest.TestCase):
             os.environ["INPUT_CONFIG_PATH"] = os.path.join(tmpdirpath, "config-in")
             os.environ["OUTPUT_CONFIG_PATH"] = os.path.join(tmpdirpath, "config")
 
-            url = "/generate_configs?tenant=default&use_cached_project_metadata=true"
+            url = "/generate_configs?tenant=default&stream_response=true&use_cached_project_metadata=true"
             response = self.app.post(url)
+            data = response.get_data() # Force reading data to ensure streamed response is fully read
 
             if response.status_code != 200:
                 print(response.text)
