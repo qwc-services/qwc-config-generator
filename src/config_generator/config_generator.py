@@ -138,6 +138,9 @@ class ConfigGenerator():
         :param bool force_readonly_datasets: Whether to force all datasets readonly
         """
 
+        self.logger = Logger(logger)
+        self.cancelled_event = cancelled_event
+
         config_file_dir = os.path.dirname(config_file)
         try:
             with open(config_file, encoding='utf-8') as f:
@@ -147,9 +150,6 @@ class ConfigGenerator():
             msg = "Error loading ConfigGenerator config file %s:\n%s" % (config_file, e)
             self.logger.critical(msg)
             raise Exception(msg)
-
-        self.logger = Logger(logger)
-        self.cancelled_event = cancelled_event
 
         self.tenant = config.get('config', {}).get('tenant', 'default')
         self.logger.debug("Using tenant '%s'" % self.tenant)
