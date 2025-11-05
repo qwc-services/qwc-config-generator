@@ -72,6 +72,10 @@ class PermissionsTests(unittest.TestCase):
                     os.path.join('qwc-docker', 'volumes', 'config-in', 'default', fileName),
                     os.path.join(tmpdirpath, "config-in", "default", fileName)
                 )
+                print("Copy %s to %s" % (
+                    os.path.join('qwc-docker', 'volumes', 'config-in', 'default', fileName),
+                    os.path.join(tmpdirpath, "config-in", "default", fileName)
+                ))
 
             os.environ["INPUT_CONFIG_PATH"] = os.path.join(tmpdirpath, "config-in")
             os.environ["OUTPUT_CONFIG_PATH"] = os.path.join(tmpdirpath, "config")
