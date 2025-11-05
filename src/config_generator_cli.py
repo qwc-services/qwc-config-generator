@@ -1,8 +1,6 @@
 import argparse
 from collections import OrderedDict
 from datetime import datetime
-import json
-import os
 
 from config_generator.config_generator import ConfigGenerator
 
@@ -44,20 +42,11 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-# read ConfigGenerator config file
-try:
-    with open(args.config_file, encoding='utf-8') as f:
-        # parse config JSON with original order of keys
-        config = json.load(f, object_pairs_hook=OrderedDict)
-except Exception as e:
-    print("Error loading ConfigGenerator config:\n%s" % e)
-    exit(1)
-
 # create logger
 logger = Logger()
 
 # create ConfigGenerator
-generator = ConfigGenerator(config, logger, os.path.dirname(args.config_file), False, False)
+generator = ConfigGenerator(args.config_file, logger, False, False)
 if args.command == 'all':
     generator.write_configs()
     generator.write_permissions()

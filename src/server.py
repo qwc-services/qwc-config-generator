@@ -27,25 +27,9 @@ def config_generator(tenant, logger, use_cached_project_metadata, force_readonly
         logger.critical(msg)
         return None
 
-    # read ConfigGenerator config file
-    config_in_path = os.environ.get(
-        'INPUT_CONFIG_PATH', 'config-in/'
-    ).rstrip('/') + '/'
-    config_file_dir = os.path.join(config_in_path, tenant)
-    try:
-        config_file = os.path.join(
-            config_file_dir, 'tenantConfig.json'
-        )
-        with open(config_file, encoding='utf-8') as f:
-            # parse config JSON with original order of keys
-            config = json.load(f, object_pairs_hook=OrderedDict)
-    except Exception as e:
-        msg = "Error loading ConfigGenerator config:\n%s" % e
-        logger.critical(msg)
-        return None
-
-    # create ConfigGenerator
-    return ConfigGenerator(config, logger, config_file_dir, use_cached_project_metadata, force_readonly_datasets)
+    config_in_path = os.environ.get('INPUT_CONFIG_PATH', 'config-in/').rstrip('/')
+    config_file = os.path.join(config_in_path, tenant, 'tenantConfig.json')
+    return ConfigGenerator(config_file, logger, use_cached_project_metadata, force_readonly_datasets)
 
 
 # routes

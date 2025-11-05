@@ -127,14 +127,25 @@ class ConfigGenerator():
     from a tenantConfig.json and QWC ConfigDB.
     """
 
-    def __init__(self, config, logger, config_file_dir, use_cached_project_metadata, force_readonly_datasets):
+    def __init__(self, config_file, logger, use_cached_project_metadata, force_readonly_datasets):
         """Constructor
 
-        :param obj config: ConfigGenerator config
+        :param str config_file: ConfigGenerator config file
         :param Logger logger: Logger
         :param bool use_cached_project_metadata: Whether to use cached project metadata if available
         :param bool force_readonly_datasets: Whether to force all datasets readonly
         """
+
+        config_file_dir = os.path.dirname(config_file)
+        try:
+            with open(config_file, encoding='utf-8') as f:
+                # parse config JSON with original order of keys
+                config = json.load(f, object_pairs_hook=OrderedDict)
+        except Exception as e:
+            msg = "Error loading ConfigGenerator config file %s:\n%s" % (config_file, e)
+            self.logger.critical(msg)
+            raise Exception(msg)
+
         self.logger = Logger(logger)
 
         self.tenant = config.get('config', {}).get('tenant', 'default')
