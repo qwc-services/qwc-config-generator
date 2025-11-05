@@ -1,6 +1,7 @@
 import argparse
 from collections import OrderedDict
 from datetime import datetime
+import threading
 
 from config_generator.config_generator import ConfigGenerator
 
@@ -46,7 +47,7 @@ args = parser.parse_args()
 logger = Logger()
 
 # create ConfigGenerator
-generator = ConfigGenerator(args.config_file, logger, False, False)
+generator = ConfigGenerator(args.config_file, logger, threading.Event(), False, False)
 if args.command == 'all':
     generator.write_configs()
     generator.write_permissions()

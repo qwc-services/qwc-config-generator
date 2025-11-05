@@ -15,11 +15,12 @@ class ThemeReader():
     Reads project metadata for all theme items in the QWC2 theme configuration.
     """
 
-    def __init__(self, config, logger, config_models, themes_config, assets_dir, translations_dir, use_cached_project_metadata, cache_dir):
+    def __init__(self, config, logger, check_cancelled, config_models, themes_config, assets_dir, translations_dir, use_cached_project_metadata, cache_dir):
         """Constructor
 
         :param obj config: ConfigGenerator config
         :param Logger logger: Logger
+        :param check_cancelled function: function which raises an exception if the config generator run is cancelled
         :param ConfigModels config_models: Helper for ORM models
         :param dict themes_config: themes config
         :param str assets_dir: Viewer assets directory
@@ -29,6 +30,7 @@ class ThemeReader():
         """
         self.config = config
         self.logger = logger
+        self.check_cancelled = check_cancelled
         self.themes_config = themes_config
         self.config_models = config_models
 
@@ -137,6 +139,9 @@ class ThemeReader():
     def __read_metadata_for_theme(self, item):
         """ Read theme metadata for a theme item. """
         # get service name
+
+        self.check_cancelled()
+
         url = item.get('url')
 
         # check if theme is disabled
@@ -152,7 +157,11 @@ class ThemeReader():
         self.logger.info("<b>Reading theme %s</b>" % url)
 
         wms_capabilities = self.capabilities_reader.read_wms_service_capabilities(service_name, item, self.themes_config)
+        self.check_cancelled()
+
         wfs_capabilities = self.capabilities_reader.read_wfs_service_capabilities(service_name, item)
+        self.check_cancelled()
+
         project_translations = self.capabilities_reader.read_project_translations(service_name, self.viewer_languages)
         project_metadata = self.qgs_reader.read(service_name, item, self.__get_edit_datasets(service_name))
 

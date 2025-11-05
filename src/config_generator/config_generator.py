@@ -1,11 +1,12 @@
+import deepmerge
 import json
 import jsonschema
-import deepmerge
 import os
+import re
 import requests
 import tempfile
-import re
 
+from concurrent.futures import CancelledError
 from collections import OrderedDict
 from datetime import datetime, UTC
 from pathlib import Path
@@ -127,11 +128,12 @@ class ConfigGenerator():
     from a tenantConfig.json and QWC ConfigDB.
     """
 
-    def __init__(self, config_file, logger, use_cached_project_metadata, force_readonly_datasets):
+    def __init__(self, config_file, logger, cancelled_event, use_cached_project_metadata, force_readonly_datasets):
         """Constructor
 
         :param str config_file: ConfigGenerator config file
         :param Logger logger: Logger
+        :param threading.Event cancelled_event: Event to signal that the config generator task is aborted
         :param bool use_cached_project_metadata: Whether to use cached project metadata if available
         :param bool force_readonly_datasets: Whether to force all datasets readonly
         """
@@ -147,6 +149,7 @@ class ConfigGenerator():
             raise Exception(msg)
 
         self.logger = Logger(logger)
+        self.cancelled_event = cancelled_event
 
         self.tenant = config.get('config', {}).get('tenant', 'default')
         self.logger.debug("Using tenant '%s'" % self.tenant)
@@ -276,13 +279,17 @@ class ConfigGenerator():
         self.logger.info(f"Assets destination: {assets_dir}")
         self.logger.info(f"Translations destination: {translations_dir}")
 
+        self.check_cancelled()
+
         # Search for QGS projects in scan dir and automatically generate theme items
         self.search_qgs_projects(generator_config, config["themesConfig"])
+
+        self.check_cancelled()
 
         # Load metadata for all QWC2 theme items
         capabilities_cache_dir = os.path.join(self.config_path, "__capabilities_cache")
         self.theme_reader = ThemeReader(
-            generator_config, self.logger, self.config_models, config["themesConfig"],
+            generator_config, self.logger, self.check_cancelled, self.config_models, config["themesConfig"],
             assets_dir, translations_dir, use_cached_project_metadata, capabilities_cache_dir
         )
 
@@ -321,6 +328,7 @@ class ConfigGenerator():
             self.logger.error(
                 "qwc-config-generator config failed schema validation"
             )
+        self.check_cancelled()
 
         # create service config handlers
         self.config_handler = {
@@ -375,6 +383,7 @@ class ConfigGenerator():
         }
 
         for service_name, service_config in self.service_configs.items():
+            self.check_cancelled()
             # config-only services
             if service_name not in self.config_handler:
                 # if service is not yet in config handler, it has not a specific service configuration, it is a config-only service
@@ -404,6 +413,12 @@ class ConfigGenerator():
         except Exception as e:
             self.logger.critical("Could not create tenant dir:\n%s" % e)
 
+    def check_cancelled(self):
+        """Checks whether the config generator run has been cancelled and, if yes, throws an exception.
+        """
+        if self.cancelled_event.is_set():
+            raise CancelledError()
+
     def service_config(self, service):
         """Return any additional service config for service.
 
@@ -417,6 +432,7 @@ class ConfigGenerator():
         Return True if the config files could be generated.
         """
         for service_config in self.config.get('services', []):
+            self.check_cancelled()
             self.write_service_config(service_config['name'])
 
         criticals, errors = self.check_for_errors()
@@ -484,6 +500,7 @@ class ConfigGenerator():
 
         # collect service permissions
         for service_config in self.config.get('services', []):
+            self.check_cancelled()
             service = service_config['name']
             config_handler = self.config_handler.get(service)
             if config_handler:
@@ -716,6 +733,7 @@ class ConfigGenerator():
 
         base_path = Path(qgis_projects_scan_base_dir)
         for item in base_path.glob('**/*'):
+            self.check_cancelled()
             # Skip hidden files/folders
             if item.name.startswith("."):
                 continue
