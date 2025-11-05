@@ -39,7 +39,17 @@ parser.add_argument(
 )
 parser.add_argument(
     "command", choices=['all', 'service_configs', 'permissions'],
-    help="generate service configs and/or permissions"
+    help="Generate service configs and/or permissions"
+)
+parser.add_argument(
+    "--use_cached_project_metadata", choices=["0", "1", "false", "true"],
+    help="Whether to use cached project metadata",
+    default="false"
+)
+parser.add_argument(
+    "--force_readonly_datasets", choices=["0", "1", "false", "true"],
+    help="Whether to force read-only dataset permissions",
+    default="false"
 )
 args = parser.parse_args()
 
@@ -47,7 +57,9 @@ args = parser.parse_args()
 logger = Logger()
 
 # create ConfigGenerator
-generator = ConfigGenerator(args.config_file, logger, threading.Event(), False, False)
+use_cached_project_metadata = str(args.use_cached_project_metadata).lower() in ["1","true"]
+force_readonly_datasets = str(args.force_readonly_datasets).lower() in ["1","true"]
+generator = ConfigGenerator(args.config_file, logger, threading.Event(), use_cached_project_metadata, force_readonly_datasets)
 if args.command == 'all':
     generator.write_configs()
     generator.write_permissions()
