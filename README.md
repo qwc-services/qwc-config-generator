@@ -56,7 +56,7 @@ Add the following configuration and adapt it to your service in `tenantConfig.js
 Usage
 -----
 
-### Script
+### CLI interface
 
 Show command options:
 
@@ -74,7 +74,12 @@ Generate permissions file:
 
     uv run src/config_generator_cli.py ./tenantConfig.json permissions
 
-### Service
+Additionally, the following command line args may be specified:
+
+- `--use_cached_project_metadata=1`: Whether to use cached project metadata
+- `--force_readonly_datasets=1`: Whether to force read-only dataset permissions
+
+### Service interface
 
 Set the `INPUT_CONFIG_PATH` environment variable to the base directory where for the configuration files are that should be read by the ConfigGenerator (default: `config-in/`).
 Set the `OUTPUT_CONFIG_PATH` environment variable to the base directory where the ConfigGenerator should output service configurations and permissions (default: `/tmp/`).
@@ -85,7 +90,24 @@ Base URL:
 
 Generate both service configs and permissions for `default` tenant:
 
-    curl -X POST "http://localhost:5010/generate_configs?tenant=default"
+    # Non-blocking call, returns task_id
+    curl "http://localhost:5010/generate_configs?tenant=default"
+
+    # Blocking call, streams log output
+    curl "http://localhost:5010/generate_configs?tenant=default&stream_response=1"
+
+Additionally, the following query parameters may be specified:
+
+- `use_cached_project_metadata=1`: Whether to use cached project metadata
+- `force_readonly_datasets=1`: Whether to force read-only dataset permissions
+
+Watch config generator task status:
+
+    curl "http://localhost:5010/generate_configs_status?task_id=<task_id>"
+
+Cancel config generator task:
+
+    curl "http://localhost:5010/generate_configs_cancel?task_id=<task_id>"
 
 ### Update JSON schemas
 
