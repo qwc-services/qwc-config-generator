@@ -81,6 +81,7 @@ class ThemeReader():
             if subdirpath and not dirpath.startswith(subdirpath):
                 continue
             relpath = dirpath[len(qgis_print_layouts_dir.rstrip('/')) + 1:]
+            subdirrelpath = dirpath[len(subdirpath or qgis_print_layouts_dir.rstrip('/')) + 1:]
 
             for filename in files:
                 if Path(filename).suffix != ".qpt":
@@ -100,6 +101,7 @@ class ThemeReader():
                 position = composer_map.get('positionOnPage').split(',')
                 print_template = OrderedDict()
                 print_template['name'] = os.path.join(relpath, layout.get('name'))
+                print_template['title'] = os.path.join(subdirrelpath, layout.get('name'))
                 print_map = OrderedDict()
                 print_map['name'] = "map0"
                 print_map['x'] = float(position[0])

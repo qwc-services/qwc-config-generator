@@ -200,6 +200,7 @@ class QGSReader:
             }
             print_template = {}
             print_template['name'] = template.get('name')
+            print_template['title'] = template.get('name')
             print_map = {}
             print_map['name'] = "map0"
             print_map['x'] = float(position[0]) * tomm.get(position[2], 1)
@@ -225,10 +226,10 @@ class QGSReader:
 
             print_templates.append(print_template)
 
-        project_template_names = [template['name'] for template in print_templates]
+        project_template_titles = [template['title'] for template in print_templates]
         return print_templates + [
             template for template in self.global_print_layouts
-            if template["name"] not in project_template_names
+            if template["title"] not in project_template_titles
         ]
 
 
