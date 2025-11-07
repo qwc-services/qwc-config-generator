@@ -148,7 +148,7 @@ class QGSReader:
 
         return {
             "project_crs": self.__project_crs(root),
-            "print_templates": self.__print_templates(root, shortname_map),
+            "print_templates": self.__print_templates(root, shortname_map, theme_item),
             "visibility_presets": self.__visibility_presets(root),
             "layer_metadata": self.__layer_metadata(root, shortname_map, map_prefix, edit_datasets, theme_item, qgs_dir),
         }
@@ -159,14 +159,15 @@ class QGSReader:
         authid = root.find('./projectCrs/spatialrefsys/authid')
         return authid.text if authid is not None else None
 
-    def __print_templates(self, root, shortname_map):
+    def __print_templates(self, root, shortname_map, theme_item):
         """ Collect print templates from QGS and merge with global print layouts. """
 
+        printTemplateBlacklist = theme_item.get("printTemplateBlacklist", [])
         restrictedLayouts = [el.text for el in root.findall('./properties/WMSRestrictedComposers/value')]
         print_templates = []
         composer_template_map = {}
         for template in root.findall('.//Layout'):
-            if not template.get('name') in restrictedLayouts:
+            if template.get('name') not in restrictedLayouts and template.get('name') not in printTemplateBlacklist:
                 composer_template_map[template.get('name')] = template
 
         for template in composer_template_map.values():
@@ -229,7 +230,7 @@ class QGSReader:
         project_template_titles = [template['title'] for template in print_templates]
         return print_templates + [
             template for template in self.global_print_layouts
-            if template["title"] not in project_template_titles
+            if template["title"] not in project_template_titles and template["title"] not in printTemplateBlacklist
         ]
 
 
