@@ -104,6 +104,7 @@ class OGCServiceConfig(ServiceConfig):
             if not cap or not 'name' in cap:
                 continue
             project_metadata = self.themes_reader.project_metadata(service_name)
+            layer_metadata = project_metadata['layer_metadata']
 
             # NOTE: use ordered keys
             wms_service = OrderedDict()
@@ -119,13 +120,15 @@ class OGCServiceConfig(ServiceConfig):
                 # NOTE: use ordered keys
                 online_resources = OrderedDict()
                 for key, url in cfg_wms_services['online_resources'].items():
-                    url = url.rstrip('/') + '/'
+                    url = url.rstrip('/')
+                    if not url.endswith('='):
+                         url += '/'
                     online_resources[key] = "%s%s" % (url, service_name)
                 wms_service['online_resources'] = online_resources
 
             # collect WMS layers
             wms_service['root_layer'] = self.collect_wms_layers(
-                cap['root_layer']
+                cap['root_layer'], layer_metadata
             )
 
             wms_service['print_templates'] = [
@@ -139,7 +142,7 @@ class OGCServiceConfig(ServiceConfig):
 
         return wms_services
 
-    def collect_wms_layers(self, layer):
+    def collect_wms_layers(self, layer, layer_metadata, parent_edit_layers = []):
         """Recursively collect WMS layer info for layer subtree from
         capabilities and return nested WMS layers.
 
@@ -147,6 +150,7 @@ class OGCServiceConfig(ServiceConfig):
         """
         # NOTE: use ordered keys
         wms_layer = OrderedDict()
+        edit_layers = []
 
         wms_layer['name'] = layer['name']
         if 'title' in layer:
@@ -157,7 +161,7 @@ class OGCServiceConfig(ServiceConfig):
             sublayers = []
             for sublayer in layer['layers']:
                 # recursively collect sub layer
-                sublayers.append(self.collect_wms_layers(sublayer))
+                sublayers.append(self.collect_wms_layers(sublayer, layer_metadata, edit_layers))
 
             wms_layer['layers'] = sublayers
         else:
@@ -166,6 +170,12 @@ class OGCServiceConfig(ServiceConfig):
                 wms_layer['attributes'] = layer['attributes']
 
             wms_layer['queryable'] = layer.get('queryable', False)
+
+            if layer_metadata.get(layer['name'], {}).get('editable') == True:
+                edit_layers.append(layer['name'])
+
+        wms_layer['edit_layers'] = edit_layers
+        parent_edit_layers += edit_layers
 
         return wms_layer
 
