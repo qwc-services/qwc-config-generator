@@ -780,6 +780,9 @@ class QGSReader:
     def __parse_datasource(self, datasource):
         """ Parse a QGS datasource URI string. """
 
+        if not datasource:
+            return {}
+
         result = {}
 
         # sql= is placed at end of datasource string, and can contain spaces even if it is not quoted (hurray)
