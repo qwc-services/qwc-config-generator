@@ -570,7 +570,8 @@ class QGSReader:
             elif kvlayer.find('provider').text != 'postgres':
                 self.logger.warning(f"Cannot generate keyvalrel config for field {field}: relation table {layerName} is not a postgres layer")
             else:
-                keyvaltable_metadata = self.__datasource_metadata(layerSource)
+                # NOTE: could use layerSource, but in certain QGIS projects it does not match the datasource of the actual layer
+                keyvaltable_metadata = self.__datasource_metadata(kvlayer.find('datasource').text)
                 keyvaltable_metadata['fields'] = []
                 for kvlayer_field in kvlayer.findall('fieldConfiguration/field'):
                     kvlayer_field_metadata = {"name": kvlayer_field.get('name')}
