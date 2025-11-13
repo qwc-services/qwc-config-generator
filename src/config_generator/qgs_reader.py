@@ -612,110 +612,115 @@ class QGSReader:
             column=column
         ))
         db = self.db_engine.db_engine(datasource["database"])
-        with db.connect() as conn:
-            # execute query
-            results = conn.execute(sql)
+        try:
+            with db.connect() as conn:
+                # execute query
+                results = conn.execute(sql)
 
-            if results.rowcount == 0:
-                # fallback to query SQL for materialized views
+                if results.rowcount == 0:
+                    # fallback to query SQL for materialized views
 
-                # SQL partially based on definition of information_schema.columns:
-                #   https://github.com/postgres/postgres/tree/master/src/backendsrc/backend/catalog/information_schema.sql#L674
-                sql_mv = sql_text("""
-                    SELECT
-                        ns.nspname AS table_schema,
-                        c.relname AS table_name,
-                        a.attname AS column_name,
-                        format_type(a.atttypid, null) AS data_type,
-                        CASE
-                            WHEN a.atttypmod = -1 /* default typmod */
-                                THEN NULL
-                            WHEN a.atttypid IN (1042, 1043) /* char, varchar */
-                                THEN a.atttypmod - 4
-                            WHEN a.atttypid IN (1560, 1562) /* bit, varbit */
-                                THEN a.atttypmod
-                            ELSE
-                                NULL
-                        END AS character_maximum_length,
-                        CASE a.atttypid
-                            WHEN 21 /*int2*/ THEN 16
-                            WHEN 23 /*int4*/ THEN 32
-                            WHEN 20 /*int8*/ THEN 64
-                            WHEN 1700 /*numeric*/ THEN
-                                CASE
-                                    WHEN a.atttypmod = -1
-                                        THEN NULL
-                                    ELSE ((a.atttypmod - 4) >> 16) & 65535
-                                END
-                            WHEN 700 /*float4*/ THEN 24 /*FLT_MANT_DIG*/
-                            WHEN 701 /*float8*/ THEN 53 /*DBL_MANT_DIG*/
-                            ELSE NULL
-                        END AS numeric_precision,
-                        CASE
-                            WHEN a.atttypid IN (21, 23, 20) /* int */ THEN 0
-                            WHEN a.atttypid IN (1700) /* numeric */ THEN
-                                CASE
-                                    WHEN a.atttypmod = -1
-                                        THEN NULL
-                                    ELSE (a.atttypmod - 4) & 65535
-                                END
-                            ELSE NULL
-                        END AS numeric_scale
-                    FROM pg_catalog.pg_class c
-                        JOIN pg_catalog.pg_namespace ns ON ns.oid = c.relnamespace
-                        JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
-                    WHERE
-                        /* tables, views, materialized views */
-                        c.relkind in ('r', 'v', 'm')
-                        AND ns.nspname = '{schema}'
-                        AND c.relname = '{table}'
-                        AND a.attname = '{column}'
-                    ORDER BY nspname, relname, attnum
-                """.format(
-                    schema=datasource["schema"],
-                    table=datasource["table_name"],
-                    column=column
-                ))
-                results = conn.execute(sql_mv)
+                    # SQL partially based on definition of information_schema.columns:
+                    #   https://github.com/postgres/postgres/tree/master/src/backendsrc/backend/catalog/information_schema.sql#L674
+                    sql_mv = sql_text("""
+                        SELECT
+                            ns.nspname AS table_schema,
+                            c.relname AS table_name,
+                            a.attname AS column_name,
+                            format_type(a.atttypid, null) AS data_type,
+                            CASE
+                                WHEN a.atttypmod = -1 /* default typmod */
+                                    THEN NULL
+                                WHEN a.atttypid IN (1042, 1043) /* char, varchar */
+                                    THEN a.atttypmod - 4
+                                WHEN a.atttypid IN (1560, 1562) /* bit, varbit */
+                                    THEN a.atttypmod
+                                ELSE
+                                    NULL
+                            END AS character_maximum_length,
+                            CASE a.atttypid
+                                WHEN 21 /*int2*/ THEN 16
+                                WHEN 23 /*int4*/ THEN 32
+                                WHEN 20 /*int8*/ THEN 64
+                                WHEN 1700 /*numeric*/ THEN
+                                    CASE
+                                        WHEN a.atttypmod = -1
+                                            THEN NULL
+                                        ELSE ((a.atttypmod - 4) >> 16) & 65535
+                                    END
+                                WHEN 700 /*float4*/ THEN 24 /*FLT_MANT_DIG*/
+                                WHEN 701 /*float8*/ THEN 53 /*DBL_MANT_DIG*/
+                                ELSE NULL
+                            END AS numeric_precision,
+                            CASE
+                                WHEN a.atttypid IN (21, 23, 20) /* int */ THEN 0
+                                WHEN a.atttypid IN (1700) /* numeric */ THEN
+                                    CASE
+                                        WHEN a.atttypmod = -1
+                                            THEN NULL
+                                        ELSE (a.atttypmod - 4) & 65535
+                                    END
+                                ELSE NULL
+                            END AS numeric_scale
+                        FROM pg_catalog.pg_class c
+                            JOIN pg_catalog.pg_namespace ns ON ns.oid = c.relnamespace
+                            JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
+                        WHERE
+                            /* tables, views, materialized views */
+                            c.relkind in ('r', 'v', 'm')
+                            AND ns.nspname = '{schema}'
+                            AND c.relname = '{table}'
+                            AND a.attname = '{column}'
+                        ORDER BY nspname, relname, attnum
+                    """.format(
+                        schema=datasource["schema"],
+                        table=datasource["table_name"],
+                        column=column
+                    ))
+                    results = conn.execute(sql_mv)
 
 
-            row = results.mappings().fetchone()
-            if not row:
-                self.logger.warn(f"Failed to query column metadata of column {column} from table {datasource["schema"]}.{datasource["table_name"]}")
-                return
+                row = results.mappings().fetchone()
+                if not row:
+                    self.logger.warn(f"Failed to query column metadata of column {column} from table {datasource["schema"]}.{datasource["table_name"]} of {datasource["database"]}")
+                    return
 
-            # Field data type
-            data_type = row['data_type']
-            field_metadata['data_type'] = data_type
+                # Field data type
+                data_type = row['data_type']
+                field_metadata['data_type'] = data_type
 
-            if not data_type_only:
-                # Constraints from data type
-                # NOTE: any existing QGIS field constraints take precedence
-                ranges = {
-                    'smallint': {'min': -32768, 'max': 32767},
-                    'integer': {'min': -2147483648, 'max': 2147483647},
-                    'bigint': {'min': -9223372036854775808, 'max': 9223372036854775807}
-                }
-                constraints = field_metadata['constraints']
-                if (data_type in ['character', 'character varying'] and
-                        row['character_maximum_length']):
-                    constraints['maxlength'] = row['character_maximum_length']
-                elif data_type == 'numeric' and row['numeric_precision']:
-                    step = pow(10, -row['numeric_scale'])
-                    max_value = pow(
-                        10, row['numeric_precision'] - row['numeric_scale']
-                    ) - step
-                    constraints['numeric_precision'] = row['numeric_precision']
-                    constraints['numeric_scale'] = row['numeric_scale']
-                    if not 'step' in constraints:
-                        constraints['step'] = step
-                    ranges['numeric'] = {'min': -max_value, 'max': max_value}
+                if not data_type_only:
+                    # Constraints from data type
+                    # NOTE: any existing QGIS field constraints take precedence
+                    ranges = {
+                        'smallint': {'min': -32768, 'max': 32767},
+                        'integer': {'min': -2147483648, 'max': 2147483647},
+                        'bigint': {'min': -9223372036854775808, 'max': 9223372036854775807}
+                    }
+                    constraints = field_metadata['constraints']
+                    if (data_type in ['character', 'character varying'] and
+                            row['character_maximum_length']):
+                        constraints['maxlength'] = row['character_maximum_length']
+                    elif data_type == 'numeric' and row['numeric_precision']:
+                        step = pow(10, -row['numeric_scale'])
+                        max_value = pow(
+                            10, row['numeric_precision'] - row['numeric_scale']
+                        ) - step
+                        constraints['numeric_precision'] = row['numeric_precision']
+                        constraints['numeric_scale'] = row['numeric_scale']
+                        if not 'step' in constraints:
+                            constraints['step'] = step
+                        ranges['numeric'] = {'min': -max_value, 'max': max_value}
 
-                if data_type in ranges:
-                    if not 'min' in constraints:
-                        constraints['min'] = ranges[data_type]['min']
-                    if not 'max' in constraints:
-                        constraints['max'] = ranges[data_type]['max']
+                    if data_type in ranges:
+                        if not 'min' in constraints:
+                            constraints['min'] = ranges[data_type]['min']
+                        if not 'max' in constraints:
+                            constraints['max'] = ranges[data_type]['max']
+
+        except:
+            self.logger.warn(f"Failed to query column metadata of column {column} from table {datasource["schema"]}.{datasource["table_name"]} of {datasource["database"]}")
+            return
 
 
     def __generate_edit_form(self, project, qgs_dir, map_prefix, shortnames, maplayer, layer_metadata, layername, theme_item):
