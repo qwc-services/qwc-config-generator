@@ -149,7 +149,7 @@ class QGSReader:
         return {
             "project_crs": self.__project_crs(root),
             "print_templates": self.__print_templates(root, shortname_map, theme_item),
-            "visibility_presets": self.__visibility_presets(root),
+            "visibility_presets": self.__visibility_presets(root, theme_item),
             "layer_metadata": self.__layer_metadata(root, shortname_map, map_prefix, edit_datasets, theme_item, qgs_dir),
         }
 
@@ -234,47 +234,50 @@ class QGSReader:
         ]
 
 
-    def __visibility_presets(self, root):
+    def __visibility_presets(self, root, theme_item):
         """ Read layer visibility presets from QGS. """
         visibilityPresets = root.find('./visibility-presets')
         if visibilityPresets is None:
             return {}
 
         # layerId => (short)name map
-        layerMap = {}
+        layer_map = {}
         for mapLayer in root.findall('.//maplayer'):
             layerId = mapLayer.find('./id')
             if layerId is not None:
                 if mapLayer.find('shortname') is not None:
-                    layerMap[layerId.text] = mapLayer.find('shortname').text
+                    layer_map[layerId.text] = mapLayer.find('shortname').text
                 elif mapLayer.find('layername') is not None:
-                    layerMap[layerId.text] = mapLayer.find('layername').text
+                    layer_map[layerId.text] = mapLayer.find('layername').text
 
-        def map_tree_groups(parent, parent_path =[]):
-            for group in parent.findall('.//layer-tree-group'):
-                if group.get('name'):
-                    path = list(parent_path) + [group.get('name')]
-                    shortname = group.find('./shortname')
-                    if shortname is not None:
-                        layerMap["/".join(path)] = shortname.text
-                    else:
-                        layerMap["/".join(path)] = group.get('name')
-                    map_tree_groups(group, path)
+        tree = root.find('layer-tree-group')
+        parent_map = {c: p for p in tree.iter() for c in p}
 
-        map_tree_groups(root)
+        def layer_path(layer_id):
+            child = tree.find(".//layer-tree-layer[@id='%s']" % layer_id)
+            if child is None:
+                return None
+            path = [layer_map[layer_id]]
+            while (parent := parent_map.get(child)) is not None:
+                path.insert(0, parent.get('name'))
+                child = parent
+            return "/".join(path[1:])
 
+
+        hidden_layers = theme_item.get('layerTreeHiddenSublayers', [])
         result = {}
         for visibilityPreset in visibilityPresets.findall('./visibility-preset'):
             name = visibilityPreset.get('name')
             result[name] = {}
             for layer in visibilityPreset.findall('./layer'):
-                layerId = layer.get('id')
-                if layer.get('visible') == "1" and layerId in layerMap:
-                    result[name][layerMap[layerId]] = layer.get('style')
+                layer_id = layer.get('id')
+                path = layer_path(layer_id)
+                if layer_map[layer_id] not in hidden_layers and layer.get('visible') == "1" and path:
+                    result[name][path] = layer.get('style')
             for checkedGroupNode in visibilityPreset.findall('./checked-group-nodes/checked-group-node'):
                 groupid = checkedGroupNode.get('id')
-                if groupid is not None and groupid in layerMap:
-                    result[name][layerMap[groupid]] = ""
+                if groupid is not None and os.path.basename(groupid) not in hidden_layers:
+                    result[name][groupid] = ""
 
         return result
 
