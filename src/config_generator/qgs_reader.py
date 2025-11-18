@@ -273,6 +273,8 @@ class QGSReader:
             result[name] = {}
             for layer in visibilityPreset.findall('./layer'):
                 layer_id = layer.get('id')
+                if layer_id not in layer_map:
+                    continue
                 path = layer_path(layer_id)
                 if layer_map[layer_id] not in hidden_layers and \
                     geom_types[layer_id] != 'WKBNoGeometry' and geom_types[layer_id] != 'NoGeometry' and \
