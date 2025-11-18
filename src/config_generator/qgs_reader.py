@@ -242,9 +242,11 @@ class QGSReader:
 
         # layerId => (short)name map
         layer_map = {}
+        geom_types = {}
         for mapLayer in root.findall('.//maplayer'):
             layerId = mapLayer.find('./id')
             if layerId is not None:
+                geom_types[layerId.text] = mapLayer.get('wkbType')
                 if mapLayer.find('shortname') is not None:
                     layer_map[layerId.text] = mapLayer.find('shortname').text
                 elif mapLayer.find('layername') is not None:
@@ -272,7 +274,10 @@ class QGSReader:
             for layer in visibilityPreset.findall('./layer'):
                 layer_id = layer.get('id')
                 path = layer_path(layer_id)
-                if layer_map[layer_id] not in hidden_layers and layer.get('visible') == "1" and path:
+                if layer_map[layer_id] not in hidden_layers and \
+                    geom_types[layer_id] != 'WKBNoGeometry' and geom_types[layer_id] != 'NoGeometry' and \
+                    layer.get('visible') == "1" and path \
+                :
                     result[name][path] = layer.get('style')
             for checkedGroupNode in visibilityPreset.findall('./checked-group-nodes/checked-group-node'):
                 groupid = checkedGroupNode.get('id')
