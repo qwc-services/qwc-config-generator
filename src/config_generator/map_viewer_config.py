@@ -371,6 +371,7 @@ class MapViewerConfig(ServiceConfig):
         self.groupCounter += 1
         group['id'] = "g%d" % self.groupCounter
         group['title'] = cfg_group.get('title')
+        group['titleMsgId'] = cfg_group.get('titleMsgId')
 
         # collect sub theme items
         items = []
