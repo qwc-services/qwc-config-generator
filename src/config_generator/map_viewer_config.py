@@ -948,7 +948,7 @@ class MapViewerConfig(ServiceConfig):
                 edit_field['id'] = fieldname
                 edit_field['name'] = field['alias']
                 edit_field['type'] = data_type
-                edit_field['data_type'] = data_type
+                edit_field['data_type'] = field.get('data_type')
 
                 if 'defaultValue' in field:
                     edit_field['defaultValue'] = field['defaultValue']
