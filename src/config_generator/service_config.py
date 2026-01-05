@@ -40,6 +40,8 @@ class ServiceConfig():
         config['service'] = self.service_name_in_config or self.service_name
         # additional service config
         config['config'] = self.service_config.get('config', {})
+        # additional service resources
+        config['resources'] = self.service_config.get('resources', {})
 
         # return base service config
         return config
