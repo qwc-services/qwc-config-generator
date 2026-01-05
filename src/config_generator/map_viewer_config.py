@@ -248,21 +248,6 @@ class MapViewerConfig(ServiceConfig):
             self.logger.critical("Could not load QWC2 config.json:\n%s" % e)
             config['ERROR'] = str(e)
 
-        # remove service URLs
-        service_urls = [
-            'authServiceUrl',
-            'editServiceUrl',
-            'elevationServiceUrl',
-            'featureReportService',
-            'documentServiceUrl',
-            'mapInfoService',
-            'permalinkServiceUrl',
-            'searchDataServiceUrl',
-            'searchServiceUrl'
-        ]
-        for service_url in service_urls:
-            config.pop(service_url, None)
-
         qwc2_config['config'] = config
 
         return qwc2_config
