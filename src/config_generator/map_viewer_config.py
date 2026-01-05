@@ -215,7 +215,8 @@ class MapViewerConfig(ServiceConfig):
                 if permitted_tilesets_3d:
                     permissions['wms_services'].append({
                         'name': service_name,
-                        'tilesets_3d': permitted_tilesets_3d
+                        'tilesets_3d': permitted_tilesets_3d,
+                        'layers': []
                     })
 
         return permissions
