@@ -398,12 +398,18 @@ class MapViewerConfig(ServiceConfig):
         :param obj cfg_item: Themes config item
         :param str assets_dir: Assets dir
         """
-        if cfg_item.get('disabled', False): return None
+        if cfg_item.get('disabled', False):
+            return None
+
+        service_name = self.themes_reader.service_name(cfg_item['url'])
+
+        if cfg_item.get('wmsOnly') == True:
+            self.logger.info("Configuring %s as WMS-only theme" % service_name)
+
         # NOTE: use ordered keys
         item = OrderedDict()
 
         # get capabilities
-        service_name = self.themes_reader.service_name(cfg_item['url'])
         cap = self.themes_reader.wms_capabilities(service_name)
         if not cap or not 'name' in cap:
             return None
@@ -411,87 +417,17 @@ class MapViewerConfig(ServiceConfig):
         project_metadata = self.themes_reader.project_metadata(service_name)
 
         root_layer = cap.get('root_layer', {})
-
+        projectCrs = project_metadata.get('project_crs')
         name = service_name
 
-        if self.strip_scan_prefix:
-            if name.startswith(self.scan_prefix):
-                name = name[len(self.scan_prefix):]
+        if self.strip_scan_prefix and name.startswith(self.scan_prefix):
+            name = name[len(self.scan_prefix):]
 
-        item['id'] = self.unique_theme_id(cfg_item.get('id', name))
-        item['name'] = name
-
-        if cfg_item.get('default', False) is True:
-            # set default theme
-            self.default_theme = item['id']
-
-        # title from themes config or capabilities
-        title = cfg_item.get('title', cap.get('title'))
-        if title is None:
-            title = root_layer.get('title', service_name)
-        item['title'] = title
-
-        item['description'] = cfg_item.get('description', '')
-
-        item['wmsOnly'] = cfg_item.get('wmsOnly', False)
-        if item['wmsOnly'] == True:
-            self.logger.info("Configuring %s as WMS-only theme" % cfg_item['url'])
-
-        # URL relative to OGC service
-        item['wms_name'] = service_name
-        item['url'] = cfg_item['url']
-
-        attribution = OrderedDict()
-        attribution['Title'] = cfg_item.get('attribution')
-        attribution['OnlineResource'] = cfg_item.get('attributionUrl')
-        item['attribution'] = attribution
-
-        item['abstract'] = cap.get('abstract', '')
-        item['keywords'] = cap.get('keywords', '')
-        item['onlineResource'] = cap.get('onlineResource', '')
-        item['contact'] = cap.get('contact', {})
-        item['translations'] = self.themes_reader.project_translations(service_name)
-
-
-        projectCrs = project_metadata['project_crs']
-        item['mapCrs'] = cfg_item.get('mapCrs', projectCrs or themes_config.get('defaultMapCrs', 'EPSG:3857'))
-        self.set_optional_config(cfg_item, 'additionalMouseCrs', item)
+        collapseLayerGroupsBelowLevel = cfg_item.get('collapseLayerGroupsBelowLevel', -1)
         featureReports = cfg_item.get("featureReport", {})
-
-        bbox = OrderedDict()
-        bbox['crs'] = 'EPSG:4326'
-        bbox['bounds'] = root_layer.get('bbox')
-        item['bbox'] = bbox
-
-        if 'extent' in cfg_item:
-            initial_bbox = OrderedDict()
-            initial_bbox['crs'] = cfg_item.get('mapCrs', item['mapCrs'])
-            initial_bbox['bounds'] = cfg_item.get('extent')
-            item['initialBbox'] = initial_bbox
-        else:
-            item['initialBbox'] = item['bbox']
-
-        # Visibility presets
         internal_print_layers = cap.get('internal_print_layers', [])
         visibilityPresets = self.themes_reader.project_metadata(service_name)['visibility_presets']
         lockedPreset = visibilityPresets.get(cfg_item.get('lockedVisibilityPreset'))
-        if not lockedPreset:
-            item['visibilityPresets'] = {}
-            visibilityPresetsBlacklist = [
-                re.compile(
-                    '^' + '.*'.join(re.escape(part) for part in re.split(r'\*+', pattern)) + '$'
-                )
-                for pattern in cfg_item.get('visibilityPresetsBlacklist', [])
-            ]
-            for key in visibilityPresets:
-                for pattern in visibilityPresetsBlacklist:
-                    if pattern.match(key):
-                        break
-                else:
-                    item['visibilityPresets'][key] = dict(
-                        filter(lambda kv: kv[0] not in internal_print_layers, visibilityPresets[key].items())
-                    )
-
 
         # get search layers from searchProviders
         search_providers = cfg_item.get('searchProviders', themes_config.get('defaultSearchProviders', []))
@@ -509,10 +445,6 @@ class MapViewerConfig(ServiceConfig):
 
         # collect layers
         layers = []
-        collapseLayerGroupsBelowLevel = cfg_item.get(
-            'collapseLayerGroupsBelowLevel', -1)
-
-        externalLayers = cfg_item.get("externalLayers") if "externalLayers" in cfg_item else []
         newExternalLayers = []
         layer_titles = {}
         for layer in root_layer.get('layers', []):
@@ -527,20 +459,45 @@ class MapViewerConfig(ServiceConfig):
             if entry["name"].startswith("wmts:"):
                 urlobj = urllib.parse.urlparse(entry["name"][5:])
                 params = dict(urllib.parse.parse_qsl(urlobj.query))
-                params["crs"] = params.get('crs') or params.get('CRS') or item['mapCrs']
+                params["crs"] = params.get('crs', params.get('CRS', item['mapCrs']))
                 urlobj = urlobj._replace(query=urllib.parse.urlencode(params))
                 entry["name"] = "wmts:" + urllib.parse.urlunparse(urlobj)
 
-        item['sublayers'] = layers
-        item['expanded'] = True
+
+        item['id'] = self.unique_theme_id(cfg_item.get('id', name))
+        item['mapCrs'] = cfg_item.get('mapCrs', projectCrs or themes_config.get('defaultMapCrs', 'EPSG:3857'))
+        item['name'] = name
+        item['title'] = cfg_item.get('title', cap.get('title', root_layer.get('title', service_name)))
+        item['url'] = cfg_item['url']
+        item['wms_name'] = service_name
+
+        item['abstract'] = cap.get('abstract', '')
+        item['attribution'] = {
+            'Title': cfg_item.get('attribution'),
+            'OnlineResource': cfg_item.get('attributionUrl')
+        }
+        item['availableFormats'] = cap['map_formats']
+        item['bbox'] = {
+            'crs': 'EPSG:4326', 'bounds': root_layer.get('bbox')
+        }
+        item['contact'] = cap.get('contact', {})
+        item['description'] = cfg_item.get('description', '')
         item['drawingOrder'] = cap.get('drawing_order', [])
-        item['externalLayers'] = externalLayers + newExternalLayers
+        item['editConfig'] = self.edit_config(service_name, cfg_item, project_metadata, layer_titles)
+        item['expanded'] = True
+        item['externalLayers'] = cfg_item.get("externalLayers", []) + newExternalLayers
+        item['infoFormats'] = cap['info_formats']
+        item['initialBbox'] = {
+            'crs': item['mapCrs'], 'bounds': cfg_item['extent']
+        } if 'extent' in cfg_item else item['bbox']
+        item['keywords'] = cap.get('keywords', '')
+        item['onlineResource'] = cap.get('onlineResource', '')
+        item['searchProviders'] = search_providers
+        item['sublayers'] = layers
+        item['translations'] = self.themes_reader.project_translations(service_name)
+        item['wmsOnly'] = cfg_item.get('wmsOnly', False)
 
-        self.set_optional_config(cfg_item, 'backgroundLayers', item)
-        # Collect crs of background layers
-        for entry in item.get('backgroundLayers', []):
-            bgLayerCrs[entry['name']] = item['mapCrs']
-
+        # Print templates
         # NOTE: copy print templates to not overwrite original config
         print_templates = [
             template.copy() for template in project_metadata['print_templates']
@@ -557,57 +514,66 @@ class MapViewerConfig(ServiceConfig):
             print_template['default'] = print_template['name'].split("/")[-1] == cfg_item.get('defaultPrintLayout')
         item['print'] = print_templates
 
-        self.set_optional_config(cfg_item, 'printLabelConfig', item)
-        self.set_optional_config(cfg_item, 'printLabelForSearchResult', item)
-        self.set_optional_config(cfg_item, 'printLabelForAttribution', item)
+        # Visibility presets
+        if not lockedPreset:
+            item['visibilityPresets'] = {}
+            visibilityPresetsBlacklist = [
+                re.compile(
+                    '^' + '.*'.join(re.escape(part) for part in re.split(r'\*+', pattern)) + '$'
+                )
+                for pattern in cfg_item.get('visibilityPresetsBlacklist', [])
+            ]
+            for key in visibilityPresets:
+                for pattern in visibilityPresetsBlacklist:
+                    if pattern.match(key):
+                        break
+                else:
+                    item['visibilityPresets'][key] = dict(
+                        filter(lambda kv: kv[0] not in internal_print_layers, visibilityPresets[key].items())
+                    )
 
-        self.set_optional_config(cfg_item, 'extraLegendParameters', item)
-        self.set_optional_config(cfg_item, 'extraDxfParameters', item)
-        self.set_optional_config(cfg_item, 'extraPrintParameters', item)
-
-        self.set_optional_config(cfg_item, 'skipEmptyFeatureAttributes', item)
-
-        if "minSearchScaleDenom" in cfg_item.keys():
-            item["minSearchScaleDenom"] = cfg_item.get("minSearchScaleDenom")
-        elif "minSearchScale" in cfg_item.keys():  # Legacy name
-            item["minSearchScaleDenom"] = cfg_item.get("minSearchScale")
-
-        self.set_optional_config(cfg_item, "visibility", item)
-
-        item['searchProviders'] = search_providers
-
-        # edit config
-        item['editConfig'] = self.edit_config(service_name, cfg_item, project_metadata, layer_titles)
-
-        self.set_optional_config(cfg_item, 'watermark', item)
+        self.set_optional_config(cfg_item, 'additionalMouseCrs', item)
+        self.set_optional_config(cfg_item, 'backgroundLayers', item)
         self.set_optional_config(cfg_item, 'config', item)
+        self.set_optional_config(cfg_item, 'extraLegendParameters', item)
+        self.set_optional_config(cfg_item, 'extraPrintParameters', item)
         self.set_optional_config(cfg_item, 'flags', item)
-        self.set_optional_config(cfg_item, 'mapTips', item)
-        self.set_optional_config(cfg_item, 'userMap', item)
-        self.set_optional_config(cfg_item, 'pluginData', item)
-        self.set_optional_config(cfg_item, 'snapping', item)
-        self.set_optional_config(cfg_item, 'themeInfoLinks', item)
+        self.set_optional_config(cfg_item, 'format', item)
         self.set_optional_config(cfg_item, 'layerTreeHiddenSublayers', item)
-        self.set_optional_config(cfg_item, 'predefinedFilters', item)
         self.set_optional_config(cfg_item, 'map3d', item)
+        self.set_optional_config(cfg_item, 'mapTips', item)
+        self.set_optional_config(cfg_item, 'minSearchScaleDenom', item)
         self.set_optional_config(cfg_item, 'obliqueDatasets', item)
+        self.set_optional_config(cfg_item, 'pluginData', item)
+        self.set_optional_config(cfg_item, 'predefinedFilters', item)
+        self.set_optional_config(cfg_item, 'printGrid', item)
+        self.set_optional_config(cfg_item, 'printLabelConfig', item)
+        self.set_optional_config(cfg_item, 'printLabelForAttribution', item)
+        self.set_optional_config(cfg_item, 'printLabelForSearchResult', item)
+        self.set_optional_config(cfg_item, 'printResolutions', item)
+        self.set_optional_config(cfg_item, 'printScales', item)
+        self.set_optional_config(cfg_item, 'scales', item)
+        self.set_optional_config(cfg_item, 'skipEmptyFeatureAttributes', item)
+        self.set_optional_config(cfg_item, 'snapping', item)
         self.set_optional_config(cfg_item, 'startupView', item)
+        self.set_optional_config(cfg_item, 'themeInfoLinks', item)
+        self.set_optional_config(cfg_item, 'tiled', item)
+        self.set_optional_config(cfg_item, 'tileSize', item)
+        self.set_optional_config(cfg_item, 'userMap', item)
+        self.set_optional_config(cfg_item, 'version', item)
+        self.set_optional_config(cfg_item, 'visibility', item)
+        self.set_optional_config(cfg_item, 'watermark', item)
 
         if not cfg_item.get('wmsOnly', False):
             item['thumbnail'] = self.get_thumbnail(cfg_item, service_name, cap, assets_dir)
 
-        self.set_optional_config(cfg_item, 'version', item)
-        self.set_optional_config(cfg_item, 'format', item)
-        self.set_optional_config(cfg_item, 'tiled', item)
-        self.set_optional_config(cfg_item, 'tileSize', item)
+        if cfg_item.get('default', False) is True:
+            # set default theme
+            self.default_theme = item['id']
 
-        item['availableFormats'] = cap['map_formats']
-        item['infoFormats'] = cap['info_formats']
-
-        self.set_optional_config(cfg_item, 'scales', item)
-        self.set_optional_config(cfg_item, 'printScales', item)
-        self.set_optional_config(cfg_item, 'printResolutions', item)
-        self.set_optional_config(cfg_item, 'printGrid', item)
+        # Collect crs of background layers
+        for entry in item.get('backgroundLayers', []):
+            bgLayerCrs[entry['name']] = item['mapCrs']
 
         autogenExternalLayers += list(map(lambda entry: entry["name"], newExternalLayers))
 
