@@ -184,21 +184,30 @@ class MapViewerConfig(ServiceConfig):
             # NOTE: Data permissions collected by Data service config
             permissions['data_datasets'] = []
 
-            permissions['viewer_tasks'] = sorted(list(self.permitted_resources(
+            permissions['viewer_tasks'] = sorted(self.permitted_resources(
                 'viewer_task', role, session
-            ).keys()))
-            permissions['viewer_assets'] = sorted(list(self.permitted_resources(
+            ).keys())
+            permissions['viewer_assets'] = sorted(self.permitted_resources(
                 'viewer_asset', role, session
-            ).keys()))
-            permissions['theme_info_links'] = sorted(list(self.permitted_resources(
+            ).keys())
+            permissions['theme_info_links'] = sorted(self.permitted_resources(
                 'theme_info_link', role, session
-            ).keys()))
+            ).keys())
             permissions['plugin_data'] = self.permitted_plugin_data_resources(
                 role, session
             )
-            permissions['tilesets_3d'] = sorted(list(self.permitted_resources(
+            tileset_3d_permissions = self.permitted_resources(
                 'tileset3d', role, session
-            ).keys()))
+            )
+
+            for service_name in self.themes_reader.wms_service_names():
+                permitted_tilesets_3d = sorted(tileset_3d_permissions.get(service_name, {}).keys())
+
+                if permitted_tilesets_3d:
+                    permissions['wms_services'].append({
+                        'name': service_name,
+                        'tilesets_3d': permitted_tilesets_3d
+                    })
 
         return permissions
 
