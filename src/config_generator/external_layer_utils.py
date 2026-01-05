@@ -189,7 +189,9 @@ def get_external_wms_layer(resource, url, layerName, infoFormat, logger, timeout
     attributionEl = getFirstElementByTagName(targetLayer, "Attribution")
     if attributionEl is not None:
         attribution["Title"] = getFirstElementValueByTagName(attributionEl, "Title")
-        attribution["OnlineResource"] = getFirstElementByTagName(attributionEl, "OnlineResource").getAttribute('xlink:href')
+        onlineResourceEl = getFirstElementByTagName(attributionEl, "OnlineResource")
+        if onlineResourceEl is not None:
+            attribution["OnlineResource"] = onlineResourceEl.getAttribute('xlink:href')
 
     # URLs
     getMapUrl = getWmsRequestUrl(contents, "GetMap", urlobj)
