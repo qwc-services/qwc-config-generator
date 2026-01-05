@@ -161,6 +161,11 @@ class MapViewerConfig(ServiceConfig):
         )
         resources['qwc2_themes'] = self.qwc2_themes(assets_dir)
 
+        # Read auth service URL from config.json as fallback
+        config['config']['auth_service_url'] = config['config'].get('auth_service_url',
+            resources['qwc2_config']['config'].get('authServiceUrl')
+        )
+
         # copy index.html
         self.copy_index_html()
 
