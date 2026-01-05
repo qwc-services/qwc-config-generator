@@ -196,6 +196,10 @@ class MapViewerConfig(ServiceConfig):
             permissions['plugin_data'] = self.permitted_plugin_data_resources(
                 role, session
             )
+            permissions['oblique_image_datasets'] = sorted(self.permitted_resources(
+                'oblique_image_dataset', role, session
+            ).keys())
+
             tileset_3d_permissions = self.permitted_resources(
                 'tileset3d', role, session
             )
