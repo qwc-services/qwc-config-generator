@@ -110,13 +110,13 @@ colorama==0.4.6 ; sys_platform == 'win32' \
     --hash=sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44 \
     --hash=sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6
     # via click
-deepmerge==1.1.1 \
-    --hash=sha256:53a489dc9449636e480a784359ae2aab3191748c920649551c8e378622f0eca4 \
-    --hash=sha256:7219dad9763f15be9dcd4bcb53e00f48e4eed6f5ed8f15824223eb934bb35977
+deepmerge==2.0 \
+    --hash=sha256:5c3d86081fbebd04dd5de03626a0607b809a98fb6ccba5770b62466fe940ff20 \
+    --hash=sha256:6de9ce507115cff0bed95ff0ce9ecc31088ef50cbdf09bc90a09349a318b3d00
     # via qwc-config-generator
-flask==3.0.3 \
-    --hash=sha256:34e815dfaa43340d1d15a5c3a02b8476004037eb4840b34910c6e21679d288f3 \
-    --hash=sha256:ceb27b0af3823ea2737928a4d99d125a06175b8512c445cbd9a9ce200ef76842
+flask==3.1.2 \
+    --hash=sha256:bf656c15c80190ed628ad08cdfd3aaa35beb087855e2f494910aa3774cc4fd87 \
+    --hash=sha256:ca1d8112ec8a6158cc29ea4858963350011b5c846a414cdb7a954aa9e967d03c
     # via
     #   flask-login
     #   flask-restx
@@ -199,9 +199,9 @@ jsonpath-ng==1.7.0 \
     --hash=sha256:f3d7f9e848cba1b6da28c55b1c26ff915dc9e0b1ba7e752a53d6da8d5cbd00b6 \
     --hash=sha256:f6f5f7fd4e5ff79c785f1573b394043b39849fb2bb47bcead935d12b00beab3c
     # via qwc-config-generator
-jsonschema==4.20.0 \
-    --hash=sha256:4f614fd46d8d61258610998997743ec5492a648b33cf478c1ddc23ed4598a5fa \
-    --hash=sha256:ed6231f0429ecf966f5bc8dfef245998220549cbbcf140f913b7464c52c3b6b3
+jsonschema==4.25.1 \
+    --hash=sha256:3fba0169e345c7175110351d456342c364814cfcf3b964ba4587f22915230a63 \
+    --hash=sha256:e4a9655ce0da0c0b67a085847e00a3a51449e1157f4f75e9fb5aa545e122eb85
     # via
     #   flask-restx
     #   qwc-config-generator
@@ -289,6 +289,7 @@ markupsafe==3.0.3 \
     --hash=sha256:f9e130248f4462aaa8e2552d547f36ddadbeaa573879158d721bbd33dfe4743a \
     --hash=sha256:fed51ac40f757d41b7c48425901843666a6677e3e8eb0abcff09e4ba6e664f50
     # via
+    #   flask
     #   jinja2
     #   werkzeug
 ply==3.11 \
@@ -303,13 +304,9 @@ psycopg2==2.9.11 \
     --hash=sha256:e03e4a6dbe87ff81540b434f2e5dc2bddad10296db5eea7bdc995bf5f4162938 \
     --hash=sha256:f10a48acba5fe6e312b891f290b4d2ca595fc9a06850fe53320beac353575578
     # via qwc-config-generator
-python-dotenv==1.0.1 \
-    --hash=sha256:e324ee90a023d808f1959c46bcbc04446a10ced277783dc6ee09987c37ec10ca \
-    --hash=sha256:f7b63ef50f1b690dddf550d03497b66d609393b40b564ed0d674909a68ebf16a
-    # via qwc-config-generator
-qwc-services-core==1.4.6 \
-    --hash=sha256:4dbdda48a9ff68cfab6dadb1b15f04b8e61d04448299f67aa9eab5a0587d6dac \
-    --hash=sha256:60a61ada0e4f240982f5f44e10d864a44894b1a093db712a798c2a562fe84959
+qwc-services-core==1.5.0 \
+    --hash=sha256:0c6ec5f911944b73e6b73dddff8b71bd51d650b180b3e3102c693ad4832c601c \
+    --hash=sha256:7c5d84b7b2c5ee5764cb2705f28ccba6b42f18123b7097527e26b2e060ebc906
     # via qwc-config-generator
 referencing==0.37.0 \
     --hash=sha256:381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231 \
