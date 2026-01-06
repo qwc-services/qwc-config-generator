@@ -232,7 +232,7 @@ class DnDFormGenerator:
             # - Try the layer displayfield if it is a simple field
             # - Try the primary key from referencing layer
             # - Fall back to 'id'
-            displayField = referencingLayer.find("previewExpression").text
+            displayField = referencingLayer.find("previewExpression").text or ""
             datasource = referencingLayer.find("datasource").text
 
             displayFieldMatch = re.search(r'^"(\w+)"$', displayField)
