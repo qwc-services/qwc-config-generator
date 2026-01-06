@@ -232,15 +232,6 @@ class MapViewerConfig(ServiceConfig):
         cfg_generator_config = self.service_config.get('generator_config', {})
         cfg_qwc2_config = cfg_generator_config.get('qwc2_config', {})
 
-        # collect restricted menu items from ConfigDB
-        with self.config_models.session() as session:
-            qwc2_config['restricted_viewer_tasks'] = sorted(list(self.permissions_query.non_public_resources(
-                'viewer_task', session
-            )))
-            qwc2_config['restricted_viewer_assets'] = sorted(list(self.permissions_query.non_public_resources(
-                'viewer_asset', session
-            )))
-
         # read QWC2 config.json
         config = OrderedDict()
         try:
