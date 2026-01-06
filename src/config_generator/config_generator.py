@@ -234,6 +234,10 @@ class ConfigGenerator():
         self.do_validate_schema = str(generator_config.get(
             'validate_schema', True)).lower() != 'false'
 
+        self.permissions_default_allow = generator_config.get(
+            'permissions_default_allow', True
+        )
+
         try:
             # load ORM models for ConfigDB
             config_db_url = generator_config.get(
@@ -497,6 +501,7 @@ class ConfigGenerator():
         )
         permissions_query = PermissionsQuery(self.config_models, self.logger)
         permissions = permissions_config.base_config()
+        permissions['permissions_default_allow'] = self.permissions_default_allow
 
         # collect service permissions
         for service_config in self.config.get('services', []):
