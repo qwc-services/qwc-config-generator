@@ -398,9 +398,6 @@ class MapViewerConfig(ServiceConfig):
         if cfg_item.get('wmsOnly') == True:
             self.logger.info("Configuring %s as WMS-only theme" % service_name)
 
-        # NOTE: use ordered keys
-        item = OrderedDict()
-
         # get capabilities
         cap = self.themes_reader.wms_capabilities(service_name)
         if not cap or not 'name' in cap:
@@ -435,6 +432,15 @@ class MapViewerConfig(ServiceConfig):
                 search_layers = search_provider.get('params', {}).get('layers', search_provider.get('layers', {}))
                 break
 
+        # NOTE: use ordered keys
+        item = OrderedDict()
+        item['id'] = self.unique_theme_id(cfg_item.get('id', name))
+        item['mapCrs'] = cfg_item.get('mapCrs', projectCrs or themes_config.get('defaultMapCrs', 'EPSG:3857'))
+        item['name'] = name
+        item['title'] = cfg_item.get('title', cap.get('title', root_layer.get('title', service_name)))
+        item['url'] = cfg_item['url']
+        item['wms_name'] = service_name
+
         # collect layers
         layers = []
         newExternalLayers = []
@@ -454,14 +460,6 @@ class MapViewerConfig(ServiceConfig):
                 params["crs"] = params.get('crs', params.get('CRS', item['mapCrs']))
                 urlobj = urlobj._replace(query=urllib.parse.urlencode(params))
                 entry["name"] = "wmts:" + urllib.parse.urlunparse(urlobj)
-
-
-        item['id'] = self.unique_theme_id(cfg_item.get('id', name))
-        item['mapCrs'] = cfg_item.get('mapCrs', projectCrs or themes_config.get('defaultMapCrs', 'EPSG:3857'))
-        item['name'] = name
-        item['title'] = cfg_item.get('title', cap.get('title', root_layer.get('title', service_name)))
-        item['url'] = cfg_item['url']
-        item['wms_name'] = service_name
 
         item['abstract'] = cap.get('abstract', '')
         item['attribution'] = {
