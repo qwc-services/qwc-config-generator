@@ -415,7 +415,10 @@ class QGSReader:
                     field, layer_metadata, fieldname
                 )
 
-            layer_metadata["fields"][fieldname] = field
+            if field.get('data_type') not in ['USER-DEFINED', 'geometry']:
+                layer_metadata["fields"][fieldname] = field
+            else:
+                self.logger.warn("Skipping edit field %s with unhandled data-type %s" % (fieldname, field.get('data_type')))
 
         # Display field
         previewExpression = maplayer.find('previewExpression')
