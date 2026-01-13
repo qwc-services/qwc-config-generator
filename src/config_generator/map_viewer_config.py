@@ -893,6 +893,7 @@ class MapViewerConfig(ServiceConfig):
             dataset['displayField'] = layer_metadata['displayField']
             dataset['editDataset'] = dataset_name
             dataset['geomType'] = self.EDIT_GEOM_TYPES.get(layer_metadata['geometry_type'])
+            dataset['primaryKey'] = layer_metadata['primary_key']
             dataset['form'] = layer_metadata["edit_form"]
 
             # collect fields
