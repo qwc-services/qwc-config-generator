@@ -121,8 +121,7 @@ class DataServiceConfig(ServiceConfig):
 
             for map_dataset in map_datasets:
                 meta = self.themes_reader.project_metadata(qgs_name)['layer_metadata'][map_dataset]
-                if autogen_keyvaltable_datasets:
-                    keyvaltables.update(meta.get('keyvaltables', {}))
+                keyvaltables.update(meta.get('keyvaltables', {}))
 
                 # NOTE: use ordered keys
                 dataset = OrderedDict()
@@ -168,16 +167,19 @@ class DataServiceConfig(ServiceConfig):
 
         for dataset_name, dataset_config in keyvaltables.items():
             if not dataset_name in added_datasets:
-                dataset = OrderedDict()
-                dataset['name'] = dataset_name
-                dataset['db_url'] = dataset_config.get('database')
-                dataset['datasource_filter'] = dataset_config.get('datasource_filter')
-                dataset['schema'] = dataset_config.get('schema')
-                dataset['table_name'] = dataset_config.get('table_name')
-                dataset['primary_key'] = dataset_config.get('primary_key')
-                dataset['fields'] = dataset_config.get('fields')
-                dataset['readonlypermitted'] = True
-                datasets.append(dataset)
+                if autogen_keyvaltable_datasets:
+                    dataset = OrderedDict()
+                    dataset['name'] = dataset_name
+                    dataset['db_url'] = dataset_config.get('database')
+                    dataset['datasource_filter'] = dataset_config.get('datasource_filter')
+                    dataset['schema'] = dataset_config.get('schema')
+                    dataset['table_name'] = dataset_config.get('table_name')
+                    dataset['primary_key'] = dataset_config.get('primary_key')
+                    dataset['fields'] = dataset_config.get('fields')
+                    dataset['readonlypermitted'] = True
+                    datasets.append(dataset)
+                else:
+                    self.logger.warn("No Data resource exists for the keyval relation '%s', either create the resource or set 'autogen_keyvaltable_datasets: true'" % dataset_name)
 
         return datasets
 
