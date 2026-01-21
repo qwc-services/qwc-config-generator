@@ -188,6 +188,9 @@ class DnDFormGenerator:
             filterOpt = editWidget.find("config/Option/Option[@name='FileWidgetFilter']")
             self.__add_widget_property(widget, "text", filterOpt, "value")
             return widget
+        elif editWidget.get("type") == "Geometry":
+            # Expected to be unhandled
+            return None
         else:
             self.logger.warning("Warning: field %s has unhandled widget type %s" % (field, editWidget.get("type")))
             return None
