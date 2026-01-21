@@ -69,7 +69,12 @@ class MapViewerConfig(ServiceConfig):
         'time': 'time',
         'timestamp with time zone': 'date',
         'timestamp without time zone': 'date',
-        'uuid': 'text'
+        'uuid': 'text',
+        'smallint[]': 'number[]',
+        'integer[]': 'number[]',
+        'bigint[]': 'number[]',
+        'numeric[]': 'number[]',
+        'text[]': 'text[]'
     }
 
     def __init__(self, tenant_path, generator_config, themes_reader,

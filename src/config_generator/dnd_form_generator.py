@@ -188,6 +188,9 @@ class DnDFormGenerator:
             filterOpt = editWidget.find("config/Option/Option[@name='FileWidgetFilter']")
             self.__add_widget_property(widget, "text", filterOpt, "value")
             return widget
+        elif editWidget.get("type") == "List":
+            widget.set("class", "QListWidget")
+            return widget
         elif editWidget.get("type") == "Geometry":
             # Expected to be unhandled
             return None

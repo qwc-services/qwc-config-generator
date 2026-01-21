@@ -613,7 +613,7 @@ class QGSReader:
 
         # build query SQL for tables and views
         sql = sql_text("""
-            SELECT data_type, character_maximum_length,
+            SELECT data_type, udt_name, character_maximum_length,
                 numeric_precision, numeric_scale
             FROM information_schema.columns
             WHERE table_schema = '{schema}' AND table_name = '{table}'
@@ -640,7 +640,11 @@ class QGSReader:
                             ns.nspname AS table_schema,
                             c.relname AS table_name,
                             a.attname AS column_name,
-                            format_type(a.atttypid, null) AS data_type,
+                            CASE
+                                WHEN t.typelem <> 0 THEN 'ARRAY'
+                                ELSE format_type(a.atttypid, NULL)
+                            END AS data_type,
+                            t.typname AS udt_name,
                             CASE
                                 WHEN a.atttypmod = -1 /* default typmod */
                                     THEN NULL
@@ -678,6 +682,7 @@ class QGSReader:
                         FROM pg_catalog.pg_class c
                             JOIN pg_catalog.pg_namespace ns ON ns.oid = c.relnamespace
                             JOIN pg_catalog.pg_attribute a ON a.attrelid = c.oid
+                            JOIN pg_catalog.pg_type t ON t.oid = a.atttypid
                         WHERE
                             /* tables, views, materialized views */
                             c.relkind in ('r', 'v', 'm')
@@ -700,6 +705,16 @@ class QGSReader:
 
                 # Field data type
                 data_type = row['data_type']
+                udt_name = row['udt_name']
+                if data_type == 'ARRAY':
+                    array_types = {
+                        "_int2": "smallint[]",
+                        "_int4": "integer[]",
+                        "_int8": "bigint[]",
+                        "_text": "text[]",
+                        "_numeric": "numeric[]"
+                    }
+                    data_type = array_types.get(row['udt_name'], 'ARRAY')
                 field_metadata['data_type'] = data_type
 
                 if not data_type_only:
