@@ -374,6 +374,12 @@ class QGSReader:
                     }
         layer_metadata["jointables"] = jointables
 
+        # Read referencing layers
+        layer_metadata["reltables"] = []
+        for relation in maplayer.findall('referencingLayers/relation'):
+            layer_name = relation.get('layerName')
+            layer_metadata["reltables"].append(shortnames.get(layer_name, layer_name))
+
         # Read fields
         layer_metadata["keyvaltables"] = {}
         layer_metadata["fields"] = OrderedDict()
