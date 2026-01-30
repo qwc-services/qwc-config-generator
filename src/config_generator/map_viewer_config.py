@@ -860,8 +860,6 @@ class MapViewerConfig(ServiceConfig):
             # refresh interval
             item_layer['refreshInterval'] = meta.get('refresh_interval', 0)
 
-            item_layer['reltables'] = meta.get('reltables', [])
-
         return item_layer
 
     def edit_config(self, map_name, cfg_item, project_metadata, layer_titles):
@@ -902,6 +900,7 @@ class MapViewerConfig(ServiceConfig):
             dataset['geomType'] = self.EDIT_GEOM_TYPES.get(layer_metadata['geometry_type'])
             dataset['primaryKey'] = layer_metadata['primary_key']
             dataset['form'] = layer_metadata["edit_form"]
+            dataset['reltables'] = layer_metadata.get('reltables', [])
 
             # collect fields
             fields = []
