@@ -137,20 +137,32 @@ class QGSReader:
                 % qgs_filename
             )
 
-        # Build layername -> shortname lookup
+        # Build layername -> shortname lookup and layerid -> shortname lookup
         shortname_map = {}
+        shortname_id_map = {}
         for maplayer in root.findall('.//maplayer'):
             layernameEl = maplayer.find('layername')
+            layerIdEl = maplayer.find('id')
             if layernameEl is not None:
                 shortnameEl = maplayer.find('shortname')
                 shortname = shortnameEl.text if shortnameEl is not None else layernameEl.text
                 shortname_map[layernameEl.text] = shortname
+                shortname_id_map[layerIdEl.text] = shortname
+
+        relations = {}
+        for relation in root.findall('./relations/relation'):
+            parent = relation.get('referencedLayer')
+            child = relation.get('referencingLayer')
+            if not parent in relations:
+                relations[parent] = set()
+            if child in shortname_id_map:
+                relations[parent].add(shortname_id_map[child])
 
         return {
             "project_crs": self.__project_crs(root),
             "print_templates": self.__print_templates(root, shortname_map, theme_item),
             "visibility_presets": self.__visibility_presets(root, theme_item),
-            "layer_metadata": self.__layer_metadata(root, shortname_map, map_prefix, edit_datasets, theme_item, qgs_dir),
+            "layer_metadata": self.__layer_metadata(root, shortname_map, map_prefix, edit_datasets, relations, theme_item, qgs_dir),
         }
 
 
@@ -289,7 +301,7 @@ class QGSReader:
         return result
 
 
-    def __layer_metadata(self, root, shortname_map, map_prefix, edit_datasets, theme_item, qgs_dir):
+    def __layer_metadata(self, root, shortname_map, map_prefix, edit_datasets, relations, theme_item, qgs_dir):
         """ Read additional layer metadata from QGS. """
         layers_metadata = {}
         # Collect metadata for layers
@@ -317,7 +329,7 @@ class QGSReader:
 
             # Edit metadata
             if editable:
-                self.__layer_edit_metadata(root, layer_metadata, maplayer, layername, map_prefix, shortname_map, qgs_dir, theme_item)
+                self.__layer_edit_metadata(root, layer_metadata, maplayer, layername, map_prefix, shortname_map, relations, qgs_dir, theme_item)
 
             layers_metadata[layername] = layer_metadata
 
@@ -332,7 +344,7 @@ class QGSReader:
         return layers_metadata
 
 
-    def __layer_edit_metadata(self, root, layer_metadata, maplayer, layername, map_prefix, shortnames, qgs_dir, theme_item):
+    def __layer_edit_metadata(self, root, layer_metadata, maplayer, layername, map_prefix, shortnames, relations, qgs_dir, theme_item):
         """ Read layer metadata relevant for editing from QGS. """
 
         provider = maplayer.find('provider').text
@@ -379,6 +391,12 @@ class QGSReader:
         for relation in maplayer.findall('referencingLayers/relation'):
             layer_name = relation.get('layerName')
             layer_metadata["reltables"].append(shortnames.get(layer_name, layer_name))
+        layerid = maplayer.find('./id').text
+        # For some reason (buggy QGIS projects?) some times maplayer/referencingLayer does not list a reference which
+        # is listed in the toplevel relations element
+        for child in relations.get(layerid, {}):
+            if child not in layer_metadata["reltables"]:
+                layer_metadata["reltables"].append(child)
 
         # Read fields
         layer_metadata["keyvaltables"] = {}
