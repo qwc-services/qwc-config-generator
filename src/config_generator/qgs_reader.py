@@ -273,7 +273,12 @@ class QGSReader:
                 return None
             path = [layer_map[layer_id]]
             while (parent := parent_map.get(child)) is not None:
-                path.insert(0, parent.get('name'))
+                shortname = parent.find('shortname')
+                if shortname is not None:
+                    layer_map[parent.get('name')] = shortname.text
+                    path.insert(0, shortname.text)
+                else:
+                    path.insert(0, parent.get('name'))
                 child = parent
             return "/".join(path[1:])
 
@@ -296,7 +301,7 @@ class QGSReader:
             for checkedGroupNode in visibilityPreset.findall('./checked-group-nodes/checked-group-node'):
                 groupid = checkedGroupNode.get('id')
                 if groupid is not None and os.path.basename(groupid) not in hidden_layers:
-                    result[name][groupid] = ""
+                    result[name][layer_map.get(groupid, groupid)] = ""
 
         return result
 
