@@ -15,7 +15,7 @@ class ThemeReader():
     Reads project metadata for all theme items in the QWC2 theme configuration.
     """
 
-    def __init__(self, config, logger, check_cancelled, config_models, themes_config, assets_dir, translations_dir, use_cached_project_metadata, cache_dir):
+    def __init__(self, config, logger, check_cancelled, config_models, themes_config, assets_dir, viewer_languages, use_cached_project_metadata, cache_dir):
         """Constructor
 
         :param obj config: ConfigGenerator config
@@ -24,7 +24,7 @@ class ThemeReader():
         :param ConfigModels config_models: Helper for ORM models
         :param dict themes_config: themes config
         :param str assets_dir: Viewer assets directory
-        :param str translations_dir: Viewer translations directory
+        :param str viewer_languages: Viewer languages
         :param bool use_cached_project_metadata: Whether to use cached project metadata if available
         :param str cache_dir: Project metadata cache directory
         """
@@ -33,18 +33,12 @@ class ThemeReader():
         self.check_cancelled = check_cancelled
         self.themes_config = themes_config
         self.config_models = config_models
+        self.viewer_languages = viewer_languages
 
         # Dictionary storing theme metadata
         self.theme_metadata = OrderedDict()
 
         global_print_layouts = self.__search_global_print_layouts()
-
-        try:
-            with open(os.path.join(translations_dir, 'tsconfig.json')) as fh:
-                self.viewer_languages = json.load(fh)['languages']
-        except:
-            self.logger.warning("Failed to detect viewer languages from tsconfig.json")
-            self.viewer_languages = ["en-US"]
 
         self.capabilities_reader = CapabilitiesReader(config, logger, use_cached_project_metadata, cache_dir)
         self.qgs_reader = QGSReader(config, logger, assets_dir, use_cached_project_metadata, global_print_layouts)
