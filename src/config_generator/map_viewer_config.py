@@ -368,6 +368,7 @@ class MapViewerConfig(ServiceConfig):
         themes['defaultPrintGrid'] = themes_config.get('defaultPrintGrid')
         themes['defaultSearchProviders'] = themes_config.get('defaultSearchProviders')
         themes['defaultBackgroundLayers'] = themes_config.get('defaultBackgroundLayers', [])
+        themes['defaultMapTips'] = themes_config.get('defaultMapTips', None)
 
         qwc2_themes['themes'] = themes
 
