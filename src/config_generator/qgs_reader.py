@@ -426,7 +426,7 @@ class QGSReader:
                 maplayer.find("fieldConfiguration/field[@name='%s']/editWidget[@type='ValueRelation']/config/Option/Option[@name='FilterExpression']" % fieldname), 'value')
 
             # Widget constraints
-            field['constraints'] = self.__field_constraints(root, maplayer, fieldname, map_prefix, shortnames, layer_metadata["keyvaltables"])
+            field['constraints'] = self.__field_constraints(root, maplayer, fieldname, map_prefix, shortnames, layer_metadata["keyvaltables"], layer_metadata["reltables"])
 
             # Join field
             field['joinfield'] = joinfields.get(fieldname, None)
@@ -523,7 +523,7 @@ class QGSReader:
 
         return metadata
 
-    def __field_constraints(self, root, maplayer, field, map_prefix, shortnames, keyvaltables):
+    def __field_constraints(self, root, maplayer, field, map_prefix, shortnames, keyvaltables, reltables):
         """ Get field constraints from QGS edit widget config. """
 
         constraints = {}
@@ -620,6 +620,7 @@ class QGSReader:
                     self.__column_metadata(kvlayer_field_metadata, keyvaltable_metadata, kvlayer_field_metadata['name'], True)
                     keyvaltable_metadata['fields'].append(kvlayer_field_metadata)
                 keyvaltables[map_prefix + "." + layerName] = keyvaltable_metadata
+                reltables.append(layerName)
 
         elif edit_widget.get('type') == 'TextEdit':
             multilineOpt = element_attr(edit_widget.find("config/Option/Option[@name='IsMultiline']"), 'value')
