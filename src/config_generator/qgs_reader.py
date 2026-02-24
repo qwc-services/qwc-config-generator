@@ -133,7 +133,7 @@ class QGSReader:
         wmsUseLayerIds = root.find('./properties/WMSUseLayerIDs')
         if wmsUseLayerIds is not None and wmsUseLayerIds.text == "true":
             self.logger.warning(
-                "'Use layer ids as names' is checked in the QGIS Server properites of '%s', which is not properly supported by QWC"
+                "'Use layer ids as names' is checked in the QGIS Server properties of '%s', which is not properly supported by QWC"
                 % qgs_filename
             )
 
