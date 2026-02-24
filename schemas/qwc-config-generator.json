@@ -126,6 +126,10 @@
           "description": "Whether to generate nested nrelation forms instead of a tabluar view. Default: `false`",
           "type": "boolean"
         },
+        "autogen_sensor_things_tool_configs": {
+          "description": "Whether to generate theme specific configs for the SensorThingsTool plugin from any SensorThings layers in the QGIS projects. Default: `false`",
+          "type": "boolean"
+        },
         "use_default_map_thumbnail": {
           "description": "Whether to use the default mapthumb (`mapthumbs/default.jpg`) instead of generating the thumbnail via GetMap if no custom thumbnail is provided. Default: `false`"
         },

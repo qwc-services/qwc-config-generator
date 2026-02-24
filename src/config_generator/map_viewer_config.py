@@ -130,6 +130,11 @@ class MapViewerConfig(ServiceConfig):
             "project_settings_read_timeout", 60
         )
 
+        # automatically generate configurations for SensorThingsTool plugin from QGIS project metadata
+        self.autogen_sensor_things_tool_configs = generator_config.get(
+            'autogen_sensor_things_tool_configs', False
+        )
+
         qgis_projects_base_dir = generator_config.get(
             'qgis_projects_base_dir').rstrip('/') + '/'
         qgis_projects_scan_base_dir = generator_config.get(
@@ -284,8 +289,9 @@ class MapViewerConfig(ServiceConfig):
         items = []
         autogenExternalLayers = []
         bgLayerCrs = {}
+        autogenPluginDataConfigs = {}
         for item in themes_config_themes.get('items', []):
-            theme_item = self.theme_item(item, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs)
+            theme_item = self.theme_item(item, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs, autogenPluginDataConfigs)
             if theme_item is not None and not theme_item['wmsOnly']:
                 items.append(theme_item)
         themes['items'] = items
@@ -293,7 +299,7 @@ class MapViewerConfig(ServiceConfig):
         # collect theme groups
         groups = []
         for group in themes_config_themes.get('groups', []):
-            groups.append(self.theme_group(group, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs))
+            groups.append(self.theme_group(group, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs, autogenPluginDataConfigs))
         themes['subdirs'] = groups
 
         if not self.default_theme and self.theme_ids:
@@ -340,7 +346,14 @@ class MapViewerConfig(ServiceConfig):
             if layer:
                 themes["externalLayers"].append(layer)
 
-        themes['pluginData'] = themes_config_themes.get('pluginData', {})
+        # merge any generated pluginData configs
+        plugin_data = themes_config_themes.get('pluginData', {})
+        for plugin, entries in autogenPluginDataConfigs.items():
+            if plugin not in plugin_data:
+                plugin_data[plugin] = []
+            plugin_data[plugin] += entries
+        themes['pluginData'] = plugin_data
+
         themes['themeInfoLinks'] = themes_config_themes.get(
             'themeInfoLinks', []
         )
@@ -360,11 +373,15 @@ class MapViewerConfig(ServiceConfig):
 
         return qwc2_themes
 
-    def theme_group(self, cfg_group, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs):
+    def theme_group(self, cfg_group, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs,
+                    autogenPluginDataConfigs):
         """Recursively collect theme item group.
 
         :param obj theme_group: Themes config group
         :param str assets_dir: Assets dir
+        :param list(dict) autogenExternalLayers: Collected list of generated external layers
+        :param dict bgLayerCrs: Collected background layers CRSs
+        :param dict autogenPluginDataConfigs: Collected dict of generated pluginData configs
         """
         # NOTE: use ordered keys
         group = OrderedDict()
@@ -376,7 +393,7 @@ class MapViewerConfig(ServiceConfig):
         # collect sub theme items
         items = []
         for item in cfg_group.get('items', []):
-            theme_item = self.theme_item(item, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs)
+            theme_item = self.theme_item(item, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs, autogenPluginDataConfigs)
             if theme_item is not None and not theme_item['wmsOnly']:
                 items.append(theme_item)
         group['items'] = items
@@ -384,16 +401,20 @@ class MapViewerConfig(ServiceConfig):
         # recursively collect sub theme groups
         subgroups = []
         for subgroup in cfg_group.get('groups', []):
-            subgroups.append(self.theme_group(subgroup, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs))
+            subgroups.append(self.theme_group(subgroup, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs, autogenPluginDataConfigs))
         group['subdirs'] = subgroups
 
         return group
 
-    def theme_item(self, cfg_item, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs):
+    def theme_item(self, cfg_item, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs,
+                   autogenPluginDataConfigs):
         """Collect theme item from capabilities.
 
         :param obj cfg_item: Themes config item
         :param str assets_dir: Assets dir
+        :param list(dict) autogenExternalLayers: Collected list of generated external layers
+        :param dict bgLayerCrs: Collected background layers CRSs
+        :param dict autogenPluginDataConfigs: Collected dict of generated pluginData configs
         """
         if cfg_item.get('disabled', False):
             return None
@@ -527,6 +548,12 @@ class MapViewerConfig(ServiceConfig):
                         filter(lambda kv: kv[0] not in internal_print_layers, visibilityPresets[key].items())
                     )
 
+        # pluginData configs
+        item['pluginData'] = self.plugin_data_configs(service_name, cfg_item, project_metadata, autogenPluginDataConfigs)
+        if not item['pluginData']:
+            # remove if blank
+            del item['pluginData']
+
         self.set_optional_config(cfg_item, 'additionalMouseCrs', item)
         self.set_optional_config(cfg_item, 'backgroundLayers', item)
         self.set_optional_config(cfg_item, 'config', item)
@@ -539,7 +566,6 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'mapTips', item)
         self.set_optional_config(cfg_item, 'minSearchScaleDenom', item)
         self.set_optional_config(cfg_item, 'obliqueDatasets', item)
-        self.set_optional_config(cfg_item, 'pluginData', item)
         self.set_optional_config(cfg_item, 'predefinedFilters', item)
         self.set_optional_config(cfg_item, 'printGrid', item)
         self.set_optional_config(cfg_item, 'printLabelConfig', item)
@@ -947,6 +973,72 @@ class MapViewerConfig(ServiceConfig):
                     edit_config[layer_name].update(cfg_item['editConfig'][layer_name])
 
         return edit_config
+
+    def plugin_data_configs(self, service_name, cfg_item, project_metadata, autogenPluginDataConfigs):
+        """Collect pluginData configs for a map.
+
+        :param str service_name: Service name (matches WMS and QGIS project)
+        :param obj cfg_item: Theme config item
+        :param obj project_metadata: Theme project metadata
+        :param dict autogenPluginDataConfigs: Collected dict of generated pluginData configs
+        """
+        # get original config
+        plugin_data = cfg_item.get('pluginData', {})
+
+        if self.autogen_sensor_things_tool_configs:
+            # NOTE: skip if config entry is already present in original config
+            if 'sensorThingsTool' not in plugin_data:
+                # collect SensorThingsTool plugin configs from layer metadata
+                sensor_things_api_urls = []
+                for layer_name, layer_metadata in project_metadata['layer_metadata'].items():
+                    sensor_things_metadata = layer_metadata.get('sensor_things')
+                    if not sensor_things_metadata:
+                        # skip if not a SensorThings layer
+                        continue
+                    if sensor_things_metadata.get('entity') != 'Location':
+                        # skip if SensorThings layer is not based on Location
+                        self.logger.info(
+                            "Skipping automatic plugin config for SensorThings layer '%s' of theme '%s': "
+                            "Layer entity type is not 'Location'" % (layer_name, service_name)
+                        )
+                        continue
+                    if re.match(r'^https?://.+:.+@', sensor_things_metadata.get('url')):
+                        # skip if SensorThings layer has basic auth in URL
+                        self.logger.info(
+                            "Skipping automatic plugin config for SensorThings layer '%s' of theme '%s': "
+                            "Layer requires authentication" % (layer_name, service_name)
+                        )
+                        continue
+
+                    # build sensorThingsApiUrls entry
+                    cfg = {
+                        'url': sensor_things_metadata['url']
+                    }
+                    if sensor_things_metadata.get('filter'):
+                        cfg['locationsFilter'] = sensor_things_metadata['filter']
+                    sensor_things_api_urls.append(cfg)
+
+                if sensor_things_api_urls:
+                    config_name = service_name
+
+                    # add config name to item pluginData
+                    plugin_data['sensorThingsTool'] = [config_name]
+
+                    # add entry to overall pluginData configs
+                    if 'sensorThingsTool' not in autogenPluginDataConfigs:
+                        autogenPluginDataConfigs['sensorThingsTool'] = []
+
+                    autogenPluginDataConfigs['sensorThingsTool'].append({
+                        'name': config_name,
+                        'sensorThingsApiUrls': sensor_things_api_urls
+                    })
+            else:
+                self.logger.info(
+                    "Skipping automatic plugin config for SensorThings layers of theme '%s': "
+                    "sensorThingsTool plugin config is already present" % service_name
+                )
+
+        return plugin_data
 
     def copy_index_html(self):
         """Copy index.html to tenant dir."""

@@ -336,6 +336,9 @@ class QGSReader:
             if editable:
                 self.__layer_edit_metadata(root, layer_metadata, maplayer, layername, map_prefix, shortname_map, relations, qgs_dir, theme_item)
 
+            # SensorThings metadata
+            self.__layer_sensor_things_metadata(layer_metadata, maplayer)
+
             layers_metadata[layername] = layer_metadata
 
         # Warn about non-existing datasets
@@ -460,6 +463,20 @@ class QGSReader:
             root, qgs_dir, map_prefix, shortnames, maplayer, layer_metadata, layername, theme_item
         )
 
+    def __layer_sensor_things_metadata(self, layer_metadata, maplayer):
+        """Read and add any metadata from a SensorThings layer from QGS."""
+        provider = maplayer.find('provider').text
+        if provider != 'sensorthings':
+            # skip if not a SensorThings layer
+            return
+
+        # add metadata from datasource
+        datasource = self.__parse_datasource(maplayer.find('datasource').text)
+        layer_metadata['sensor_things'] = {
+            'url': datasource.get('url'),
+            'entity': datasource.get('entity'),
+            'filter': datasource.get('sql')
+        }
 
     def __datasource_metadata(self, datasource, maplayer=None):
         """ Read datasource metadata from a QGS datasource URI. """
