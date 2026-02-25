@@ -215,17 +215,17 @@ class MapViewerConfig(ServiceConfig):
                 'oblique_image_dataset', role, session
             ).keys())
 
-            tileset_3d_permissions = self.permitted_resources(
-                'tileset3d', role, session
+            object_3d_permissions = self.permitted_resources(
+                'object3d', role, session
             )
 
             for service_name in self.themes_reader.wms_service_names():
-                permitted_tilesets_3d = sorted(tileset_3d_permissions.get(service_name, {}).keys())
+                permitted_objects_3d = sorted(object_3d_permissions.get(service_name, {}).keys())
 
-                if permitted_tilesets_3d:
+                if permitted_objects_3d:
                     permissions['wms_services'].append({
                         'name': service_name,
-                        'tilesets_3d': permitted_tilesets_3d,
+                        'objects_3d': permitted_objects_3d,
                         'layers': []
                     })
 
