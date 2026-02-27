@@ -135,6 +135,10 @@ class MapViewerConfig(ServiceConfig):
             'autogen_sensor_things_tool_configs', False
         )
 
+        self.autogen_qgis_searchproviders = generator_config.get(
+            'autogen_qgis_searchproviders', False
+        )
+
         qgis_projects_base_dir = generator_config.get(
             'qgis_projects_base_dir').rstrip('/') + '/'
         qgis_projects_scan_base_dir = generator_config.get(
@@ -479,6 +483,69 @@ class MapViewerConfig(ServiceConfig):
             if sublayer:
                 layers.append(sublayer)
 
+        # Add QGIS searchProviders
+        newSearchProviders = []
+        if self.autogen_qgis_searchproviders:
+            singleFields = {}
+            for layer in layers:
+                if layer.get('queryable'):
+                    searchFields = layer.get('typedAttributes', {})
+                    if layer.get('displayField', None) is not None:
+                        attr = next((name for name, attrDef in searchFields.items() if attrDef['alias'] == layer['displayField']), None)
+                        if attr is not None:
+                            if searchFields[attr]['type'] == 'QString':
+                                singleFields[layer['name']] = f"\"{attr}\" ILIKE '%$TEXT$%'"
+                            else:
+                                self.logger.info(f"{layer['name']} skipping displayField attribute {attr} {searchFields[attr]}")
+
+                    expressions = []
+                    fields = OrderedDict()
+                    for attr, attrDef in searchFields.items():
+                        paramName = attr.upper()
+                        fieldType = None
+                        if searchFields[attr]['type'] == 'QString':
+                            expressions.append(f"\"{attr}\" ILIKE '%${paramName}$%'")
+                            fieldType = 'text'
+                            fieldOptions = {}
+                        # elif attrDef['type'] in ["int", "double"]:
+                        #     expressions.append(f"\"{attr}\" = '${paramName}$'")
+                        #     fieldType = "number"
+                        #     fieldOptions = {}
+                        # elif attrDef['type'] == "bool":
+                        #     expressions.append(f"\"{attr}\" = '${paramName}$'")
+                        #     fieldType = "checkbox"
+                        #     fieldOptions = {}
+
+                        if fieldType is not None:
+                            fields[paramName] = {'label': attrDef['alias'], 'type': fieldType, 'options': fieldOptions}
+                        else:
+                            self.logger.info(f"{layer['name']} skipping attribute {attr} {searchFields[attr]}")
+
+                    if len(expressions) > 0:
+                        newSearchProviders.append({
+                            'provider': 'qgis',
+                            'key': f"qgis-{layer['name']}-full",
+                            'label': f"{layer['title']} (QGIS)",
+                            'params': {
+                                'title': layer['title'],
+                                'expression': {
+                                    layer['name']: " AND ".join(expressions),
+                                },
+                                'fields': fields,
+                            }
+                        })
+                        self.logger.info(f"Adding QGIS search provider for '{layer['name']}' with fields {list(fields.keys())}")
+
+            if singleFields:
+                newSearchProviders.append({
+                    'provider': 'qgis',
+                    'params': {
+                        "title": 'QGIS',
+                        "expression": singleFields
+                    }
+                })
+                self.logger.info(f"Adding QGIS search provider with fields {singleFields}")
+
         # Inject crs in wmts resource string
         for entry in newExternalLayers:
             if entry["name"].startswith("wmts:"):
@@ -509,7 +576,7 @@ class MapViewerConfig(ServiceConfig):
         } if 'extent' in cfg_item else item['bbox']
         item['keywords'] = cap.get('keywords', '')
         item['onlineResource'] = cap.get('onlineResource', '')
-        item['searchProviders'] = search_providers
+        item['searchProviders'] = search_providers + newSearchProviders
         item['sublayers'] = layers
         item['translations'] = self.themes_reader.project_translations(service_name)
         item['wmsOnly'] = cfg_item.get('wmsOnly', False)
@@ -892,6 +959,10 @@ class MapViewerConfig(ServiceConfig):
 
             # refresh interval
             item_layer['refreshInterval'] = meta.get('refresh_interval', 0)
+
+            item_layer['attributes'] = layer.get('attributes', OrderedDict())
+            item_layer['typedAttributes'] = layer.get('typedAttributes', OrderedDict())
+            item_layer['searchFields'] = meta.get('searchFields', OrderedDict())
 
         return item_layer
 

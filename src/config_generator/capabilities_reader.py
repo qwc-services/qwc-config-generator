@@ -343,15 +343,24 @@ class CapabilitiesReader():
 
             # collect attributes
             attributes = {}
+            typedAttributes = {}
             attrs = layer.find('%sAttributes' % np, ns)
             if attrs is not None:
                 for attr in attrs.findall('%sAttribute' % np, ns):
                     attributes[attr.get('name')] = attr.get('alias', attr.get('name'))
+                    typedAttributes[attr.get('name')] = {
+                        'alias': attr.get('alias', attr.get('name')),
+                        'type': attr.get('type'),
+                        'typeName': attr.get('typeName'),
+                        'editType': attr.get('editType'),
+                    }
                 attributes['geometry'] = 'geometry'
                 attributes['maptip'] = 'maptip'
 
             if attributes:
                 wms_layer['attributes'] = attributes
+            if typedAttributes:
+                wms_layer['typedAttributes'] = typedAttributes
 
         if layer.find('%sAbstract' % np, ns) is not None:
             wms_layer["abstract"] = layer.find('%sAbstract' % np, ns).text
