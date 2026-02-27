@@ -336,6 +336,15 @@ class QGSReader:
             if editable:
                 self.__layer_edit_metadata(root, layer_metadata, maplayer, layername, map_prefix, shortname_map, relations, qgs_dir, theme_item)
 
+            # Map tips
+            mapTips = maplayer.find('mapTip')
+            layer_metadata["mapTips"] = (
+                element_attr(mapTips, "enabled") == "1" and
+                # QGIS Server has a different behavior than QGIS Desktop:
+                # it outputs map tips if enabled *and* text is not empty (does not use the Display Name)
+                mapTips.text is not None and mapTips.text.strip() != ""
+            )
+
             # SensorThings metadata
             self.__layer_sensor_things_metadata(layer_metadata, maplayer)
 
@@ -457,15 +466,6 @@ class QGSReader:
         if previewExpression is not None:
             m = re.match(r'^"([^"]+)"$', previewExpression.text if previewExpression.text is not None else "")
         layer_metadata["displayField"] = m.group(1) if m else None
-
-        # Map tips
-        mapTips = maplayer.find('mapTip')
-        layer_metadata["mapTips"] = (
-            element_attr(mapTips, "enabled") == "1" and
-            # QGIS Server has a different behavior than QGIS Desktop:
-            # it outputs map tips if enabled *and* text is not empty (does not use the Display Name)
-            mapTips.text is not None and mapTips.text.strip() != ""
-        )
 
         # Generate form
         layer_metadata["edit_form"] = self.__generate_edit_form(
