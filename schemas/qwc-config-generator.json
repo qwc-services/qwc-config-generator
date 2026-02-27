@@ -123,11 +123,15 @@
           "type": "boolean"
         },
         "generate_nested_nrel_forms": {
-          "description": "Whether to generate nested nrelation forms instead of a tabluar view. Default: `false`",
+          "description": "Whether to generate nested nrelation forms instead of a tabular view. Default: `false`",
           "type": "boolean"
         },
         "autogen_sensor_things_tool_configs": {
           "description": "Whether to generate theme specific configs for the SensorThingsTool plugin from any SensorThings layers in the QGIS projects. Default: `false`",
+          "type": "boolean"
+        },
+        "autogen_qgis_searchproviders": {
+          "description": "Whether to automatically generate QGIS search providers for SearchBar and FeatureSearch. Default: `false`",
           "type": "boolean"
         },
         "use_default_map_thumbnail": {
