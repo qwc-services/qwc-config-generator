@@ -368,6 +368,7 @@ class MapViewerConfig(ServiceConfig):
         themes['defaultPrintGrid'] = themes_config.get('defaultPrintGrid')
         themes['defaultSearchProviders'] = themes_config.get('defaultSearchProviders')
         themes['defaultBackgroundLayers'] = themes_config.get('defaultBackgroundLayers', [])
+        themes['defaultMapTips'] = themes_config.get('defaultMapTips', None)
 
         qwc2_themes['themes'] = themes
 
@@ -592,6 +593,10 @@ class MapViewerConfig(ServiceConfig):
         if cfg_item.get('default', False) is True:
             # set default theme
             self.default_theme = item['id']
+
+        if item.get("mapTips", None) is None and themes_config.get("defaultMapTips", False):
+            # Enable mapTips if any layer defines some
+            item['mapTips'] = any(layer.get('mapTips') for layer in layers)
 
         # Collect crs of background layers
         for entry in item.get('backgroundLayers', []):
@@ -829,6 +834,7 @@ class MapViewerConfig(ServiceConfig):
 
             if 'display_field' in layer:
                 item_layer['displayField'] = layer.get('display_field')
+            item_layer['mapTips'] = meta.get('mapTips', False)
             item_layer['opacity'] = layer['opacity']
             if 'bbox' in layer:
                 item_layer['bbox'] = {
