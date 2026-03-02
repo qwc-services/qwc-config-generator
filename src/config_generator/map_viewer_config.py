@@ -492,7 +492,7 @@ class MapViewerConfig(ServiceConfig):
                             if searchFields[attr]['type'] == 'QString':
                                 singleFields[layer['name']] = f"\"{attr}\" ILIKE '%$TEXT$%'"
                             else:
-                                self.logger.info(f"{layer['name']} skipping displayField attribute {attr} {searchFields[attr]}")
+                                self.logger.debug(f"{layer['name']} skipping displayField attribute {attr} {searchFields[attr]}")
 
                     expressions = []
                     fields = OrderedDict()
@@ -515,7 +515,7 @@ class MapViewerConfig(ServiceConfig):
                         if fieldType is not None:
                             fields[paramName] = {'label': attrDef['alias'], 'type': fieldType, 'options': fieldOptions}
                         else:
-                            self.logger.info(f"{layer['name']} skipping attribute {attr} {searchFields[attr]}")
+                            self.logger.debug(f"{layer['name']} skipping attribute {attr} {searchFields[attr]}")
 
                     if len(expressions) > 0:
                         newSearchProviders.append({
@@ -541,6 +541,8 @@ class MapViewerConfig(ServiceConfig):
                     }
                 })
                 self.logger.info(f"Adding QGIS search provider with fields {singleFields}")
+        else:
+            self.logger.info("Skipping adding QGIS search provider")
 
         # Inject crs in wmts resource string
         for entry in newExternalLayers:
