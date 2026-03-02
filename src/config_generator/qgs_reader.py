@@ -369,6 +369,24 @@ class QGSReader:
                         variables[element.get('value')] = parent.find(f'./Option[@name="variableValues"]/Option[{i+1}]').get('value')
             layer_metadata["variables"] = variables
 
+            # Searchable fields
+            if "fields" not in layer_metadata:
+                # Initialize if layer is not editable
+                layer_metadata["fields"] = OrderedDict()
+
+            for alias in maplayer.findall('aliases/alias'):
+                fieldname = alias.get('field')
+
+                if fieldname not in layer_metadata["fields"]:
+                    layer_metadata["fields"][fieldname] = {
+                        'alias': alias.get('name') or fieldname
+                    }
+
+                configurationFlags = maplayer.find(f"fieldConfiguration/field[@name='{fieldname}']").get('configurationFlags', 'NoFlag').split('|')
+                layer_metadata['fields'][fieldname].update({
+                    'searchable': 'NotSearchable' not in configurationFlags,
+                })
+
             layers_metadata[layername] = layer_metadata
 
         # Warn about non-existing datasets

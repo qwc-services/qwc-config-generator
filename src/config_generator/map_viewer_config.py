@@ -485,21 +485,31 @@ class MapViewerConfig(ServiceConfig):
             singleFields = {}
             for layer in layers:
                 if layer.get('queryable'):
-                    searchFields = layer.get('typedAttributes', {})
+                    typedAttributes = layer.get('typedAttributes', {})
                     if layer.get('displayField', None) is not None:
-                        attr = next((name for name, attrDef in searchFields.items() if attrDef['alias'] == layer['displayField']), None)
+                        attr = next((name for name, attrDef in typedAttributes.items() if attrDef['alias'] == layer['displayField']), None)
                         if attr is not None:
-                            if searchFields[attr]['type'] == 'QString':
-                                singleFields[layer['name']] = f"\"{attr}\" ILIKE '%$TEXT$%'"
+                            searchable = layer.get('fields', {}).get(attr, {}).get('searchable', False)
+                            if searchable:
+                                if typedAttributes[attr]['type'] == 'QString':
+                                    singleFields[layer['name']] = f"\"{attr}\" ILIKE '%$TEXT$%'"
+                                else:
+                                    self.logger.debug(f"{layer['name']} skipping displayField attribute {attr}: unhandled type {typedAttributes[attr]['type']}")
                             else:
-                                self.logger.debug(f"{layer['name']} skipping displayField attribute {attr} {searchFields[attr]}")
+                                self.logger.debug(f"{layer['name']} skipping displayField attribute {attr}: not searchable")
+                        else:
+                            self.logger.debug(f"{layer['name']} skipping displayField attribute: could not find field with alias '{layer['displayField']}")
 
                     expressions = []
                     fields = OrderedDict()
-                    for attr, attrDef in searchFields.items():
+                    for attr, attrDef in typedAttributes.items():
+                        searchable = layer.get('fields', {}).get(attr, {}).get('searchable', False)
+                        if not searchable:
+                            continue
+
                         paramName = attr.upper()
                         fieldType = None
-                        if searchFields[attr]['type'] == 'QString':
+                        if typedAttributes[attr]['type'] == 'QString':
                             expressions.append(f"\"{attr}\" ILIKE '%${paramName}$%'")
                             fieldType = 'text'
                             fieldOptions = {}
@@ -514,8 +524,6 @@ class MapViewerConfig(ServiceConfig):
 
                         if fieldType is not None:
                             fields[paramName] = {'label': attrDef['alias'], 'type': fieldType, 'options': fieldOptions}
-                        else:
-                            self.logger.debug(f"{layer['name']} skipping attribute {attr} {searchFields[attr]}")
 
                     if len(expressions) > 0:
                         newSearchProviders.append({
@@ -530,7 +538,7 @@ class MapViewerConfig(ServiceConfig):
                                 'fields': fields,
                             }
                         })
-                        self.logger.info(f"Adding QGIS search provider for '{layer['name']}' with fields {list(fields.keys())}")
+                        self.logger.info(f"Adding QGIS search provider for '{layer['name']}' with fields {", ".join(list(fields.keys()))}")
 
             if singleFields:
                 newSearchProviders.append({
@@ -961,6 +969,7 @@ class MapViewerConfig(ServiceConfig):
             item_layer['attributes'] = layer.get('attributes', OrderedDict())
             item_layer['typedAttributes'] = layer.get('typedAttributes', OrderedDict())
             item_layer['searchFields'] = meta.get('searchFields', OrderedDict())
+            item_layer['fields'] = meta.get('fields', OrderedDict())
 
         return item_layer
 
