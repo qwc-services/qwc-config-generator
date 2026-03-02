@@ -494,11 +494,13 @@ class MapViewerConfig(ServiceConfig):
                                 if typedAttributes[attr]['type'] == 'QString':
                                     singleFields[layer['name']] = f"\"{attr}\" ILIKE '%$TEXT$%'"
                                 else:
-                                    self.logger.debug(f"{layer['name']} skipping displayField attribute {attr}: unhandled type {typedAttributes[attr]['type']}")
+                                    # We cannot support other types (int, etc) as PG will fail when entering text
+                                    # We could support boolean, but it doesn't make sense
+                                    self.logger.debug(f"{layer['name']} skipping displayField attribute {attr}: unhandled type '{typedAttributes[attr]['type']}'")
                             else:
                                 self.logger.debug(f"{layer['name']} skipping displayField attribute {attr}: not searchable")
                         else:
-                            self.logger.debug(f"{layer['name']} skipping displayField attribute: could not find field with alias '{layer['displayField']}")
+                            self.logger.debug(f"{layer['name']} skipping displayField attribute: could not find field with alias '{layer['displayField']}'")
 
                     expressions = []
                     fields = OrderedDict()
@@ -509,21 +511,31 @@ class MapViewerConfig(ServiceConfig):
 
                         paramName = attr.upper()
                         fieldType = None
-                        if typedAttributes[attr]['type'] == 'QString':
+                        if attrDef['type'] == 'QString':
                             expressions.append(f"\"{attr}\" ILIKE '%${paramName}$%'")
                             fieldType = 'text'
                             fieldOptions = {}
-                        # elif attrDef['type'] in ["int", "double"]:
-                        #     expressions.append(f"\"{attr}\" = '${paramName}$'")
-                        #     fieldType = "number"
-                        #     fieldOptions = {}
-                        # elif attrDef['type'] == "bool":
-                        #     expressions.append(f"\"{attr}\" = '${paramName}$'")
-                        #     fieldType = "checkbox"
-                        #     fieldOptions = {}
+                        elif attrDef['type'] in ["int", "double"]:
+                            expressions.append(f"\"{attr}\" = '${paramName}$'")
+                            fieldType = "number"
+                            fieldOptions = {}
+                        elif attrDef['type'] == "bool":
+                            expressions.append(f"\"{attr}\" = '${paramName}$'")
+                            fieldType = "checkbox"
+                            fieldOptions = {}
+                        elif attrDef['type'] == "QDate":
+                            expressions.append(f"\"{attr}\" = '${paramName}$'")
+                            fieldType = "date"
+                            fieldOptions = {}
+                        elif attrDef['type'] == "QDateTime":
+                            expressions.append(f"\"{attr}\" = '${paramName}$'")
+                            fieldType = "datetime-local"
+                            fieldOptions = {}
 
                         if fieldType is not None:
                             fields[paramName] = {'label': attrDef['alias'], 'type': fieldType, 'options': fieldOptions}
+                        else:
+                            self.logger.debug(f"{layer['name']} skipping search attribute {attr}: unhandled type '{attrDef['type']}'")
 
                     if len(expressions) > 0:
                         newSearchProviders.append({
