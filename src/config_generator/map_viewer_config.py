@@ -135,10 +135,6 @@ class MapViewerConfig(ServiceConfig):
             'autogen_sensor_things_tool_configs', False
         )
 
-        self.autogen_qgis_searchproviders = generator_config.get(
-            'autogen_qgis_searchproviders', False
-        )
-
         qgis_projects_base_dir = generator_config.get(
             'qgis_projects_base_dir').rstrip('/') + '/'
         qgis_projects_scan_base_dir = generator_config.get(
@@ -485,7 +481,7 @@ class MapViewerConfig(ServiceConfig):
 
         # Add QGIS searchProviders
         newSearchProviders = []
-        if self.autogen_qgis_searchproviders:
+        if self.themes_reader.project_metadata(service_name)['variables'].get('qwc_autogen_searchproviders', 'false').lower() == "true":
             singleFields = {}
             for layer in layers:
                 if layer.get('queryable'):
