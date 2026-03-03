@@ -342,8 +342,8 @@ class CapabilitiesReader():
             # layer
 
             # collect attributes
-            attributes = {}
-            typedAttributes = {}
+            attributes = {}  # Mapping name -> alias
+            typedAttributes = {}  # Mapping name -> info
             attrs = layer.find('%sAttributes' % np, ns)
             if attrs is not None:
                 for attr in attrs.findall('%sAttribute' % np, ns):
