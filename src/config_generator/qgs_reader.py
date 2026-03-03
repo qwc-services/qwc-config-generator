@@ -179,7 +179,8 @@ class QGSReader:
         parent = root.find('./properties/Variables')
         if parent is not None:
             for i, element in enumerate(parent.findall('./variableNames/value')):
-                variables[element.text] = parent.find(f'./variableValues/value[{i+1}]').text
+                if element.text.startswith('qwc_'):
+                    variables[element.text] = parent.find(f'./variableValues/value[{i+1}]').text
         return variables
 
     def __print_templates(self, root, shortname_map, theme_item):
@@ -364,7 +365,8 @@ class QGSReader:
             parent = maplayer.find('./customproperties/Option[@type="Map"]')
             if parent is not None:
                 for i, element in enumerate(parent.findall('./Option[@name="variableNames"]/Option')):
-                    variables[element.get('value')] = parent.find(f'./Option[@name="variableValues"]/Option[{i+1}]').get('value')
+                    if element.get('value').startswith('qwc_'):
+                        variables[element.get('value')] = parent.find(f'./Option[@name="variableValues"]/Option[{i+1}]').get('value')
             layer_metadata["variables"] = variables
 
             # Searchable fields
