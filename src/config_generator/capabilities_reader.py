@@ -342,25 +342,31 @@ class CapabilitiesReader():
             # layer
 
             # collect attributes
-            attributes = {}  # Mapping name -> alias
-            typedAttributes = {}  # Mapping name -> info
+            attributes = {}
             attrs = layer.find('%sAttributes' % np, ns)
             if attrs is not None:
                 for attr in attrs.findall('%sAttribute' % np, ns):
-                    attributes[attr.get('name')] = attr.get('alias', attr.get('name'))
-                    typedAttributes[attr.get('name')] = {
+                    attributes[attr.get('name')] = {
                         'alias': attr.get('alias', attr.get('name')),
-                        'type': attr.get('type'),
-                        'typeName': attr.get('typeName'),
-                        'editType': attr.get('editType'),
+                        'type': attr.get('type'),  # Qt type
+                        'typeName': attr.get('typeName'),  # postgresql type
+                        'editType': attr.get('editType'),  # Edit widget
                     }
-                attributes['geometry'] = 'geometry'
-                attributes['maptip'] = 'maptip'
+                attributes['geometry'] = {
+                    'alias': 'geometry',
+                    'type': None,
+                    'typeName': None,
+                    'editType': None,
+                }
+                attributes['maptip'] = {
+                    'alias': 'maptip',
+                    'type': None,
+                    'typeName': None,
+                    'editType': None,
+                }
 
             if attributes:
                 wms_layer['attributes'] = attributes
-            if typedAttributes:
-                wms_layer['typedAttributes'] = typedAttributes
 
         if layer.find('%sAbstract' % np, ns) is not None:
             wms_layer["abstract"] = layer.find('%sAbstract' % np, ns).text
