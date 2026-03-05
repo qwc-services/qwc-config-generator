@@ -488,21 +488,21 @@ class MapViewerConfig(ServiceConfig):
             globalSearchExpressions = {}
             for layer in layers:
                 if layer.get('queryable'):
-                    typedAttributes = layer.get('typedAttributes', {})
+                    attributes = layer.get('attributes', {})
 
                     if layer.get('displayField', None) is not None:
                         # Try to add the displayField to global search
-                        fieldName = next((name for name, attrDef in typedAttributes.items() if attrDef['alias'] == layer['displayField']), None)
+                        fieldName = next((name for name, attrDef in attributes.items() if attrDef['alias'] == layer['displayField']), None)
                         if fieldName is not None:
                             # Don't use field if it's defined as not searchable in QGIS
                             searchable = layer.get('fields', {}).get(fieldName, {}).get('searchable', False)
                             if searchable:
-                                if typedAttributes[fieldName]['type'] == 'QString':
+                                if attributes[fieldName]['type'] == 'QString':
                                     globalSearchExpressions[layer['name']] = f"\"{fieldName}\" ILIKE '%$TEXT$%'"
                                 else:
                                     # We cannot support other types (int, etc) as PG will fail when entering text
                                     # We could support boolean, but it doesn't make sense
-                                    self.logger.debug(f"{layer['name']} skipping displayField '{fieldName}': unhandled type '{typedAttributes[fieldName]['type']}'")
+                                    self.logger.debug(f"{layer['name']} skipping displayField '{fieldName}': unhandled type '{attributes[fieldName]['type']}'")
                             else:
                                 self.logger.debug(f"{layer['name']} skipping displayField '{fieldName}': not searchable")
                         else:
@@ -511,7 +511,7 @@ class MapViewerConfig(ServiceConfig):
                     # Try to define a search for that layer
                     expressions = []
                     fields = OrderedDict()
-                    for fieldName, attrDef in typedAttributes.items():
+                    for fieldName, attrDef in attributes.items():
                         searchable = layer.get('fields', {}).get(fieldName, {}).get('searchable', False)
                         if not searchable:
                             continue
@@ -988,7 +988,6 @@ class MapViewerConfig(ServiceConfig):
             item_layer['refreshInterval'] = meta.get('refresh_interval', 0)
 
             item_layer['attributes'] = layer.get('attributes', OrderedDict())
-            item_layer['typedAttributes'] = layer.get('typedAttributes', OrderedDict())
             # Some fields metadata are only available via parsing the QGIS project (e.g. searchable)
             item_layer['fields'] = meta.get('fields', OrderedDict())
 
