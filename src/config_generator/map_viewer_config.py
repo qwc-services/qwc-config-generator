@@ -472,106 +472,14 @@ class MapViewerConfig(ServiceConfig):
         layers = []
         newExternalLayers = []
         layer_titles = {}
+        newSearchProviders = []
+        autogen_theme_search_provider_expressions = {}
         for layer in root_layer.get('layers', []):
             sublayer = self.collect_layers(
-                layer, search_layers, 1, collapseLayerGroupsBelowLevel, newExternalLayers, project_metadata, featureReports, lockedPreset, layer_titles
+                layer, search_layers, 1, collapseLayerGroupsBelowLevel, newExternalLayers, project_metadata, featureReports, lockedPreset, layer_titles, newSearchProviders, autogen_theme_search_provider_expressions
             )
             if sublayer:
                 layers.append(sublayer)
-
-        # Add QGIS searchProviders if qwc_autogen_searchproviders is set in QGIS project variables
-        newSearchProviders = []
-        if self.themes_reader.project_metadata(service_name)['variables'].get('qwc_autogen_searchproviders', 'false').lower() == "true":
-            # Add multiple search providers:
-            # * one querying all layers, using displayField (if available)
-            # * one per layer, with all available attributes
-            globalSearchExpressions = {}
-            for layer in layers:
-                if layer.get('queryable'):
-                    attributes = layer.get('attributes', {})
-
-                    if layer.get('displayField', None) is not None:
-                        # Try to add the displayField to global search
-                        fieldName = next((name for name, attrDef in attributes.items() if attrDef['alias'] == layer['displayField']), None)
-                        if fieldName is not None:
-                            # Don't use field if it's defined as not searchable in QGIS
-                            searchable = layer.get('fields', {}).get(fieldName, {}).get('searchable', False)
-                            if searchable:
-                                if attributes[fieldName]['type'] == 'QString':
-                                    globalSearchExpressions[layer['name']] = f"\"{fieldName}\" ILIKE '%$TEXT$%'"
-                                else:
-                                    # We cannot support other types (int, etc) as PG will fail when entering text
-                                    # We could support boolean, but it doesn't make sense
-                                    self.logger.debug(f"{layer['name']} skipping displayField '{fieldName}': unhandled type '{attributes[fieldName]['type']}'")
-                            else:
-                                self.logger.debug(f"{layer['name']} skipping displayField '{fieldName}': not searchable")
-                        else:
-                            self.logger.debug(f"{layer['name']} skipping displayField: could not find field with alias '{layer['displayField']}'")
-
-                    # Try to define a search for that layer
-                    expressions = []
-                    fields = OrderedDict()
-                    for fieldName, attrDef in attributes.items():
-                        searchable = layer.get('fields', {}).get(fieldName, {}).get('searchable', False)
-                        if not searchable:
-                            continue
-
-                        paramName = fieldName.upper()
-                        fieldType = None
-                        if attrDef['type'] == 'QString':
-                            expressions.append(f"\"{fieldName}\" ILIKE '%${paramName}$%'")
-                            fieldType = 'text'
-                            fieldOptions = {}
-                        elif attrDef['type'] in ["int", "double"]:
-                            # Handling double is a bit optimistic but it's sometimes useful
-                            expressions.append(f"\"{fieldName}\" = '${paramName}$'")
-                            fieldType = "number"
-                            fieldOptions = {}
-                        elif attrDef['type'] == "bool":
-                            expressions.append(f"\"{fieldName}\" = '${paramName}$'")
-                            fieldType = "checkbox"
-                            fieldOptions = {}
-                        elif attrDef['type'] == "QDate":
-                            expressions.append(f"\"{fieldName}\" = '${paramName}$'")
-                            fieldType = "date"
-                            fieldOptions = {}
-                        elif attrDef['type'] == "QDateTime":
-                            # Handling time is a bit optimistic but it's sometimes useful
-                            expressions.append(f"\"{fieldName}\" = '${paramName}$'")
-                            fieldType = "datetime-local"
-                            fieldOptions = {}
-
-                        if fieldType is not None:
-                            fields[paramName] = {'label': attrDef['alias'], 'type': fieldType, 'options': fieldOptions}
-                        else:
-                            self.logger.debug(f"{layer['name']} skipping search field '{fieldName}': unhandled type '{attrDef['type']}'")
-
-                    if len(expressions) > 0:
-                        newSearchProviders.append({
-                            'provider': 'qgis',
-                            'key': f"qgis-{layer['name']}",
-                            'label': f"{layer['title']} (QGIS)",
-                            'params': {
-                                'title': layer['title'],
-                                'expression': {
-                                    layer['name']: " AND ".join(expressions),
-                                },
-                                'fields': fields,
-                            }
-                        })
-                        self.logger.info(f"Adding QGIS search provider for '{layer['name']}' with fields {", ".join(list(fields.keys()))}")
-
-            if globalSearchExpressions:
-                newSearchProviders.append({
-                    'provider': 'qgis',
-                    'params': {
-                        "title": 'QGIS',
-                        "expression": globalSearchExpressions
-                    }
-                })
-                self.logger.info(f"Adding QGIS search provider with fields {globalSearchExpressions}")
-        else:
-            self.logger.info("Skipping adding QGIS search provider")
 
         # Inject crs in wmts resource string
         for entry in newExternalLayers:
@@ -581,6 +489,17 @@ class MapViewerConfig(ServiceConfig):
                 params["crs"] = params.get('crs', params.get('CRS', item['mapCrs']))
                 urlobj = urlobj._replace(query=urllib.parse.urlencode(params))
                 entry["name"] = "wmts:" + urllib.parse.urlunparse(urlobj)
+
+        # Create QGIS search provider if enabled & fields found during collect_layers
+        if autogen_theme_search_provider_expressions:
+            newSearchProviders.append({
+                'provider': 'qgis',
+                'params': {
+                    "title": 'QGIS',
+                    "expression": autogen_theme_search_provider_expressions
+                }
+            })
+            self.logger.info(f"Adding QGIS search provider with layers {", ".join(autogen_theme_search_provider_expressions.keys())}")
 
         item['abstract'] = cap.get('abstract', '')
         item['attribution'] = {
@@ -846,7 +765,7 @@ class MapViewerConfig(ServiceConfig):
         if field in cfg_item:
             item[field] = cfg_item.get(field)
 
-    def collect_layers(self, layer, search_layers, level, collapseBelowLevel, externalLayers, project_metadata, featureReports, lockedPreset, layer_titles):
+    def collect_layers(self, layer, search_layers, level, collapseBelowLevel, externalLayers, project_metadata, featureReports, lockedPreset, layer_titles, autogen_search_providers, autogen_theme_search_provider_expressions):
         """Recursively collect layer tree from capabilities.
 
         :param obj layer: Layer or group layer
@@ -866,7 +785,7 @@ class MapViewerConfig(ServiceConfig):
             for sublayer in layer['layers']:
                 # recursively collect sub layer
                 item_sublayer = self.collect_layers(
-                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers, project_metadata, featureReports, lockedPreset, layer_titles
+                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers, project_metadata, featureReports, lockedPreset, layer_titles, autogen_search_providers, autogen_theme_search_provider_expressions
                 )
                 if item_sublayer:
                     sublayers.append(item_sublayer)
@@ -987,9 +906,81 @@ class MapViewerConfig(ServiceConfig):
             # refresh interval
             item_layer['refreshInterval'] = meta.get('refresh_interval', 0)
 
-            item_layer['attributes'] = layer.get('attributes', OrderedDict())
-            # Some fields metadata are only available via parsing the QGIS project (e.g. searchable)
-            item_layer['fields'] = meta.get('fields', OrderedDict())
+            # Auto-generated QGIS searchProviders
+            if project_metadata['variables'].get('qwc_autogen_searchproviders', 'false').lower() == "true":
+                if layer.get('queryable'):
+                    attributes = layer.get('attributes', {})
+
+                    if layer.get('display_field', None) is not None:
+                        # Try to add the displayField to global search
+                        fieldName = next((name for name, attrDef in attributes.items() if attrDef['alias'] == layer['display_field']), None)
+                        if fieldName is not None:
+                            # Don't use field if it's defined as not searchable in QGIS
+                            searchable = meta.get('fields', {}).get(fieldName, {}).get('searchable', False)
+                            if searchable:
+                                if attributes[fieldName]['type'] == 'QString':
+                                    autogen_theme_search_provider_expressions[layer['name']] = f"\"{fieldName}\" ILIKE '%$TEXT$%'"
+                                else:
+                                    # We cannot support other types (int, etc) as PG will fail when entering text
+                                    # We could support boolean, but it doesn't make sense
+                                    self.logger.debug(f"{layer['name']}: skipping displayField '{fieldName}': unhandled type '{attributes[fieldName]['type']}'")
+                            else:
+                                self.logger.debug(f"{layer['name']}: skipping displayField '{fieldName}': not searchable")
+                        else:
+                            self.logger.debug(f"{layer['name']}: skipping displayField: could not find field with alias '{layer['display_field']}'")
+
+                    # Try to define a search for that layer
+                    expressions = []
+                    fields = OrderedDict()
+                    for fieldName, attrDef in attributes.items():
+                        searchable = meta.get('fields', {}).get(fieldName, {}).get('searchable', False)
+                        if not searchable:
+                            continue
+
+                        paramName = fieldName.upper()
+                        fieldType = None
+                        if attrDef['type'] == 'QString':
+                            expressions.append(f"\"{fieldName}\" ILIKE '%${paramName}$%'")
+                            fieldType = 'text'
+                            fieldOptions = {}
+                        elif attrDef['type'] in ["int", "double"]:
+                            # Handling double is a bit optimistic but it's sometimes useful
+                            expressions.append(f"\"{fieldName}\" = '${paramName}$'")
+                            fieldType = "number"
+                            fieldOptions = {}
+                        elif attrDef['type'] == "bool":
+                            expressions.append(f"\"{fieldName}\" = '${paramName}$'")
+                            fieldType = "checkbox"
+                            fieldOptions = {}
+                        elif attrDef['type'] == "QDate":
+                            expressions.append(f"\"{fieldName}\" = '${paramName}$'")
+                            fieldType = "date"
+                            fieldOptions = {}
+                        elif attrDef['type'] == "QDateTime":
+                            # Handling time is a bit optimistic but it's sometimes useful
+                            expressions.append(f"\"{fieldName}\" = '${paramName}$'")
+                            fieldType = "datetime-local"
+                            fieldOptions = {}
+
+                        if fieldType is not None:
+                            fields[paramName] = {'label': attrDef['alias'], 'type': fieldType, 'options': fieldOptions}
+                        else:
+                            self.logger.debug(f"{layer['name']} skipping search field '{fieldName}': unhandled type '{attrDef['type']}'")
+
+                    if len(expressions) > 0:
+                        autogen_search_providers.append({
+                            'provider': 'qgis',
+                            'key': f"qgis-{layer['name']}",
+                            'label': f"{layer['title']} (QGIS)",
+                            'params': {
+                                'title': layer['title'],
+                                'expression': {
+                                    layer['name']: " AND ".join(expressions),
+                                },
+                                'fields': fields,
+                            }
+                        })
+                        self.logger.info(f"Adding QGIS search provider for '{layer['name']}' with fields {", ".join(list(fields.keys()))}")
 
         return item_layer
 
