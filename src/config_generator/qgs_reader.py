@@ -385,8 +385,6 @@ class QGSReader:
                 configurationFlags = maplayer.find(f"fieldConfiguration/field[@name='{fieldname}']").get('configurationFlags', 'NoFlag').split('|')
                 layer_metadata['fields'][fieldname].update({
                     'searchable': 'NotSearchable' not in configurationFlags,
-                    'in_wms': 'HideFromWms' not in configurationFlags,
-                    'in_wfs': 'HideFromWfs' not in configurationFlags,
                 })
 
             layers_metadata[layername] = layer_metadata
