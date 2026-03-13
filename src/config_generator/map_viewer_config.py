@@ -940,25 +940,30 @@ class MapViewerConfig(ServiceConfig):
                         paramName = fieldName.upper()
                         fieldType = None
                         if attrDef['type'] == 'QString':
-                            expressions.append(f"\"{fieldName}\" ILIKE '%${paramName}$%'")
+                            expressions.append([fieldName, "ILIKE", f'%${paramName}$%'])
+                            expressions.append("and")
                             fieldType = 'text'
                             fieldOptions = {}
                         elif attrDef['type'] in ["int", "double"]:
                             # Handling double is a bit optimistic but it's sometimes useful
-                            expressions.append(f"\"{fieldName}\" = '${paramName}$'")
+                            expressions.append([fieldName, "=", f'${paramName}$'])
+                            expressions.append("and")
                             fieldType = "number"
                             fieldOptions = {}
                         elif attrDef['type'] == "bool":
-                            expressions.append(f"\"{fieldName}\" = '${paramName}$'")
+                            expressions.append([fieldName, "=", f'${paramName}$'])
+                            expressions.append("and")
                             fieldType = "checkbox"
                             fieldOptions = {}
                         elif attrDef['type'] == "QDate":
-                            expressions.append(f"\"{fieldName}\" = '${paramName}$'")
+                            expressions.append([fieldName, "=", f'${paramName}$'])
+                            expressions.append("and")
                             fieldType = "date"
                             fieldOptions = {}
                         elif attrDef['type'] == "QDateTime":
                             # Handling time is a bit optimistic but it's sometimes useful
-                            expressions.append(f"\"{fieldName}\" = '${paramName}$'")
+                            expressions.append([fieldName, "=", f'${paramName}$'])
+                            expressions.append("and")
                             fieldType = "datetime-local"
                             fieldOptions = {}
 
@@ -968,6 +973,7 @@ class MapViewerConfig(ServiceConfig):
                             self.logger.debug(f"{layer['name']} skipping search field '{fieldName}': unhandled type '{attrDef['type']}'")
 
                     if len(expressions) > 0:
+                        expressions.pop()  # pop last "and"
                         autogen_search_providers.append({
                             'provider': 'qgis',
                             'key': f"qgis-{layer['name']}",
@@ -975,7 +981,7 @@ class MapViewerConfig(ServiceConfig):
                             'params': {
                                 'title': layer['title'],
                                 'expression': {
-                                    layer['name']: " AND ".join(expressions),
+                                    layer['name']: expressions,
                                 },
                                 'fields': fields,
                             }
