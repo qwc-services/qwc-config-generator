@@ -161,11 +161,11 @@ class FeatureInfoServiceConfig(ServiceConfig):
             # collect attributes
             if 'attributes' in layer:
                 attributes = []
-                for attr, attrDef in layer['attributes'].items():
+                for attr, alias in layer['attributes'].items():
                     # NOTE: use ordered keys
                     attribute = OrderedDict()
                     attribute['name'] = attr
-                    attribute['alias'] = attrDef['alias']
+                    attribute['alias'] = alias
 
                     attributes.append(attribute)
 

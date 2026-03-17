@@ -123,7 +123,7 @@
           "type": "boolean"
         },
         "generate_nested_nrel_forms": {
-          "description": "Whether to generate nested nrelation forms instead of a tabular view. Default: `false`",
+          "description": "Whether to generate nested nrelation forms instead of a tabluar view. Default: `false`",
           "type": "boolean"
         },
         "autogen_sensor_things_tool_configs": {

@@ -162,7 +162,6 @@ class QGSReader:
             "project_crs": self.__project_crs(root),
             "print_templates": self.__print_templates(root, shortname_map, theme_item),
             "visibility_presets": self.__visibility_presets(root, theme_item),
-            "variables": self.__project_variables(root),
             "layer_metadata": self.__layer_metadata(root, shortname_map, map_prefix, edit_datasets, relations, theme_item, qgs_dir),
         }
 
@@ -171,17 +170,6 @@ class QGSReader:
         """ Read project CRS from QGS. """
         authid = root.find('./projectCrs/spatialrefsys/authid')
         return authid.text if authid is not None else None
-
-
-    def __project_variables(self, root):
-        """ Read project Variables from QGS. """
-        variables = OrderedDict()
-        parent = root.find('./properties/Variables')
-        if parent is not None:
-            for i, element in enumerate(parent.findall('./variableNames/value')):
-                if element.text.startswith('qwc_'):
-                    variables[element.text] = parent.find(f'./variableValues/value[{i+1}]').text
-        return variables
 
     def __print_templates(self, root, shortname_map, theme_item):
         """ Collect print templates from QGS and merge with global print layouts. """
@@ -359,33 +347,6 @@ class QGSReader:
 
             # SensorThings metadata
             self.__layer_sensor_things_metadata(layer_metadata, maplayer)
-
-            # Layer variables
-            variables = OrderedDict()
-            parent = maplayer.find('./customproperties/Option[@type="Map"]')
-            if parent is not None:
-                for i, element in enumerate(parent.findall('./Option[@name="variableNames"]/Option')):
-                    if element.get('value').startswith('qwc_'):
-                        variables[element.get('value')] = parent.find(f'./Option[@name="variableValues"]/Option[{i+1}]').get('value')
-            layer_metadata["variables"] = variables
-
-            # Searchable fields
-            if "fields" not in layer_metadata:
-                # Initialize if layer is not editable
-                layer_metadata["fields"] = OrderedDict()
-
-            for alias in maplayer.findall('aliases/alias'):
-                fieldname = alias.get('field')
-
-                if fieldname not in layer_metadata["fields"]:
-                    layer_metadata["fields"][fieldname] = {
-                        'alias': alias.get('name') or fieldname
-                    }
-
-                configurationFlags = maplayer.find(f"fieldConfiguration/field[@name='{fieldname}']").get('configurationFlags', 'NoFlag').split('|')
-                layer_metadata['fields'][fieldname].update({
-                    'searchable': 'NotSearchable' not in configurationFlags,
-                })
 
             layers_metadata[layername] = layer_metadata
 

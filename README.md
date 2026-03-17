@@ -24,14 +24,6 @@ Configuration
 
 *NOTE:* the Search service configuration takes its resources directly from the ConfigGenerator configuration. Its Permissions are collected from the ConfigDB (`solr_facet` resources), unless they are defined in the ConfigGenerator configuration.
 
-### QGIS variables
-
-Some behavior are configured via the [QGIS project variables](https://docs.qgis.org/latest/en/docs/user_manual/introduction/qgis_configuration.html#variables-properties). Expressions are not yet supported: values must be simple values.
-
-| Name                          | Type    | Default       | Description                                                                             |
-|-------------------------------|---------|---------------|-----------------------------------------------------------------------------------------|
-| `qwc_autogen_searchproviders` | boolean | `false`       | Whether to automatically generate QGIS search providers for SearchBar and FeatureSearch |
-
 ### Environment variables
 
 Config options in the config file can be overridden by equivalent uppercase environment variables.

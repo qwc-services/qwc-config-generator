@@ -346,24 +346,9 @@ class CapabilitiesReader():
             attrs = layer.find('%sAttributes' % np, ns)
             if attrs is not None:
                 for attr in attrs.findall('%sAttribute' % np, ns):
-                    attributes[attr.get('name')] = {
-                        'alias': attr.get('alias', attr.get('name')),
-                        'type': attr.get('type'),  # Qt type
-                        'typeName': attr.get('typeName'),  # postgresql type
-                        'editType': attr.get('editType'),  # Edit widget
-                    }
-                attributes['geometry'] = {
-                    'alias': 'geometry',
-                    'type': None,
-                    'typeName': None,
-                    'editType': None,
-                }
-                attributes['maptip'] = {
-                    'alias': 'maptip',
-                    'type': None,
-                    'typeName': None,
-                    'editType': None,
-                }
+                    attributes[attr.get('name')] = attr.get('alias', attr.get('name'))
+                attributes['geometry'] = 'geometry'
+                attributes['maptip'] = 'maptip'
 
             if attributes:
                 wms_layer['attributes'] = attributes
