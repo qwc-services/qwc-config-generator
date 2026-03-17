@@ -157,7 +157,7 @@ class DnDFormGenerator:
                     widget.set("class", "QComboBox")
                     sql = sql_text("SELECT unnest(enum_range(NULL:: %s))::text as values ;" % defined_type)
                     result = conn.execute(sql)
-                    for row in result : 
+                    for row in result.mappings() : 
                         values['value'] = row['values']
                         values['name'] = row['values']
                         item = ElementTree.Element("item")
