@@ -151,7 +151,7 @@ class DnDFormGenerator:
         """).format(schema = self.metadata['schema'], table = self.metadata['table_name'], column = field))
             with self.db_engine.db_engine(self.metadata['database']).connect() as conn:
                 result = conn.execute(sql)
-                for row in result:
+                for row in result.mappings():
                     defined_type = row['defined_type']
                 try : 
                     widget.set("class", "QComboBox")
