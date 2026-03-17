@@ -31,7 +31,7 @@ jobs:
           docker compose -f docker-compose-example.yml up -d qwc-postgis qwc-config-db-migrate qwc-qgis-server
 
       - name: Setting up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
             python-version: '3.12'
 
