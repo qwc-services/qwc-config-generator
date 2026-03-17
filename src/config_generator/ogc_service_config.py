@@ -204,7 +204,7 @@ class OGCServiceConfig(ServiceConfig):
                 wfs_layer = OrderedDict()
 
                 wfs_layer['name'] = layer_cap['name']
-                wfs_layer['attributes'] = {k: v['alias'] for k, v in layer_cap['attributes'].items()}
+                wfs_layer['attributes'] = layer_cap['attributes']
 
                 wfs_layers.append(wfs_layer)
 
