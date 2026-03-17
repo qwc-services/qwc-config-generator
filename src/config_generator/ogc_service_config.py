@@ -167,7 +167,7 @@ class OGCServiceConfig(ServiceConfig):
         else:
             # layer
             if 'attributes' in layer:
-                wms_layer['attributes'] = layer['attributes']
+                wms_layer['attributes'] = {k: v['alias'] for k, v in layer['attributes'].items()}
 
             wms_layer['queryable'] = layer.get('queryable', False)
 
