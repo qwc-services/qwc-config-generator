@@ -449,6 +449,12 @@ class QGSReader:
             else:
                 self.logger.warn("Skipping edit field %s with unhandled data-type %s" % (fieldname, field.get('data_type')))
 
+        if not layer_metadata['primary_key'] in layer_metadata["fields"]:
+            self.logger.warn(
+                "Primary key '%s' does not match any existing field. Check that a valid primary key has been set on the table '%s'."
+                % (layer_metadata['primary_key'], layer_metadata['schema'] + "." + layer_metadata['table_name'])
+            )
+
         # Display field
         previewExpression = maplayer.find('previewExpression')
         if previewExpression is not None:
