@@ -574,6 +574,7 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'defaultDisplayCrs', item)
         self.set_optional_config(cfg_item, 'extraLegendParameters', item)
         self.set_optional_config(cfg_item, 'extraPrintParameters', item)
+        self.set_optional_config(cfg_item, 'filter', item)
         self.set_optional_config(cfg_item, 'flags', item)
         self.set_optional_config(cfg_item, 'format', item)
         self.set_optional_config(cfg_item, 'layerTreeHiddenSublayers', item)
