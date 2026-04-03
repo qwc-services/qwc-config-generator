@@ -878,7 +878,7 @@ class QGSReader:
                 try:
                     os.makedirs(outputdir, exist_ok=True)
                     shutil.copy(formpath, outputfile)
-                    self.logger.info(f"Copied edit form to {projectname}_{layerame}.ui")
+                    self.logger.info(f"Copied edit form to {projectname}_{layername}.ui")
                     uipath = ":/forms/autogen/%s_%s.ui?v=%d" % (projectname, layername, int(time.time()))
                 except Exception as e:
                     self.logger.warning(f"Failed to copy edit form: {str(e)}")
