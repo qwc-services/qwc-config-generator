@@ -1105,6 +1105,13 @@ class MapViewerConfig(ServiceConfig):
                             "Layer entity type is not 'Location'" % (layer_name, service_name)
                         )
                         continue
+                    if sensor_things_metadata.get('geometry_type') is None:
+                        # skip if SensorThings layer has no geometry
+                        self.logger.info(
+                            "Skipping automatic plugin config for SensorThings layer '%s' of theme '%s': "
+                            "Layer has no geometry" % (layer_name, service_name)
+                        )
+                        continue
                     if re.match(r'^https?://.+:.+@', sensor_things_metadata.get('url')):
                         # skip if SensorThings layer has basic auth in URL
                         self.logger.info(
@@ -1113,12 +1120,46 @@ class MapViewerConfig(ServiceConfig):
                         )
                         continue
 
+                    # map QGIS layer geometry type to SensorThings geometry type
+                    SENSOR_THINGS_GEOM_TYPES = {
+                        'POINT': 'Point',
+                        'POINTZ': 'Point',
+                        'MULTIPOINT': 'Point',
+                        'MULTIPOINTZ': 'Point',
+                        'LINESTRING': 'LineString',
+                        'LINESTRINGZ': 'LineString',
+                        'MULTILINESTRING': 'LineString',
+                        'MULTILINESTRINGZ': 'LineString',
+                        'POLYGON': 'Polygon',
+                        'POLYGONZ': 'Polygon',
+                        'MULTIPOLYGON': 'Polygon',
+                        'MULTIPOLYGONZ': 'Polygon'
+                    }
+                    geom_type = SENSOR_THINGS_GEOM_TYPES.get(sensor_things_metadata.get('geometry_type').upper())
+                    if geom_type is None:
+                        # skip if SensorThings layer geometry type is not supported
+                        self.logger.info(
+                            "Skipping automatic plugin config for SensorThings layer '%s' of theme '%s': "
+                            "Layer geometry type '%s' is not supported" %
+                            (layer_name, service_name, sensor_things_metadata.get('geometry_type'))
+                        )
+                        continue
+
                     # build sensorThingsApiUrls entry
                     cfg = {
                         'url': sensor_things_metadata['url']
                     }
+
+                    # add geometry type filter
+                    locations_filter = (
+                        "location/type eq '%s' or location/geometry/type eq '%s'" %
+                        (geom_type, geom_type)
+                    )
+                    # append any custom locations filter
                     if sensor_things_metadata.get('filter'):
-                        cfg['locationsFilter'] = sensor_things_metadata['filter']
+                        locations_filter = "(%s) and (%s)" % (locations_filter, sensor_things_metadata['filter'])
+
+                    cfg['locationsFilter'] = locations_filter
                     sensor_things_api_urls.append(cfg)
 
                 if sensor_things_api_urls:

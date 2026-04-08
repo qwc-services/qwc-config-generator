@@ -529,6 +529,7 @@ class QGSReader:
         layer_metadata['sensor_things'] = {
             'url': datasource.get('url'),
             'entity': datasource.get('entity'),
+            'geometry_type': datasource.get('type'),
             'filter': datasource.get('sql')
         }
 
