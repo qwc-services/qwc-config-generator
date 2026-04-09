@@ -608,8 +608,8 @@ class MapViewerConfig(ServiceConfig):
             # set default theme
             self.default_theme = item['id']
 
-        if item.get("mapTips", None) is None and themes_config.get("defaultMapTips", False):
-            # Enable mapTips if any layer defines some
+        if item.get("mapTips", None) is None and themes_config.get("defaultMapTips", True):
+            # Enable mapTips if any layer defines some and if not explicitely disabled in themesConfig
             item['mapTips'] = any(layer.get('mapTips') for layer in layers)
 
         # Collect crs of background layers
