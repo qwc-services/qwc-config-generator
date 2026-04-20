@@ -210,6 +210,7 @@ class QGSReader:
                 self.logger.warning("Skipping invalid print template " + template.get('name') + " (may not contain a layout map element)")
                 continue
 
+            followPresetName = composer_map.get('followPresetName')
             size = composer_map.get('size').split(',')
             position = composer_map.get('positionOnPage').split(',')
             resolution = float(template.get('printResolution'))
@@ -232,6 +233,7 @@ class QGSReader:
             print_map['y'] = float(position[1]) * tomm.get(position[2], 1)
             print_map['width'] = float(size[0]) * tomm.get(size[2], 1)
             print_map['height'] = float(size[1]) * tomm.get(size[2], 1)
+            print_map['followPresetName'] = followPresetName
             print_template['map'] = print_map
 
             atlas = template.find("Atlas")
