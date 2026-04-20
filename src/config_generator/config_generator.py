@@ -272,18 +272,12 @@ class ConfigGenerator():
                     qwc_base_dir,
                     viewer_config.get('assetsPath', 'assets').lstrip('/')
                 )
-                translations_dir = os.path.join(
-                    qwc_base_dir,
-                    viewer_config.get('translationsPath', 'translations').lstrip('/')
-                )
                 viewer_languages = list(viewer_config.get('availableLocales', {}).keys())
-
-            if not viewer_languages:
-                with open(os.path.join(translations_dir, 'tsconfig.json')) as fh:
-                    viewer_languages = json.load(fh)['languages']
         except:
-            self.logger.warning("Failed to read assets/translations path from viewer config.json, using default")
+            self.logger.warning("Failed to read assets path from viewer config.json, using default")
             assets_dir = os.path.join(qwc_base_dir, 'assets')
+            viewer_languages = []
+        if not viewer_languages:
             viewer_languages = ["en-US"]
         self.logger.info(f"Assets destination: {assets_dir}")
         self.logger.info(f"Viewer languages: {viewer_languages}")
