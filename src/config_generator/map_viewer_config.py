@@ -452,7 +452,7 @@ class MapViewerConfig(ServiceConfig):
         layer_titles = {}
         for layer in root_layer.get('layers', []):
             sublayer = self.collect_layers(
-                layer, search_layers, 1, collapseLayerGroupsBelowLevel, newExternalLayers, project_metadata, featureReports, lockedPreset, layer_titles
+                layer, search_layers, 1, collapseLayerGroupsBelowLevel, newExternalLayers, project_metadata, featureReports, lockedPreset, [], layer_titles
             )
             if sublayer:
                 layers.append(sublayer)
@@ -721,7 +721,7 @@ class MapViewerConfig(ServiceConfig):
         if field in cfg_item:
             item[field] = cfg_item.get(field)
 
-    def collect_layers(self, layer, search_layers, level, collapseBelowLevel, externalLayers, project_metadata, featureReports, lockedPreset, layer_titles):
+    def collect_layers(self, layer, search_layers, level, collapseBelowLevel, externalLayers, project_metadata, featureReports, lockedPreset, parentGroups, layer_titles):
         """Recursively collect layer tree from capabilities.
 
         :param obj layer: Layer or group layer
@@ -731,6 +731,7 @@ class MapViewerConfig(ServiceConfig):
         item_layer = OrderedDict()
 
         item_layer['name'] = layer['name']
+        layerPath = "/".join(parentGroups + [layer['name']])
         if 'title' in layer:
             item_layer['title'] = layer['title']
             layer_titles[layer['name']] = layer['title']
@@ -741,7 +742,7 @@ class MapViewerConfig(ServiceConfig):
             for sublayer in layer['layers']:
                 # recursively collect sub layer
                 item_sublayer = self.collect_layers(
-                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers, project_metadata, featureReports, lockedPreset, layer_titles
+                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers, project_metadata, featureReports, lockedPreset, parentGroups + [layer['name']], layer_titles
                 )
                 if item_sublayer:
                     sublayers.append(item_sublayer)
@@ -770,7 +771,7 @@ class MapViewerConfig(ServiceConfig):
             item_layer['visibility'] = layer['visible']
 
             if lockedPreset:
-                item_layer['visibility'] = layer['name'] in lockedPreset
+                item_layer['visibility'] = layerPath in lockedPreset
         else:
 
             geometryType = layer.get('geometryType')
@@ -793,8 +794,8 @@ class MapViewerConfig(ServiceConfig):
                 item_layer['style'] = ''
 
             if lockedPreset:
-                if layer['name'] in lockedPreset:
-                    style = lockedPreset[layer['name']]
+                if layerPath in lockedPreset:
+                    style = lockedPreset[layerPath]
                     item_layer['styles'] = {style: style}
                     item_layer['style'] = style
                     item_layer['visibility'] = True
