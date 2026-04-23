@@ -183,8 +183,13 @@ class DnDFormGenerator:
             self.__add_widget_property(widget, "allowMulti", None, None, "true" if allowMulti else "false", "property", "bool")
             return widget
         elif editWidget.get("type") == "RelationReference":
+            refLayerIdOpt = editWidget.find("config/Option/Option[@name='ReferencedLayerId']")
+            if not refLayerIdOpt:
+                # No relation assigned to relation reference
+                return None
+
             widget.set("class", "QComboBox")
-            refLayerId = editWidget.find("config/Option/Option[@name='ReferencedLayerId']").get('value')
+            refLayerId = refLayerIdOpt.get('value')
             refLayerName = editWidget.find("config/Option/Option[@name='ReferencedLayerName']").get('value')
             refLayerDS = editWidget.find("config/Option/Option[@name='ReferencedLayerDataSource']").get('value')
             try:

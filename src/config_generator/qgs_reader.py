@@ -696,8 +696,12 @@ class QGSReader:
                 keyvaltables[map_prefix + "." + layerName] = keyvaltable_metadata
                 reltables.append(layerName)
         elif edit_widget.get('type') == 'RelationReference':
-            layerId = edit_widget.find(
-                        "config/Option/Option[@name='ReferencedLayerId']").get('value')
+            refLayerIdOpt = edit_widget.find("config/Option/Option[@name='ReferencedLayerId']")
+            if not refLayerIdOpt:
+                # No relation assigned to relation reference
+                return constraints
+
+            layerId = refLayerIdOpt.get('value')
             layerName = edit_widget.find(
                         "config/Option/Option[@name='ReferencedLayerName']").get('value')
             layerSource = edit_widget.find(
