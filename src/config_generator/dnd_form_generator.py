@@ -62,7 +62,7 @@ class DnDFormGenerator:
         editWidget = maplayer.find("fieldConfiguration/field[@name='%s']/editWidget" % field)
         if (
             editWidget is None
-            or editWidget.get("type") == "Hidden" or editWidget.get("type") == "RelationReference"
+            or editWidget.get("type") == "Hidden"
         ):
             return None
         if not editWidget.get("type"):
@@ -182,6 +182,23 @@ class DnDFormGenerator:
             ))
             self.__add_widget_property(widget, "allowMulti", None, None, "true" if allowMulti else "false", "property", "bool")
             return widget
+        elif editWidget.get("type") == "RelationReference":
+            widget.set("class", "QComboBox")
+            refLayerId = editWidget.find("config/Option/Option[@name='ReferencedLayerId']").get('value')
+            refLayerName = editWidget.find("config/Option/Option[@name='ReferencedLayerName']").get('value')
+            refLayerDS = editWidget.find("config/Option/Option[@name='ReferencedLayerDataSource']").get('value')
+            try:
+                key=re.search(r"key='(\w+)'", refLayerDS).group(1)
+            except:
+                self.logger.warning("Warning: failed to determine key of ReferencedLayerDataSource %s, falling back to 'id'" % (refLayerName))
+                key="id"
+            refLayer = self.project.find(".//maplayer[id='%s']" % refLayerId)
+            value = refLayer.find('previewExpression').text.strip('"')
+            widget.set("name", "kvrel__{field}__{kvtable}__{keyfield}__{valuefield}".format(
+                field=prefix + field, kvtable=refLayerName, keyfield=key, valuefield=value
+            ))
+            return widget
+
         elif editWidget.get("type") == "ExternalResource":
             widget.set("class", "QLineEdit")
             widget.set("name", "%s__upload" % (prefix + field))

@@ -695,6 +695,55 @@ class QGSReader:
                     keyvaltable_metadata['fields'].append(kvlayer_field_metadata)
                 keyvaltables[map_prefix + "." + layerName] = keyvaltable_metadata
                 reltables.append(layerName)
+        elif edit_widget.get('type') == 'RelationReference':
+            layerId = edit_widget.find(
+                        "config/Option/Option[@name='ReferencedLayerId']").get('value')
+            layerName = edit_widget.find(
+                        "config/Option/Option[@name='ReferencedLayerName']").get('value')
+            layerSource = edit_widget.find(
+                        "config/Option/Option[@name='ReferencedLayerDataSource']").get('value')
+            allowAddFeatures = edit_widget.find(
+                        "config/Option/Option[@name='AllowAddFeatures']").get('value') == "true"
+            allowEditFeatures = edit_widget.find(
+                        "config/Option/Option[@name='ShowOpenFormButton']").get('value') == "true"
+
+
+            # Lookup shortname
+            layerName = shortnames.get(layerName, layerName)
+
+            kvlayer = root.find(".//maplayer[id='%s']" % layerId)
+            if kvlayer is None:
+                # Try to resolve by layer name
+                for ml in root.findall(".//maplayer"):
+                    mlname = ml.find("layername")
+                    if mlname is not None and mlname.text == layerName:
+                        kvlayer = ml
+                        break
+            if kvlayer is None:
+                self.logger.warning(f"Cannot generate keyvalrel config for field {field}: the referenced relation table {layerName} does not exist in the project")
+            elif kvlayer.find('provider').text != 'postgres':
+                self.logger.warning(f"Cannot generate keyvalrel config for field {field}: relation table {layerName} is not a postgres layer")
+            else:
+                # NOTE: could use layerSource, but in certain QGIS projects it does not match the datasource of the actual layer
+                keyvaltable_metadata = self.__datasource_metadata(kvlayer.find('datasource').text)
+                keyvaltable_metadata['fields'] = []
+                for kvlayer_field in kvlayer.findall('fieldConfiguration/field'):
+                    kvlayer_field_metadata = {"name": kvlayer_field.get('name')}
+                    self.__column_metadata(kvlayer_field_metadata, keyvaltable_metadata, kvlayer_field_metadata['name'], True)
+                    keyvaltable_metadata['fields'].append(kvlayer_field_metadata)
+                keyvaltables[map_prefix + "." + layerName] = keyvaltable_metadata
+                reltables.append(layerName)
+
+                key = keyvaltable_metadata['primary_key']
+                value = kvlayer.find('previewExpression').text.strip('"')
+                for field in keyvaltable_metadata['fields']:
+                    if field['name'] == value:
+                        break
+                else:
+                    self.logger.warning(f"The displayField of the layer {layerName} does not match a filed name. Note that currenlty expressions are not supported as displayFields.")
+                constraints['keyvalrel'] = map_prefix + "." + layerName + ":" + key + ":" + value
+                constraints['showAdd'] = allowAddFeatures
+                constraints['showEdit'] = allowEditFeatures
 
         elif edit_widget.get('type') == 'TextEdit':
             multilineOpt = element_attr(edit_widget.find("config/Option/Option[@name='IsMultiline']"), 'value')
