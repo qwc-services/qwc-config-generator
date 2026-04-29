@@ -184,7 +184,7 @@ class DnDFormGenerator:
             return widget
         elif editWidget.get("type") == "RelationReference":
             refLayerIdOpt = editWidget.find("config/Option/Option[@name='ReferencedLayerId']")
-            if not refLayerIdOpt:
+            if refLayerIdOpt is None:
                 # No relation assigned to relation reference
                 return None
 

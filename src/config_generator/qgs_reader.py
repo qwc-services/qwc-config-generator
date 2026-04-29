@@ -697,7 +697,7 @@ class QGSReader:
                 reltables.append(layerName)
         elif edit_widget.get('type') == 'RelationReference':
             refLayerIdOpt = edit_widget.find("config/Option/Option[@name='ReferencedLayerId']")
-            if not refLayerIdOpt:
+            if refLayerIdOpt is None:
                 # No relation assigned to relation reference
                 return constraints
 
