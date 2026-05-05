@@ -77,13 +77,14 @@ class MapViewerConfig(ServiceConfig):
         'text[]': 'text[]'
     }
 
-    def __init__(self, tenant_path, generator_config, themes_reader,
-                 config_models, schema_url, service_config, logger,
-                 use_cached_project_metadata, cache_dir):
+    def __init__(self, tenant_path, generator_config, viewer_config,
+                 themes_reader, config_models, schema_url, service_config,
+                 logger, use_cached_project_metadata, cache_dir):
         """Constructor
 
         :param str tenant_path: Path to config files of tenant
         :param obj generator_config: ConfigGenerator config
+        :param str viewer_config: Viewer config
         :param ThemeReader themes_reader: ThemesReader
         :param ConfigModels config_models: Helper for ORM models
         :param str schema_url: JSON schema URL for service config
@@ -97,6 +98,7 @@ class MapViewerConfig(ServiceConfig):
         clear_capabilities_cache()
 
         self.tenant_path = tenant_path
+        self.viewer_config = viewer_config
         self.themes_reader = themes_reader
         self.config_models = config_models
         self.use_cached_project_metadata = use_cached_project_metadata
@@ -164,7 +166,8 @@ class MapViewerConfig(ServiceConfig):
         config['resources'] = resources
 
         # collect resources from QWC2 config, capabilities and ConfigDB
-        resources['qwc2_config'] = self.qwc2_config()
+        resources['qwc2_config'] = OrderedDict()
+        resources['qwc2_config']['config'] = self.viewer_config
         assets_dir = os.path.join(
             self.qwc_base_dir,
             resources['qwc2_config']['config'].get('assetsPath', 'assets').lstrip('/')
@@ -232,32 +235,6 @@ class MapViewerConfig(ServiceConfig):
         return permissions
 
     # service config
-
-    def qwc2_config(self):
-        """Collect QWC2 application configuration from config.json."""
-        # NOTE: use ordered keys
-        qwc2_config = OrderedDict()
-
-        # additional service config
-        cfg_generator_config = self.service_config.get('generator_config', {})
-        cfg_qwc2_config = cfg_generator_config.get('qwc2_config', {})
-
-        # read QWC2 config.json
-        config = OrderedDict()
-        try:
-            config_file = cfg_qwc2_config.get(
-                'qwc2_config_file', 'config.json'
-            )
-            with open(config_file, encoding='utf-8') as f:
-                # parse config JSON with original order of keys
-                config = json.load(f, object_pairs_hook=OrderedDict)
-        except Exception as e:
-            self.logger.critical("Could not load QWC2 config.json:\n%s" % e)
-            config['ERROR'] = str(e)
-
-        qwc2_config['config'] = config
-
-        return qwc2_config
 
     def qwc2_themes(self, assets_dir):
         """Collect QWC2 themes configuration from capabilities,

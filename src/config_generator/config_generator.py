@@ -142,6 +142,7 @@ class ConfigGenerator():
         self.cancelled_event = cancelled_event
 
         config_file_dir = os.path.dirname(config_file)
+        self.logger.info("Reading tenantConfig '%s'" % config_file_dir)
         try:
             with open(config_file, encoding='utf-8') as f:
                 # parse config JSON with original order of keys
@@ -152,7 +153,7 @@ class ConfigGenerator():
             raise Exception(msg)
 
         self.tenant = config.get('config', {}).get('tenant', 'default')
-        self.logger.debug("Using tenant '%s'" % self.tenant)
+        self.logger.info("Configuring tenant '%s'" % self.tenant)
 
         # Handle themesConfig in tenantConfig.json
         themes_config = config.get("themesConfig", None)
@@ -173,8 +174,9 @@ class ConfigGenerator():
 
         if config.get('template', None):
             config_template_path = config.get('template')
+            self.logger.info("Merging tenantConfig template '%s'" % config_template_path)
             if not os.path.isabs(config_template_path):
-                    config_template_path = os.path.join(config_file_dir, config_template_path)
+                config_template_path = os.path.join(config_file_dir, config_template_path)
             try:
                 with open(config_template_path, 'r', encoding='utf-8') as fh:
                     config_template_data = fh.read().replace('$tenant$', self.tenant)
@@ -261,24 +263,14 @@ class ConfigGenerator():
         for service_config in self.config.get('services', []):
             self.service_configs[service_config['name']] = service_config
 
-        # Read assets dir from mapViewerConfig
-        map_viewer_config = self.service_config('mapViewer')
-        qwc_base_dir = map_viewer_config['config']['qwc2_path']
-        viewer_config_json = map_viewer_config.get('generator_config', {}).get('qwc2_config', {}).get('qwc2_config_file')
-        try:
-            with open(viewer_config_json, 'r') as fh:
-                viewer_config = json.load(fh)
-                assets_dir = os.path.join(
-                    qwc_base_dir,
-                    viewer_config.get('assetsPath', 'assets').lstrip('/')
-                )
-                viewer_languages = list(viewer_config.get('availableLocales', {}).keys())
-        except:
-            self.logger.warning("Failed to read assets path from viewer config.json, using default")
-            assets_dir = os.path.join(qwc_base_dir, 'assets')
-            viewer_languages = []
-        if not viewer_languages:
-            viewer_languages = ["en-US"]
+        # Read viewer config.json
+        viewer_config = self.read_viewer_config()
+
+        assets_dir = os.path.join(
+            self.service_config('mapViewer')['config']['qwc2_path'],
+            viewer_config.get('assetsPath', 'assets').lstrip('/')
+        )
+        viewer_languages = list(viewer_config.get('availableLocales', {}).keys()) or ["en-US"]
         self.logger.info(f"Assets destination: {assets_dir}")
         self.logger.info(f"Viewer languages: {viewer_languages}")
 
@@ -343,7 +335,7 @@ class ConfigGenerator():
             ),
             'mapViewer': MapViewerConfig(
                 self.temp_tenant_path,
-                generator_config, self.theme_reader, self.config_models,
+                generator_config, viewer_config, self.theme_reader, self.config_models,
                 self.schema_urls.get('mapViewer'),
                 self.service_config('mapViewer'), self.logger,
                 use_cached_project_metadata, capabilities_cache_dir
@@ -421,6 +413,52 @@ class ConfigGenerator():
         """
         if self.cancelled_event.is_set():
             raise CancelledError()
+
+    def read_viewer_config(self):
+        """ Read the viewer config file (config.json), merging any template if one is referenced. """
+        map_viewer_config = self.service_config('mapViewer')
+        viewer_config_file = map_viewer_config.get('generator_config', {}).get('qwc2_config', {}).get('qwc2_config_file', 'config.json')
+
+        try:
+            self.logger.info("Reading viewer config '%s'" % viewer_config_file)
+            with open(viewer_config_file, encoding='utf-8') as f:
+                # parse config JSON with original order of keys
+                viewer_config = json.load(f, object_pairs_hook=OrderedDict)
+        except Exception as e:
+            msg = "Error loading viewer config file %s:\n%s" % (viewer_config_file, e)
+            self.logger.critical(msg)
+            raise Exception(msg)
+
+        if viewer_config.get('template'):
+            viewer_config_template_path = viewer_config.get('template')
+            self.logger.info("Merging viewer config template '%s'" % viewer_config_template_path)
+            if not os.path.isabs(viewer_config_template_path):
+                viewer_config_file_dir = os.path.dirname(viewer_config_file)
+                viewer_config_template_path = os.path.join(viewer_config_file_dir, viewer_config_template_path)
+            try:
+                with open(viewer_config_template_path, 'r', encoding='utf-8') as fh:
+                    viewer_config_template_data = fh.read().replace('$tenant$', self.tenant)
+                    viewer_config_template = json.loads(viewer_config_template_data, object_pairs_hook=OrderedDict)
+
+                    viewer_config_plugins = {}
+                    viewer_config_template_plugins = {}
+                    for section in "common", "desktop", "mobile":
+                        viewer_config_plugins[section] = dict(map(lambda entry: (entry["name"], entry), viewer_config.get("plugins", {}).get(section, [])))
+                        viewer_config_template_plugins[section] = dict(map(lambda entry: (entry["name"], entry), viewer_config_template.get("plugins", {}).get(section, [])))
+
+                    viewer_config = deepmerge.always_merger.merge(viewer_config_template, viewer_config)
+                    viewer_config["plugins"] = viewer_config.get("plugins", {})
+                    for section in "common", "desktop", "mobile":
+                        viewer_config["plugins"][section] = list(
+                            deepmerge.always_merger.merge(viewer_config_template_plugins[section], viewer_config_plugins[section]).values()
+                        )
+
+            except Exception as e:
+                msg = "Failed to merge viewer config template %s: %s."  % (viewer_config_template_path, str(e))
+                self.logger.critical(msg)
+                raise Exception(msg)
+
+        return viewer_config
 
     def service_config(self, service):
         """Return any additional service config for service.
