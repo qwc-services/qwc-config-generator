@@ -198,7 +198,11 @@ class DnDFormGenerator:
                 self.logger.warning("Warning: failed to determine key of ReferencedLayerDataSource %s, falling back to 'id'" % (refLayerName))
                 key="id"
             refLayer = self.project.find(".//maplayer[id='%s']" % refLayerId)
-            value = refLayer.find('previewExpression').text.strip('"')
+            previewExpression = refLayer.find('previewExpression')
+            if previewExpression is not None:
+                value = previewExpression.text.strip('"') if previewExpression.text is not None else ""
+            else:
+                value = None
             widget.set("name", "kvrel__{field}__{kvtable}__{keyfield}__{valuefield}".format(
                 field=prefix + field, kvtable=refLayerName, keyfield=key, valuefield=value
             ))

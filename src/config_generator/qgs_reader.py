@@ -739,7 +739,12 @@ class QGSReader:
                 reltables.append(layerName)
 
                 key = keyvaltable_metadata['primary_key']
-                value = kvlayer.find('previewExpression').text.strip('"')
+
+                previewExpression = kvlayer.find('previewExpression')
+                if previewExpression is not None:
+                    value = previewExpression.text.strip('"') if previewExpression.text is not None else ""
+                else:
+                    value = None
                 for field in keyvaltable_metadata['fields']:
                     if field['name'] == value:
                         break
