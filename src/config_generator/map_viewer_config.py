@@ -643,7 +643,7 @@ class MapViewerConfig(ServiceConfig):
         crs = root_layer['crs']
 
         extent = None
-        bbox = root_layer['bbox']
+        bbox = root_layer.get('bbox', [0, 0, 0, 0])
         extent = [
             float(bbox[0]), # minx
             float(bbox[1]), # miny
