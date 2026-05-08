@@ -1,7 +1,8 @@
 import re
+from sqlalchemy.sql import text as sql_text
 from xml.etree import ElementTree
 
-from sqlalchemy.sql import text as sql_text
+from .qgs_reader_utils import element_attr, element_text, find_maplayer
 
 class DnDFormGenerator:
     def __init__(self, logger, assets_dir, db_engine, project, shortnames, maplayer, metadata, generate_nested_nrel_forms):
@@ -197,12 +198,10 @@ class DnDFormGenerator:
             except:
                 self.logger.warning("Warning: failed to determine key of ReferencedLayerDataSource %s, falling back to 'id'" % (refLayerName))
                 key="id"
-            refLayer = self.project.find(".//maplayer[id='%s']" % refLayerId)
-            previewExpression = refLayer.find('previewExpression')
-            if previewExpression is not None:
-                value = previewExpression.text.strip('"') if previewExpression.text is not None else ""
-            else:
-                value = None
+            refLayer = find_maplayer(self.project, refLayerId, refLayerName)
+            if refLayer is None:
+                return None
+            value = element_text(refLayer.find('previewExpression'), "").strip('"')
             widget.set("name", "kvrel__{field}__{kvtable}__{keyfield}__{valuefield}".format(
                 field=prefix + field, kvtable=refLayerName, keyfield=key, valuefield=value
             ))

@@ -15,11 +15,9 @@ from xml.etree import ElementTree
 
 from qwc_services_core.database import DatabaseEngine
 from .dnd_form_generator import DnDFormGenerator
+from .qgs_reader_utils import element_attr, element_text, find_maplayer
 
 
-def element_attr(element, attr, default=None):
-    """ Safely queries the attribute of an element which may be none. """
-    return element.get(attr, default) if element is not None else default
 class QGSReader:
     """ Read QGIS projects and extract data for QWC config """
 
@@ -115,8 +113,7 @@ class QGSReader:
             return None
 
         # Check if WMSUseLayerIDs is set
-        wmsUseLayerIds = root.find('./properties/WMSUseLayerIDs')
-        if wmsUseLayerIds is not None and wmsUseLayerIds.text == "true":
+        if element_text(root.find('./properties/WMSUseLayerIDs')) == "true":
             self.logger.warning(
                 "'Use layer ids as names' is checked in the QGIS Server properties of '%s', which is not properly supported by QWC"
                 % qgs_filename
@@ -126,13 +123,12 @@ class QGSReader:
         shortname_map = {}
         shortname_id_map = {}
         for maplayer in root.findall('.//maplayer'):
-            layernameEl = maplayer.find('layername')
-            layerIdEl = maplayer.find('id')
-            if layernameEl is not None:
-                shortnameEl = maplayer.find('shortname')
-                shortname = shortnameEl.text if shortnameEl is not None else layernameEl.text
-                shortname_map[layernameEl.text] = shortname
-                shortname_id_map[layerIdEl.text] = shortname
+            layerid = element_text(maplayer.find('id'))
+            layername = element_text(maplayer.find('layername'))
+            if layerid is not None and layername is not None:
+                shortname = element_text(maplayer.find('shortname'), layername)
+                shortname_map[layername] = shortname
+                shortname_id_map[layerid] = shortname
 
         relations = {}
         for relation in root.findall('./relations/relation'):
@@ -154,8 +150,7 @@ class QGSReader:
 
     def __project_crs(self, root):
         """ Read project CRS from QGS. """
-        authid = root.find('./projectCrs/spatialrefsys/authid')
-        return authid.text if authid is not None else None
+        return element_text(root.find('./projectCrs/spatialrefsys/authid'))
 
 
     def __project_variables(self, root):
@@ -222,7 +217,7 @@ class QGSReader:
             print_template['map'] = print_map
 
             atlas = template.find("Atlas")
-            if atlas is not None and atlas.get("enabled") == "1":
+            if element_attr(atlas, "enabled") == "1":
                 tableMetadata = self.__datasource_metadata(atlas.get('coverageLayerSource'))
                 if 'primary_key' in tableMetadata:
                     atlasLayer = atlas.get('coverageLayerName')
@@ -255,13 +250,10 @@ class QGSReader:
         layer_map = {}
         geom_types = {}
         for mapLayer in root.findall('.//maplayer'):
-            layerId = mapLayer.find('./id')
+            layerId = element_text(mapLayer.find('./id'))
             if layerId is not None:
-                geom_types[layerId.text] = mapLayer.get('wkbType')
-                if mapLayer.find('shortname') is not None:
-                    layer_map[layerId.text] = mapLayer.find('shortname').text
-                elif mapLayer.find('layername') is not None:
-                    layer_map[layerId.text] = mapLayer.find('layername').text
+                geom_types[layerId] = mapLayer.get('wkbType')
+                layer_map[layerId] = element_text(mapLayer.find('shortname'), element_text(mapLayer.find('layername')))
 
         tree = root.find('layer-tree-group')
         parent_map = {c: p for p in tree.iter() for c in p}
@@ -310,11 +302,8 @@ class QGSReader:
         layers_metadata = {}
         # Collect metadata for layers
         for maplayer in root.findall('.//maplayer'):
-            if maplayer.find('shortname') is not None:
-                layername = maplayer.find('shortname').text
-            elif maplayer.find('layername') is not None:
-                layername = maplayer.find('layername').text
-            else:
+            layername = element_text(maplayer.find('shortname'), element_text(maplayer.find('layername')))
+            if layername is None:
                 continue
 
             editable = layername in edit_datasets
@@ -341,7 +330,7 @@ class QGSReader:
                 element_attr(mapTips, "enabled") == "1" and
                 # QGIS Server has a different behavior than QGIS Desktop:
                 # it outputs map tips if enabled *and* text is not empty (does not use the Display Name)
-                mapTips.text is not None and mapTips.text.strip() != ""
+                element_text(mapTips, "").strip() != ""
             )
 
             # SensorThings metadata
@@ -494,9 +483,7 @@ class QGSReader:
             )
 
         # Display field
-        previewExpression = maplayer.find('previewExpression')
-        if previewExpression is not None:
-            m = re.match(r'^"([^"]+)"$', previewExpression.text if previewExpression.text is not None else "")
+        m = re.match(r'^"([^"]+)"$', element_text(maplayer.find('previewExpression'), ""))
         layer_metadata["displayField"] = m.group(1) if m else None
 
         # Generate form
@@ -658,14 +645,7 @@ class QGSReader:
             constraints['keyvalrel'] = map_prefix + "." + layerName + ":" + key + ":" + value
             constraints['allowMulti'] = allowMulti
 
-            kvlayer = root.find(".//maplayer[id='%s']" % layerId)
-            if kvlayer is None:
-                # Try to resolve by layer name
-                for ml in root.findall(".//maplayer"):
-                    mlname = ml.find("layername")
-                    if mlname is not None and mlname.text == layerName:
-                        kvlayer = ml
-                        break
+            kvlayer = find_maplayer(root, layerId, layerName)
             if kvlayer is None:
                 self.logger.warning(f"Cannot generate keyvalrel config for field {field}: the referenced relation table {layerName} does not exist in the project")
             elif kvlayer.find('provider').text != 'postgres':
@@ -700,14 +680,7 @@ class QGSReader:
             # Lookup shortname
             layerName = shortnames.get(layerName, layerName)
 
-            kvlayer = root.find(".//maplayer[id='%s']" % layerId)
-            if kvlayer is None:
-                # Try to resolve by layer name
-                for ml in root.findall(".//maplayer"):
-                    mlname = ml.find("layername")
-                    if mlname is not None and mlname.text == layerName:
-                        kvlayer = ml
-                        break
+            kvlayer = find_maplayer(root, layerId, layerName)
             if kvlayer is None:
                 self.logger.warning(f"Cannot generate keyvalrel config for field {field}: the referenced relation table {layerName} does not exist in the project")
             elif kvlayer.find('provider').text != 'postgres':
@@ -725,11 +698,7 @@ class QGSReader:
 
                 key = keyvaltable_metadata['primary_key']
 
-                previewExpression = kvlayer.find('previewExpression')
-                if previewExpression is not None:
-                    value = previewExpression.text.strip('"') if previewExpression.text is not None else ""
-                else:
-                    value = None
+                value = element_text(kvlayer.find('previewExpression'), "").strip('"')
                 for field in keyvaltable_metadata['fields']:
                     if field['name'] == value:
                         break
@@ -916,9 +885,8 @@ class QGSReader:
             uipath = ":/forms/autogen/%s_%s.ui?v=%d" % (projectname, layername, int(time.time()))
 
         elif editorlayout.text == "uifilelayout":
-            editform = maplayer.find('editform')
-            if editform is not None:
-                formpath = editform.text
+            formpath = element_text(maplayer.find('editform'))
+            if formpath is not None:
                 if not os.path.isabs(formpath):
                     formpath = os.path.join(qgs_dir, formpath)
                 try:
