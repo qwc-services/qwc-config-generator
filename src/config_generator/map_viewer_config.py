@@ -554,6 +554,7 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'filter', item)
         self.set_optional_config(cfg_item, 'flags', item)
         self.set_optional_config(cfg_item, 'format', item)
+        self.set_optional_config(cfg_item, 'labelProfiles', item)
         self.set_optional_config(cfg_item, 'layerTreeHiddenSublayers', item)
         self.set_optional_config(cfg_item, 'map3d', item)
         self.set_optional_config(cfg_item, 'mapTips', item)
