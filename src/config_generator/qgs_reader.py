@@ -655,6 +655,8 @@ class QGSReader:
                 keyvaltable_metadata = self.__datasource_metadata(kvlayer.find('datasource').text)
                 keyvaltable_metadata['fields'] = []
                 for kvlayer_field in kvlayer.findall('fieldConfiguration/field'):
+                    if kvlayer.find("expressionfields/field[@name='%s']" % kvlayer_field.get('name')) is not None:
+                        continue
                     kvlayer_field_metadata = {"name": kvlayer_field.get('name')}
                     self.__column_metadata(kvlayer_field_metadata, keyvaltable_metadata, kvlayer_field_metadata['name'], True)
                     keyvaltable_metadata['fields'].append(kvlayer_field_metadata)
@@ -690,6 +692,8 @@ class QGSReader:
                 keyvaltable_metadata = self.__datasource_metadata(kvlayer.find('datasource').text)
                 keyvaltable_metadata['fields'] = []
                 for kvlayer_field in kvlayer.findall('fieldConfiguration/field'):
+                    if kvlayer.find("expressionfields/field[@name='%s']" % kvlayer_field.get('name')) is not None:
+                        continue
                     kvlayer_field_metadata = {"name": kvlayer_field.get('name')}
                     self.__column_metadata(kvlayer_field_metadata, keyvaltable_metadata, kvlayer_field_metadata['name'], True)
                     keyvaltable_metadata['fields'].append(kvlayer_field_metadata)
