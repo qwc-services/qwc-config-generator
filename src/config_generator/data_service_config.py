@@ -141,6 +141,8 @@ class DataServiceConfig(ServiceConfig):
                     if attr_meta.get('expression'):
                         # Skip expression field
                         continue
+                    if attr_meta.get('data_type') in [None, 'geometry']:
+                        continue
 
                     # NOTE: use ordered keys
                     field = OrderedDict()

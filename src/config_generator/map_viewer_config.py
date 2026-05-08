@@ -1013,6 +1013,8 @@ class MapViewerConfig(ServiceConfig):
             # collect fields
             fields = []
             for fieldname, field in layer_metadata['fields'].items():
+                if field.get('data_type') in [None, 'geometry']:
+                    continue
                 data_type = self.EDIT_FIELD_TYPES.get(
                     field.get('data_type'), 'text'
                 )

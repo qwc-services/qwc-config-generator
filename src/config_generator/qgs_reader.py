@@ -471,10 +471,9 @@ class QGSReader:
                     field, layer_metadata, fieldname
                 )
 
-            if field.get('data_type') != 'geometry':
-                layer_metadata["fields"][fieldname] = field
-            else:
-                self.logger.warn("Skipping edit field %s with unhandled data-type %s" % (fieldname, field.get('data_type')))
+            layer_metadata["fields"][fieldname] = field
+            if field.get('data_type') in [None, 'geometry']:
+                self.logger.warn("Edit field %s has unsupported data-type %s" % (fieldname, field.get('data_type')))
 
         if not layer_metadata['primary_key'] in layer_metadata["fields"]:
             self.logger.warn(
