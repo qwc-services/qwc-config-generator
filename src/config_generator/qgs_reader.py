@@ -20,21 +20,6 @@ from .dnd_form_generator import DnDFormGenerator
 def element_attr(element, attr, default=None):
     """ Safely queries the attribute of an element which may be none. """
     return element.get(attr, default) if element is not None else default
-
-def deep_merge(d1, d2):
-    """Recursively merge two dictionaries."""
-    result = d1.copy()
-    for k, v in d2.items():
-        if (
-            k in result
-            and isinstance(result[k], dict)
-            and isinstance(v, dict)
-        ):
-            result[k] = deep_merge(result[k], v)
-        else:
-            result[k] = v
-    return result
-
 class QGSReader:
     """ Read QGIS projects and extract data for QWC config """
 
