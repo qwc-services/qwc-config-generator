@@ -68,7 +68,9 @@ class QGSReader:
             return None
 
         # Check if WMSUseLayerIDs is set
-        if element_text(root.find('./properties/WMSUseLayerIDs')) == "true":
+        if element_text(root.find('./properties/WMSUseLayerIDs')) == "true" \
+            or element_text(root.find("./properties/properties[@name='WMSUseLayerIDs']")) == "true"\
+        :
             self.logger.warning(
                 "'Use layer ids as names' is checked in the QGIS Server properties of '%s', which is not properly supported by QWC"
                 % qgs_filename
