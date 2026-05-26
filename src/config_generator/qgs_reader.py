@@ -40,6 +40,8 @@ class QGSReader:
         self.qgs_ext = config.get('qgis_project_extension', '.qgs')
         self.nested_nrels = config.get('generate_nested_nrel_forms', False)
 
+        self.qgs_project_cache = {}
+
         self.db_engine = DatabaseEngine()
 
 
@@ -50,13 +52,78 @@ class QGSReader:
         :param object theme_item: theme item
         ;param list edit_datasets: list of datasets for which to gather edit metadata
         """
+
+        if map_prefix.startswith("pg/"):
+            parts = map_prefix.split("/")
+            qgs_dir = self.qgs_resources_path
+            qgs_filename = 'postgresql:///?service=qgisprojects&schema=%s&project=%s' % (parts[1], parts[2])
+            qgs_path = qgs_filename
+        else:
+            qgs_filename = map_prefix + self.qgs_ext
+            qgs_path = os.path.join(self.qgs_resources_path, qgs_filename)
+            qgs_dir = os.path.dirname(qgs_path)
+
+        root = self.__read_project(qgs_filename, qgs_path)
+        if root is None:
+            return None
+
+        # Check if WMSUseLayerIDs is set
+        if element_text(root.find('./properties/WMSUseLayerIDs')) == "true":
+            self.logger.warning(
+                "'Use layer ids as names' is checked in the QGIS Server properties of '%s', which is not properly supported by QWC"
+                % qgs_filename
+            )
+
+        # Build layername -> shortname lookup and layerid -> shortname lookup
+        shortname_map = {}
+        shortname_id_map = {}
+        geom_types = {}
+        for maplayer in root.findall('.//maplayer'):
+            if maplayer.get("embedded") == "1":
+                embedded_qgs_path = os.path.join(os.path.dirname(qgs_path), maplayer.get('project'))
+                embedded_qgs_filename = os.path.relpath(embedded_qgs_path, self.qgs_resources_path)
+                embedded_root = self.__read_project(embedded_qgs_filename, embedded_qgs_path)
+                for embedded_maplayer in embedded_root.findall(".//maplayer"):
+                    if element_text(embedded_maplayer.find("id")) == maplayer.get("id"):
+                        maplayer = embedded_maplayer
+                        break
+                else:
+                    continue
+
+            layerid = element_text(maplayer.find('id'))
+            layername = element_text(maplayer.find('layername'))
+            if layerid is not None and layername is not None:
+                shortname = element_text(maplayer.find('shortname'), layername)
+                shortname_map[layername] = shortname
+                shortname_id_map[layerid] = shortname
+                geom_types[layerid] = maplayer.get('wkbType')
+
+        relations = {}
+        for relation in root.findall('./relations/relation'):
+            parent = relation.get('referencedLayer')
+            child = relation.get('referencingLayer')
+            if not parent in relations:
+                relations[parent] = set()
+            if child in shortname_id_map:
+                relations[parent].add(shortname_id_map[child])
+
+        return {
+            "project_crs": self.__project_crs(root),
+            "print_templates": self.__print_templates(root, shortname_map, theme_item),
+            "visibility_presets": self.__visibility_presets(root, theme_item, shortname_id_map, geom_types),
+            "variables": self.__project_variables(root),
+            "layer_metadata": self.__layer_metadata(root, shortname_map, map_prefix, edit_datasets, relations, theme_item, qgs_dir),
+        }
+
+
+    def __read_project(self, qgs_filename, qgs_path):
         root = None
+        if qgs_path in self.qgs_project_cache:
+            return self.qgs_project_cache[qgs_path]
+
         try:
-            if map_prefix.startswith("pg/"):
+            if qgs_path.startswith("postgresql://"):
                 parts = map_prefix.split("/")
-                qgs_dir = self.qgs_resources_path
-                qgs_filename = 'postgresql:///?service=qgisprojects&schema=%s&project=%s' % (parts[1], parts[2])
-                projectname = parts[2]
 
                 qgis_projects_db = self.db_engine.db_engine("postgresql:///?service=qgisprojects")
 
@@ -69,6 +136,7 @@ class QGSReader:
                     row = result.mappings().fetchone()
                     if not row:
                         self.logger.error("Could not find QGS project '%s'" % qgs_filename)
+                        self.qgs_project_cache[qgs_path] = None
                         return None
 
                     qgz = zipfile.ZipFile(io.BytesIO(row['content']))
@@ -80,12 +148,9 @@ class QGSReader:
                             break
 
             else:
-                qgs_filename = map_prefix + self.qgs_ext
-                qgs_path = os.path.join(self.qgs_resources_path, qgs_filename)
-                qgs_dir = os.path.dirname(qgs_path)
-                projectname = os.path.basename(qgs_path).removesuffix(self.qgs_ext)
                 if not os.path.exists(qgs_path):
                     self.logger.error("Could not find QGS project '%s'" % qgs_filename)
+                    self.qgs_project_cache[qgs_path] = None
                     return None
 
                 if self.qgs_ext == ".qgz":
@@ -103,50 +168,18 @@ class QGSReader:
 
             if tree is None or tree.getroot().tag != 'qgis':
                 self.logger.error("'%s' is not a QGS file" % qgs_filename)
+                self.qgs_project_cache[qgs_path] = None
                 return None
+
             root = tree.getroot()
             self.logger.info("Read '%s'" % qgs_filename)
+            self.qgs_project_cache[qgs_path] = root
+            return root
 
         except Exception as e:
             self.logger.error(e)
             self.logger.debug(traceback.format_exc())
             return None
-
-        # Check if WMSUseLayerIDs is set
-        if element_text(root.find('./properties/WMSUseLayerIDs')) == "true":
-            self.logger.warning(
-                "'Use layer ids as names' is checked in the QGIS Server properties of '%s', which is not properly supported by QWC"
-                % qgs_filename
-            )
-
-        # Build layername -> shortname lookup and layerid -> shortname lookup
-        shortname_map = {}
-        shortname_id_map = {}
-        for maplayer in root.findall('.//maplayer'):
-            layerid = element_text(maplayer.find('id'))
-            layername = element_text(maplayer.find('layername'))
-            if layerid is not None and layername is not None:
-                shortname = element_text(maplayer.find('shortname'), layername)
-                shortname_map[layername] = shortname
-                shortname_id_map[layerid] = shortname
-
-        relations = {}
-        for relation in root.findall('./relations/relation'):
-            parent = relation.get('referencedLayer')
-            child = relation.get('referencingLayer')
-            if not parent in relations:
-                relations[parent] = set()
-            if child in shortname_id_map:
-                relations[parent].add(shortname_id_map[child])
-
-        return {
-            "project_crs": self.__project_crs(root),
-            "print_templates": self.__print_templates(root, shortname_map, theme_item),
-            "visibility_presets": self.__visibility_presets(root, theme_item),
-            "variables": self.__project_variables(root),
-            "layer_metadata": self.__layer_metadata(root, shortname_map, map_prefix, edit_datasets, relations, theme_item, qgs_dir),
-        }
-
 
     def __project_crs(self, root):
         """ Read project CRS from QGS. """
@@ -240,20 +273,11 @@ class QGSReader:
         ]
 
 
-    def __visibility_presets(self, root, theme_item):
+    def __visibility_presets(self, root, theme_item, layer_map, geom_types):
         """ Read layer visibility presets from QGS. """
         visibilityPresets = root.find('./visibility-presets')
         if visibilityPresets is None:
             return {}
-
-        # layerId => (short)name map
-        layer_map = {}
-        geom_types = {}
-        for mapLayer in root.findall('.//maplayer'):
-            layerId = element_text(mapLayer.find('./id'))
-            if layerId is not None:
-                geom_types[layerId] = mapLayer.get('wkbType')
-                layer_map[layerId] = element_text(mapLayer.find('shortname'), element_text(mapLayer.find('layername')))
 
         tree = root.find('layer-tree-group')
         parent_map = {c: p for p in tree.iter() for c in p}
