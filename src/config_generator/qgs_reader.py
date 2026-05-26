@@ -259,9 +259,10 @@ class QGSReader:
         parent_map = {c: p for p in tree.iter() for c in p}
 
         def layer_path(layer_id):
-            child = tree.find(".//layer-tree-layer[@id='%s']" % layer_id)
+            layer_tree_entry = tree.find(".//layer-tree-layer[@id='%s']" % layer_id)
+            child = layer_tree_entry
             if child is None:
-                return None
+                return None, None
             path = [layer_map[layer_id]]
             while (parent := parent_map.get(child)) is not None:
                 shortname = parent.find('shortname')
@@ -271,7 +272,7 @@ class QGSReader:
                 else:
                     path.insert(0, parent.get('name'))
                 child = parent
-            return "/".join(path[1:])
+            return "/".join(path[1:]), layer_tree_entry.get('checked') == 'Qt::Checked'
 
 
         hidden_layers = theme_item.get('layerTreeHiddenSublayers', [])
@@ -283,16 +284,22 @@ class QGSReader:
                 layer_id = layer.get('id')
                 if layer_id not in layer_map:
                     continue
-                path = layer_path(layer_id)
-                if layer_map[layer_id] not in hidden_layers and \
-                    geom_types[layer_id] != 'WKBNoGeometry' and geom_types[layer_id] != 'NoGeometry' and \
-                    layer.get('visible') == "1" and path \
+                path, checked = layer_path(layer_id)
+                if path and layer_map[layer_id] not in hidden_layers and \
+                    geom_types[layer_id] != 'WKBNoGeometry' and geom_types[layer_id] != 'NoGeometry' \
                 :
-                    result[name][path] = layer.get('style')
+                    result[name][path] = {
+                        "checked": checked, "style": layer.get('style'), "visible": layer.get('visible') == '1'
+                    }
             for checkedGroupNode in visibilityPreset.findall('./checked-group-nodes/checked-group-node'):
                 groupid = checkedGroupNode.get('id')
                 if groupid is not None and os.path.basename(groupid) not in hidden_layers:
-                    result[name][layer_map.get(groupid, groupid)] = ""
+                    result[name][layer_map.get(groupid, groupid)] = {"checked": True}
+            for expandedGroupNode in visibilityPreset.findall('./expanded-group-nodes/expanded-group-node'):
+                groupid = expandedGroupNode.get('id')
+                if groupid is not None and os.path.basename(groupid) not in hidden_layers:
+                    path = layer_map.get(groupid, groupid)
+                    result[name][path] = result[name].get(path, {}) | {"expanded": True}
 
         return result
 
