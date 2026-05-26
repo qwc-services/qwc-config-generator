@@ -76,6 +76,15 @@ class QGSReader:
                 % qgs_filename
             )
 
+        # Check if WMSSkipNameForGroup is set
+        if element_text(root.find('./properties/WMSSkipNameForGroup')) == "true" \
+            or element_text(root.find("./properties/properties[@name='WMSSkipNameForGroup']")) == "true"\
+        :
+            self.logger.warning(
+                "'Skip name attribute for groups' is checked in the QGIS Server properties of '%s', which is not properly supported by QWC"
+                % qgs_filename
+            )
+
         # Build layername -> shortname lookup and layerid -> shortname lookup
         shortname_map = {}
         shortname_id_map = {}
