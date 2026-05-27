@@ -346,6 +346,7 @@ class MapViewerConfig(ServiceConfig):
         themes['defaultSearchProviders'] = themes_config.get('defaultSearchProviders')
         themes['defaultBackgroundLayers'] = themes_config.get('defaultBackgroundLayers', [])
         themes['defaultMapTips'] = themes_config.get('defaultMapTips', None)
+        themes['defaultLabelProfiles'] = themes_config.get('defaultLabelProfiles', None)
 
         qwc2_themes['themes'] = themes
 
