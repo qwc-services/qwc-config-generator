@@ -38,15 +38,15 @@ class ThemeReader():
         # Dictionary storing theme metadata
         self.theme_metadata = OrderedDict()
 
-        global_print_layouts = self.__search_global_print_layouts()
 
         self.capabilities_reader = CapabilitiesReader(config, logger, use_cached_project_metadata, cache_dir)
-        self.qgs_reader = QGSReader(config, logger, assets_dir, use_cached_project_metadata, global_print_layouts)
+        self.qgs_reader = QGSReader(config, logger, assets_dir, use_cached_project_metadata)
 
         self.default_qgis_server_url = config.get(
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
         self.ows_prefix = urlparse(self.default_qgis_server_url).path.rstrip('/') + '/'
+        self.global_print_layouts = self.__search_global_print_layouts()
 
         self.__read_metadata_for_group(themes_config.get('themes', {}))
 
@@ -81,37 +81,17 @@ class ThemeReader():
                 if Path(filename).suffix != ".qpt":
                     continue
 
-                path = os.path.join(dirpath, filename)
-                with open(path, encoding='utf-8') as fh:
+                with open(os.path.join(qgis_print_layouts_dir, dirpath, filename), encoding='utf-8') as fh:
                     doc = ElementTree.parse(fh)
 
-                layout = doc.getroot()
-                composer_map = doc.find(".//LayoutItem[@type='65639']")
-                if layout.tag != "Layout" or composer_map is None:
-                    self.logger.warning("Skipping invalid print template " + filename + " (may not contain a layout map element)")
+                print_template = self.qgs_reader.print_layout_metadata(doc.getroot())
+                if print_template is None:
                     continue
 
-                size = composer_map.get('size').split(',')
-                position = composer_map.get('positionOnPage').split(',')
-                print_template = OrderedDict()
-                print_template['name'] = os.path.join(relpath, layout.get('name'))
-                print_template['title'] = os.path.join(subdirrelpath, layout.get('name'))
-                print_map = OrderedDict()
-                print_map['name'] = "map0"
-                print_map['x'] = float(position[0])
-                print_map['y'] = float(position[1])
-                print_map['width'] = float(size[0])
-                print_map['height'] = float(size[1])
-                print_template['map'] = print_map
-
-                labels = []
-                for label in doc.findall(".//LayoutItem[@type='65641']"):
-                    if label.get('visibility') == '1' and label.get('id'):
-                        labels.append(label.get('id'))
-                if labels:
-                    print_template['labels'] = labels
-
-                self.logger.info("Found print template " + filename + " (" + layout.get('name') + ")")
+                layout_name = print_template['name']
+                print_template['name'] = os.path.join(relpath, layout_name)
+                print_template['title'] = os.path.join(subdirrelpath, layout_name)
+                self.logger.info("Found print template " + os.path.join(relpath, filename) + " (" + print_template['name'] + ")")
                 print_layouts[print_template['name']] = print_template
                 if print_template['name'].endswith("_legend"):
                     legend_layout_names.append(print_template['name'])
@@ -159,7 +139,7 @@ class ThemeReader():
         self.check_cancelled()
 
         project_translations = self.capabilities_reader.read_project_translations(service_name, self.viewer_languages)
-        project_metadata = self.qgs_reader.read(service_name, item, self.__get_edit_datasets(service_name))
+        project_metadata = self.qgs_reader.read(service_name, item, self.__get_edit_datasets(service_name), self.global_print_layouts)
 
         self.theme_metadata[service_name] = {
             'service_name': service_name,

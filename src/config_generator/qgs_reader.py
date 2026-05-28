@@ -1,4 +1,5 @@
 import html
+import glob
 import io
 import json
 import math
@@ -21,20 +22,18 @@ from .qgs_reader_utils import element_attr, element_text, find_maplayer
 class QGSReader:
     """ Read QGIS projects and extract data for QWC config """
 
-    def __init__(self, config, logger, assets_dir, use_cached_project_metadata, global_print_layouts):
+    def __init__(self, config, logger, assets_dir, use_cached_project_metadata):
         """Constructor
 
         :param obj config: Config generator config
         :param Logger logger: Application logger
         :param string assets_dir: Assets directory
         :param bool use_cached_project_metadata: Whether to use cached project metadata
-        :param list global_print_layouts: Global print layouts
         """
         self.config = config
         self.logger = logger
         self.assets_dir = assets_dir
         self.use_cached_project_metadata = use_cached_project_metadata
-        self.global_print_layouts = global_print_layouts
 
         self.qgs_resources_path = config.get('qgis_projects_base_dir', '/tmp/')
         self.qgs_ext = config.get('qgis_project_extension', '.qgs')
@@ -45,12 +44,13 @@ class QGSReader:
         self.db_engine = DatabaseEngine()
 
 
-    def read(self, map_prefix, theme_item, edit_datasets):
+    def read(self, map_prefix, theme_item, edit_datasets, global_print_layouts):
         """Read QGIS project file and return project metadata on success
 
         :param str map_prefix: QGS basename with the path component relative to projects base dir
         :param object theme_item: theme item
         ;param list edit_datasets: list of datasets for which to gather edit metadata
+        :param list global_print_layouts: Global print layouts
         """
 
         if map_prefix.startswith("pg/"):
@@ -120,12 +120,58 @@ class QGSReader:
 
         return {
             "project_crs": self.__project_crs(root),
-            "print_templates": self.__print_templates(root, shortname_map, theme_item),
+            "print_templates": self.__print_templates(root, shortname_map, theme_item, global_print_layouts),
             "visibility_presets": self.__visibility_presets(root, theme_item, shortname_id_map, geom_types),
             "variables": self.__project_variables(root),
             "layer_metadata": self.__layer_metadata(root, shortname_map, map_prefix, edit_datasets, relations, theme_item, qgs_dir),
         }
 
+
+    def print_layout_metadata(self, layout, shortname_map=None):
+        composer_map = layout.find(".//LayoutItem[@type='65639']")
+        if layout.tag != "Layout" or composer_map is None:
+            self.logger.warning("Skipping invalid print template " + layout.get('name') + " (it must contain a layout map element)")
+            return None
+
+        size = composer_map.get('size').split(',')
+        position = composer_map.get('positionOnPage').split(',')
+        resolution = float(layout.get('printResolution'))
+        tomm = {
+            'mm': 1,
+            'cm': 10,
+            'm': 1000,
+            'in': 25.4,
+            'ft': 304.8,
+            'pt': 25.4 / 72,
+            'pica': 25.4 / 6,
+            'px': 25.4 / resolution
+        }
+        print_template = {}
+        print_template['name'] = layout.get('name')
+        print_template['title'] = layout.get('name')
+        print_map = {}
+        print_map['name'] = "map0"
+        print_map['x'] = float(position[0]) * tomm.get(position[2], 1)
+        print_map['y'] = float(position[1]) * tomm.get(position[2], 1)
+        print_map['width'] = float(size[0]) * tomm.get(size[2], 1)
+        print_map['height'] = float(size[1]) * tomm.get(size[2], 1)
+        print_map['followPresetName'] = composer_map.get('followPresetName')
+        print_template['map'] = print_map
+        print_template['labels'] = []
+
+        for label in layout.findall(".//LayoutItem[@type='65641']"):
+            if label.get('visibility') == '1' and label.get('id'):
+                print_template['labels'].append(label.get('id'))
+
+        atlas = layout.find("Atlas")
+        if shortname_map is not None and element_attr(atlas, "enabled") == "1":
+            tableMetadata = self.__datasource_metadata(atlas.get('coverageLayerSource'))
+            if 'primary_key' in tableMetadata:
+                atlasLayer = atlas.get('coverageLayerName')
+                print_template['atlasCoverageLayer'] = shortname_map.get(atlasLayer, atlasLayer)
+                print_template['atlas_pk'] = tableMetadata['primary_key']
+
+        return print_template
 
     def __read_project(self, qgs_filename, qgs_path):
         root = None
@@ -207,15 +253,20 @@ class QGSReader:
                     variables[element.text] = parent.find(f'./variableValues/value[{i+1}]').text
         return variables
 
-    def __print_templates(self, root, shortname_map, theme_item):
+    def __print_templates(self, root, shortname_map, theme_item, global_print_layouts):
         """ Collect print templates from QGS and merge with global print layouts. """
 
-        printTemplateBlacklist = theme_item.get("printTemplateBlacklist", [])
-        restrictedLayouts = [el.text for el in root.findall('./properties/WMSRestrictedComposers/value')]
+        print_template_blacklist = theme_item.get("printTemplateBlacklist", [])
+        extra_print_templates = theme_item.get("extraPrintTemplates", [])
+        restrictedLayouts = [
+            el.text for el in root.findall('./properties/WMSRestrictedComposers/value')
+        ] + [
+            el.text for el in root.findall("./properties/properties[@name='WMSRestrictedComposers']/value")
+        ]
         print_templates = []
         composer_template_map = {}
         for template in root.findall('.//Layout'):
-            if template.get('name') not in restrictedLayouts and template.get('name') not in printTemplateBlacklist:
+            if template.get('name') not in restrictedLayouts and template.get('name') not in print_template_blacklist:
                 composer_template_map[template.get('name')] = template
 
         for template in composer_template_map.values():
@@ -223,65 +274,36 @@ class QGSReader:
             if template_name.endswith("_legend") and template_name[:-7] in composer_template_map:
                 continue
 
-            # NOTE: use ordered keys
-            print_template = OrderedDict()
-            print_template['name'] = template.get('name')
+            print_template = self.print_layout_metadata(template, shortname_map)
+            if print_template is None:
+                continue
             if template_name + "_legend" in composer_template_map:
                 print_template["legendLayout"] = template_name + "_legend";
-
-            composer_map = template.find(".//LayoutItem[@type='65639']")
-            if template.tag != "Layout" or composer_map is None:
-                self.logger.warning("Skipping invalid print template " + template.get('name') + " (may not contain a layout map element)")
-                continue
-
-            followPresetName = composer_map.get('followPresetName')
-            size = composer_map.get('size').split(',')
-            position = composer_map.get('positionOnPage').split(',')
-            resolution = float(template.get('printResolution'))
-            tomm = {
-                'mm': 1,
-                'cm': 10,
-                'm': 1000,
-                'in': 25.4,
-                'ft': 304.8,
-                'pt': 25.4 / 72,
-                'pica': 25.4 / 6,
-                'px': 25.4 / resolution
-            }
-            print_template = {}
-            print_template['name'] = template.get('name')
-            print_template['title'] = template.get('name')
-            print_map = {}
-            print_map['name'] = "map0"
-            print_map['x'] = float(position[0]) * tomm.get(position[2], 1)
-            print_map['y'] = float(position[1]) * tomm.get(position[2], 1)
-            print_map['width'] = float(size[0]) * tomm.get(size[2], 1)
-            print_map['height'] = float(size[1]) * tomm.get(size[2], 1)
-            print_map['followPresetName'] = followPresetName
-            print_template['map'] = print_map
-
-            atlas = template.find("Atlas")
-            if element_attr(atlas, "enabled") == "1":
-                tableMetadata = self.__datasource_metadata(atlas.get('coverageLayerSource'))
-                if 'primary_key' in tableMetadata:
-                    atlasLayer = atlas.get('coverageLayerName')
-                    print_template['atlasCoverageLayer'] = shortname_map.get(atlasLayer, atlasLayer)
-                    print_template['atlas_pk'] = tableMetadata['primary_key']
-
-            labels = []
-            for label in template.findall(".//LayoutItem[@type='65641']"):
-                if label.get('visibility') == '1' and label.get('id'):
-                    labels.append(label.get('id'))
-            if labels:
-                print_template['labels'] = labels
 
             print_templates.append(print_template)
 
         project_template_titles = [template['title'] for template in print_templates]
-        return print_templates + [
-            template for template in self.global_print_layouts
-            if template["title"] not in project_template_titles and template["title"] not in printTemplateBlacklist
+
+        all_print_templates = print_templates + [
+            template for template in global_print_layouts
+            if template["title"] not in project_template_titles and template["title"] not in print_template_blacklist
         ]
+
+        qgis_print_layouts_dir = self.config.get('qgis_print_layouts_dir', '/layouts')
+        for extra_print_template in extra_print_templates:
+            for match in glob.glob(os.path.join(qgis_print_layouts_dir, extra_print_template)):
+                with open(match, encoding='utf-8') as fh:
+                    doc = ElementTree.parse(fh)
+                print_template = self.print_layout_metadata(doc.getroot())
+                if print_template:
+                    relpath = os.path.dirname(match)[len(qgis_print_layouts_dir.rstrip('/')) + 1:]
+                    print_template['name'] = print_template['title'] = os.path.join(relpath, print_template['name'])
+                    all_print_templates.append(print_template)
+                    self.logger.info(
+                        "Adding extra print template " + os.path.relpath(match, qgis_print_layouts_dir) + " (" + print_template['name'] + ")"
+                    )
+
+        return all_print_templates
 
 
     def __visibility_presets(self, root, theme_item, layer_map, geom_types):
