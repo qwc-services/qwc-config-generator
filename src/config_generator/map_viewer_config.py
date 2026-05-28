@@ -217,6 +217,10 @@ class MapViewerConfig(ServiceConfig):
             permissions['oblique_image_datasets'] = sorted(self.permitted_resources(
                 'oblique_image_dataset', role, session
             ).keys())
+            permissions['default_theme'] = [
+                {'name': perm.resource.name, 'priority': perm.priority}
+                for perm in self.permissions_query.resource_permissions('default_theme', None, role, session)
+            ]
 
             object_3d_permissions = self.permitted_resources(
                 'object3d', role, session
