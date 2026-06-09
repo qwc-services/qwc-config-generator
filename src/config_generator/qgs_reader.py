@@ -113,10 +113,18 @@ class QGSReader:
         for relation in root.findall('./relations/relation'):
             parent = relation.get('referencedLayer')
             child = relation.get('referencingLayer')
-            if not parent in relations:
-                relations[parent] = set()
+            fieldRef = relation.find('fieldRef')
             if child in shortname_id_map:
-                relations[parent].add(shortname_id_map[child])
+                if not parent in relations:
+                    relations[parent] = {}
+                relation = {
+                    "id": "nrel__%s__%s" % (shortname_id_map[child], fieldRef.get('referencingField')),
+                    "layerName": shortname_id_map[child],
+                    "referencingField": fieldRef.get("referencingField"),
+                    "referencedField": fieldRef.get("referencedField")
+                }
+                key = f'{relation["layerName"]}:{relation["referencingField"]}:{relation["referencedField"]}'
+                relations[parent][key] = relation
 
         return {
             "project_crs": self.__project_crs(root),
@@ -484,15 +492,25 @@ class QGSReader:
 
         # Read referencing layers
         layer_metadata["reltables"] = []
+        added_relations = set()
         for relation in maplayer.findall('referencingLayers/relation'):
-            layer_name = relation.get('layerName')
-            layer_metadata["reltables"].append(shortnames.get(layer_name, layer_name))
+            fieldRef = relation.find('relation')
+            if fieldRef is not None:
+                referencingLayerName = relation.get('layerName')
+                shortnames.get(referencingLayerName, referencingLayerName)
+                layer_metadata["reltables"].append({
+                    "id": "nrel__%s__%s" % (referencingLayerName, fieldRef.get('referencingField')),
+                    "layerName": referencingLayerName,
+                    "referencedField": fieldRef.get('referencedField'),
+                    "referencingField": fieldRef.get('referencingField')
+                })
+                added_relations.add(f'{referencingLayerName}:{fieldRef.get('referencedField')}:{fieldRef.get('referencingField')}')
         layerid = maplayer.find('./id').text
         # For some reason (buggy QGIS projects?) some times maplayer/referencingLayer does not list a reference which
         # is listed in the toplevel relations element
-        for child in relations.get(layerid, {}):
-            if child not in layer_metadata["reltables"]:
-                layer_metadata["reltables"].append(child)
+        for key in relations.get(layerid, {}):
+            if key not in added_relations:
+                layer_metadata["reltables"].append(relations[layerid][key])
 
         # Read fields
         layer_metadata["keyvaltables"] = {}
@@ -724,7 +742,7 @@ class QGSReader:
                     self.__column_metadata(kvlayer_field_metadata, keyvaltable_metadata, kvlayer_field_metadata['name'], True)
                     keyvaltable_metadata['fields'].append(kvlayer_field_metadata)
                 keyvaltables[map_prefix + "." + layerName] = keyvaltable_metadata
-                reltables.append(layerName)
+                reltables.append({"layerName": layerName})
         elif edit_widget.get('type') == 'RelationReference':
             refLayerIdOpt = edit_widget.find("config/Option/Option[@name='ReferencedLayerId']")
             if refLayerIdOpt is None:
@@ -761,7 +779,7 @@ class QGSReader:
                     self.__column_metadata(kvlayer_field_metadata, keyvaltable_metadata, kvlayer_field_metadata['name'], True)
                     keyvaltable_metadata['fields'].append(kvlayer_field_metadata)
                 keyvaltables[map_prefix + "." + layerName] = keyvaltable_metadata
-                reltables.append(layerName)
+                reltables.append({"layerName": layerName})
 
                 key = keyvaltable_metadata['primary_key']
 
