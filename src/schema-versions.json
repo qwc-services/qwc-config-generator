@@ -2,83 +2,83 @@
   "schemas": [
     {
       "service": "configGenerator",
-      "schema_url": "https://github.com/qwc-services/qwc-config-generator/raw/master/schemas/qwc-config-generator.json"
+      "schema_url": "https://github.com/qwc-services/qwc-config-generator/raw/2026-lts/schemas/qwc-config-generator.json"
     },
     {
       "service": "adminGui",
-      "schema_url": "https://github.com/qwc-services/qwc-admin-gui/raw/master/schemas/qwc-admin-gui.json"
+      "schema_url": "https://github.com/qwc-services/qwc-admin-gui/raw/2026-lts/schemas/qwc-admin-gui.json"
     },
     {
       "service": "data",
-      "schema_url": "https://github.com/qwc-services/qwc-data-service/raw/master/schemas/qwc-data-service.json"
+      "schema_url": "https://github.com/qwc-services/qwc-data-service/raw/2026-lts/schemas/qwc-data-service.json"
     },
     {
       "service": "dbAuth",
-      "schema_url": "https://github.com/qwc-services/qwc-db-auth/raw/master/schemas/qwc-db-auth.json"
+      "schema_url": "https://github.com/qwc-services/qwc-db-auth/raw/2026-lts/schemas/qwc-db-auth.json"
     },
     {
       "service": "document",
-      "schema_url": "https://github.com/qwc-services/qwc-document-service/raw/master/schemas/qwc-document-service.json"
+      "schema_url": "https://github.com/qwc-services/qwc-document-service/raw/2026-lts/schemas/qwc-document-service.json"
     },
     {
       "service": "elevation",
-      "schema_url": "https://github.com/qwc-services/qwc-elevation-service/raw/master/schemas/qwc-elevation-service.json"
+      "schema_url": "https://github.com/qwc-services/qwc-elevation-service/raw/2026-lts/schemas/qwc-elevation-service.json"
     },
     {
       "service": "ext",
-      "schema_url": "https://github.com/qwc-services/qwc-ext-service/raw/master/schemas/qwc-ext-service.json"
+      "schema_url": "https://github.com/qwc-services/qwc-ext-service/raw/2026-lts/schemas/qwc-ext-service.json"
     },
     {
       "service": "featureInfo",
-      "schema_url": "https://github.com/qwc-services/qwc-feature-info-service/raw/master/schemas/qwc-feature-info-service.json"
+      "schema_url": "https://github.com/qwc-services/qwc-feature-info-service/raw/2026-lts/schemas/qwc-feature-info-service.json"
     },
     {
       "service": "ldapAuth",
-      "schema_url": "https://github.com/qwc-services/qwc-ldap-auth/raw/master/schemas/qwc-ldap-auth.json"
+      "schema_url": "https://github.com/qwc-services/qwc-ldap-auth/raw/2026-lts/schemas/qwc-ldap-auth.json"
     },
     {
       "service": "legend",
-      "schema_url": "https://github.com/qwc-services/qwc-legend-service/raw/master/schemas/qwc-legend-service.json"
+      "schema_url": "https://github.com/qwc-services/qwc-legend-service/raw/2026-lts/schemas/qwc-legend-service.json"
     },
     {
       "service": "mapinfo",
-      "schema_url": "https://github.com/qwc-services/qwc-mapinfo-service/raw/master/schemas/qwc-mapinfo-service.json"
+      "schema_url": "https://github.com/qwc-services/qwc-mapinfo-service/raw/2026-lts/schemas/qwc-mapinfo-service.json"
     },
     {
       "service": "mapViewer",
-      "schema_url": "https://github.com/qwc-services/qwc-map-viewer/raw/master/schemas/qwc-map-viewer.json"
+      "schema_url": "https://github.com/qwc-services/qwc-map-viewer/raw/2026-lts/schemas/qwc-map-viewer.json"
     },
     {
       "service": "ogc",
-      "schema_url": "https://github.com/qwc-services/qwc-ogc-service/raw/master/schemas/qwc-ogc-service.json"
+      "schema_url": "https://github.com/qwc-services/qwc-ogc-service/raw/2026-lts/schemas/qwc-ogc-service.json"
     },
     {
       "service": "oidcAuth",
-      "schema_url": "https://github.com/qwc-services/qwc-oidc-auth/raw/main/schemas/qwc-oidc-auth.json"
+      "schema_url": "https://github.com/qwc-services/qwc-oidc-auth/raw/2026-lts/schemas/qwc-oidc-auth.json"
     },
     {
       "service": "permalink",
-      "schema_url": "https://github.com/qwc-services/qwc-permalink-service/raw/master/schemas/qwc-permalink-service.json"
+      "schema_url": "https://github.com/qwc-services/qwc-permalink-service/raw/2026-lts/schemas/qwc-permalink-service.json"
     },
     {
       "service": "permissions",
-      "schema_url": "https://github.com/qwc-services/qwc-services-core/raw/master/schemas/qwc-services-permissions.json"
+      "schema_url": "https://github.com/qwc-services/qwc-services-core/raw/2026-lts/schemas/qwc-services-permissions.json"
     },
     {
       "service": "print",
-      "schema_url": "https://github.com/qwc-services/qwc-print-service/raw/master/schemas/qwc-print-service.json"
+      "schema_url": "https://github.com/qwc-services/qwc-print-service/raw/2026-lts/schemas/qwc-print-service.json"
     },
     {
       "service": "search",
-      "schema_url": "https://github.com/qwc-services/qwc-fulltext-search-service/raw/master/schemas/qwc-search-service.json"
+      "schema_url": "https://github.com/qwc-services/qwc-fulltext-search-service/raw/2026-lts/schemas/qwc-search-service.json"
     },
     {
       "service": "tileinfo",
-      "schema_url": "https://raw.githubusercontent.com/qwc-services/qwc-3d-tile-info-service/refs/heads/main/schemas/qwc-3d-tile-info-service.json"
+      "schema_url": "https://raw.githubusercontent.com/qwc-services/qwc-3d-tile-info-service/refs/heads/2026-lts/schemas/qwc-3d-tile-info-service.json"
     },
     {
       "service": "obliqueImagery",
-      "schema_url": "https://raw.githubusercontent.com/qwc-services/qwc-oblique-imagery-service/refs/heads/main/schemas/qwc-oblique-imagery-service.json"
+      "schema_url": "https://raw.githubusercontent.com/qwc-services/qwc-oblique-imagery-service/refs/heads/2026-lts/schemas/qwc-oblique-imagery-service.json"
     }
   ]
 }
