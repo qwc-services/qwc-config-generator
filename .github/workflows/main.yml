@@ -46,6 +46,7 @@ jobs:
         run: |
           python -m pip install check-jsonschema
           check-jsonschema --check-metaschema schemas/qwc-config-generator.json
+          python $PWD/src/download_json_schemas.py
 
     build:
       runs-on: ubuntu-latest
