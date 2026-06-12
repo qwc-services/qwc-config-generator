@@ -31,6 +31,7 @@ except Exception as e:
     exit(1)
 
 # download and save JSON schemas
+errors = False
 for schema in schema_versions.get('schemas', []):
     try:
         # parse schema URL
@@ -46,6 +47,7 @@ for schema in schema_versions.get('schemas', []):
                 "Download error: Status %s\n%s..." %
                 (response.status_code, response.text[0:150])
             )
+            errors = True
 
         # save to file
         with open(file_path, 'wb') as f:
@@ -56,3 +58,7 @@ for schema in schema_versions.get('schemas', []):
             "Error: Could not download JSON schema for service '%s' from %s\n"
             "%s" % (service, schema_url, e)
         )
+        errors = True
+
+if errors:
+    exit(1)
