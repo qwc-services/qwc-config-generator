@@ -340,6 +340,7 @@ class MapViewerConfig(ServiceConfig):
         )
 
         themes['defaultMapCrs'] = themes_config.get('defaultMapCrs')
+        themes['defaultMapExtent'] = themes_config.get('defaultMapExtent')
         themes['defaultWMSVersion'] = themes_config.get(
             'defaultWMSVersion', '1.3.0'
         )
@@ -490,6 +491,8 @@ class MapViewerConfig(ServiceConfig):
         }
         item['availableFormats'] = cap['map_formats']
         item['bbox'] = {
+            'crs': item['mapCrs'], 'bounds': cfg_item['mapExtent']
+        } if 'mapExtent' in cfg_item else {
             'crs': 'EPSG:4326', 'bounds': root_layer.get('bbox')
         }
         item['contact'] = cap.get('contact', {})
