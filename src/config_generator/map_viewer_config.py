@@ -801,8 +801,8 @@ class MapViewerConfig(ServiceConfig):
             # visible
             item_layer['visibility'] = layer['visible']
 
-            if lockedPreset:
-                item_layer['visibility'] = layerPath in lockedPreset
+            if lockedPreset and layerPath in lockedPreset:
+                item_layer['visibility'] = lockedPreset[layerPath]['checked'] == True
         else:
 
             geometryType = layer.get('geometryType')
@@ -824,14 +824,11 @@ class MapViewerConfig(ServiceConfig):
             else:
                 item_layer['style'] = ''
 
-            if lockedPreset:
-                if layerPath in lockedPreset:
-                    style = lockedPreset[layerPath]
-                    item_layer['styles'] = {style: style}
-                    item_layer['style'] = style
-                    item_layer['visibility'] = True
-                else:
-                    item_layer['visibility'] = False
+            if lockedPreset and layerPath in lockedPreset:
+                layerPreset = lockedPreset[layerPath]
+                item_layer['styles'] = {layerPreset["style"]: layerPreset["style"]}
+                item_layer['style'] = layerPreset["style"]
+                item_layer['visibility'] = layerPreset["checked"] == True
 
             if 'display_field' in layer:
                 item_layer['displayField'] = layer.get('display_field')
