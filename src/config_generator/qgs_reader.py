@@ -337,7 +337,7 @@ class QGSReader:
                 else:
                     path.insert(0, parent.get('name'))
                 child = parent
-            return "/".join(path[1:]), layer_tree_entry.get('checked') == 'Qt::Checked'
+            return "/".join(path[1:])
 
 
         hidden_layers = theme_item.get('layerTreeHiddenSublayers', [])
@@ -349,12 +349,12 @@ class QGSReader:
                 layer_id = layer.get('id')
                 if layer_id not in layer_map:
                     continue
-                path, checked = layer_path(layer_id)
+                path = layer_path(layer_id)
                 if path and layer_map[layer_id] not in hidden_layers and \
                     geom_types[layer_id] != 'WKBNoGeometry' and geom_types[layer_id] != 'NoGeometry' \
                 :
                     result[name][path] = {
-                        "checked": checked, "style": layer.get('style'), "visible": layer.get('visible') == '1'
+                        "checked": layer.get('visible') == '1', "style": layer.get('style')
                     }
             for checkedGroupNode in visibilityPreset.findall('./checked-group-nodes/checked-group-node'):
                 groupid = checkedGroupNode.get('id')
