@@ -16,7 +16,7 @@ from xml.etree import ElementTree
 
 from qwc_services_core.database import DatabaseEngine
 from .dnd_form_generator import DnDFormGenerator
-from .qgs_reader_utils import element_attr, element_text, find_maplayer
+from .qgs_reader_utils import element_attr, element_find_by_attribute, element_text, find_maplayer
 
 
 class QGSReader:
@@ -324,7 +324,7 @@ class QGSReader:
         parent_map = {c: p for p in tree.iter() for c in p}
 
         def layer_path(layer_id):
-            layer_tree_entry = tree.find(".//layer-tree-layer[@id='%s']" % layer_id)
+            layer_tree_entry = element_find_by_attribute(tree, './/layer-tree-layer', 'id', layer_id)
             child = layer_tree_entry
             if child is None:
                 return None, None
@@ -430,7 +430,8 @@ class QGSReader:
                         'alias': alias.get('name') or fieldname
                     }
 
-                configurationFlags = maplayer.find(f"fieldConfiguration/field[@name='{fieldname}']").get('configurationFlags', 'NoFlag').split('|')
+                fieldConfiguration = element_find_by_attribute(maplayer, 'fieldConfiguration/field', 'name', fieldname)
+                configurationFlags = fieldConfiguration.get('configurationFlags', 'NoFlag').split('|') if fieldConfiguration is not None else []
                 layer_metadata['fields'][fieldname].update({
                     'searchable': 'NotSearchable' not in configurationFlags,
                 })
@@ -524,15 +525,22 @@ class QGSReader:
 
             # Default value
             field['defaultValue'] = element_attr(
-                maplayer.find("defaults/default[@field='%s']" % fieldname), 'expression')
+                element_find_by_attribute(maplayer, 'defaults/default', 'field', fieldname),
+                'expression'
+            )
 
             # Virtual field expression
             field['expression'] = element_attr(
-                maplayer.find("expressionfields/field[@name='%s']" % fieldname), 'expression')
+                element_find_by_attribute(maplayer, 'expressionfields/field', 'name', fieldname),
+                'expression'
+            )
 
             # Filter expression
+            fieldConfiguration = element_find_by_attribute(maplayer, 'fieldConfiguration/field', 'name', fieldname)
             field['filterExpression'] = element_attr(
-                maplayer.find("fieldConfiguration/field[@name='%s']/editWidget[@type='ValueRelation']/config/Option/Option[@name='FilterExpression']" % fieldname), 'value')
+                fieldConfiguration.find("editWidget[@type='ValueRelation']/config/Option/Option[@name='FilterExpression']"),
+                'value'
+            ) if fieldConfiguration is not None else None
 
             # Widget constraints
             field['constraints'] = self.__field_constraints(root, maplayer, fieldname, map_prefix, shortnames, layer_metadata["keyvaltables"], layer_metadata["reltables"])
@@ -547,7 +555,9 @@ class QGSReader:
                 )
             elif field['expression']:
                 field['data_type'] = element_attr(
-                    maplayer.find("expressionfields/field[@name='%s']" % fieldname), 'typeName')
+                    element_find_by_attribute(maplayer, 'expressionfields/field', 'name', fieldname),
+                    'typeName'
+                )
             else:
                 self.__column_metadata(
                     field, layer_metadata, fieldname
@@ -656,28 +666,35 @@ class QGSReader:
         constraints = {}
 
         # ReadOnly
-        field_editable = element_attr(maplayer.find("editable/field[@name='%s']" % field), 'editable')
+        field_editable = element_attr(
+            element_find_by_attribute(maplayer, 'editable/field', 'name', field),
+            'editable'
+        )
         constraints['readOnly'] = field_editable == '0'
 
         # Required
         if not constraints['readOnly']:
             # ConstraintNotNull = 1
             constraints['required'] = int(
-                maplayer.find("constraints/constraint[@field='%s']" % field)
+                element_find_by_attribute(maplayer, 'constraints/constraint', 'field', field)
                 .get('constraints')
             ) & 1 > 0
 
         # Constraint expression
-        constraints['expression'] = element_attr(maplayer.find(
-            "constraintExpressions/constraint[@field='%s']" % field), 'exp')
+        constraints['expression'] = element_attr(
+            element_find_by_attribute(maplayer, 'constraintExpressions/constraint', 'field', field),
+            'exp'
+        )
 
         # Constraint expression description
-        constraints['placeholder'] = element_attr(maplayer.find(
-            "constraintExpressions/constraint[@field='%s']" % field
-        ), 'desc')
+        constraints['placeholder'] = element_attr(
+            element_find_by_attribute(maplayer, 'constraintExpressions/constraint', 'field', field),
+            'desc'
+        )
 
         # Edit widget config
-        edit_widget = maplayer.find("fieldConfiguration/field[@name='%s']/editWidget" % field)
+        field_configuration = element_find_by_attribute(maplayer, 'fieldConfiguration/field', 'name', field)
+        edit_widget = field_configuration.find("editWidget") if field_configuration is not None else None
 
         if edit_widget is None:
             pass
@@ -736,7 +753,7 @@ class QGSReader:
                 keyvaltable_metadata = self.__datasource_metadata(kvlayer.find('datasource').text)
                 keyvaltable_metadata['fields'] = []
                 for kvlayer_field in kvlayer.findall('fieldConfiguration/field'):
-                    if kvlayer.find("expressionfields/field[@name='%s']" % kvlayer_field.get('name')) is not None:
+                    if element_find_by_attribute(kvlayer, 'expressionfields/field', 'name', kvlayer_field.get('name')) is not None:
                         continue
                     kvlayer_field_metadata = {"name": kvlayer_field.get('name')}
                     self.__column_metadata(kvlayer_field_metadata, keyvaltable_metadata, kvlayer_field_metadata['name'], True)
@@ -773,7 +790,7 @@ class QGSReader:
                 keyvaltable_metadata = self.__datasource_metadata(kvlayer.find('datasource').text)
                 keyvaltable_metadata['fields'] = []
                 for kvlayer_field in kvlayer.findall('fieldConfiguration/field'):
-                    if kvlayer.find("expressionfields/field[@name='%s']" % kvlayer_field.get('name')) is not None:
+                    if element_find_by_attribute(kvlayer, 'expressionfields/field', 'name', kvlayer_field.get('name')) is not None:
                         continue
                     kvlayer_field_metadata = {"name": kvlayer_field.get('name')}
                     self.__column_metadata(kvlayer_field_metadata, keyvaltable_metadata, kvlayer_field_metadata['name'], True)

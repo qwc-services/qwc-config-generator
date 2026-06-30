@@ -2,7 +2,7 @@ import re
 from sqlalchemy.sql import text as sql_text
 from xml.etree import ElementTree
 
-from .qgs_reader_utils import element_attr, element_text, find_maplayer
+from .qgs_reader_utils import element_attr, element_find_by_attribute, element_text, find_maplayer
 
 class DnDFormGenerator:
     def __init__(self, logger, assets_dir, db_engine, project, shortnames, maplayer, metadata, generate_nested_nrel_forms):
@@ -60,7 +60,8 @@ class DnDFormGenerator:
         widget.append(property)
 
     def __create_editor_widget(self, maplayer, field, prefix=""):
-        editWidget = maplayer.find("fieldConfiguration/field[@name='%s']/editWidget" % field)
+        fieldConfiguration = element_find_by_attribute(maplayer, 'fieldConfiguration/field', 'name', field)
+        editWidget = fieldConfiguration.find('editWidget') if fieldConfiguration is not None else None
         if (
             editWidget is None
             or editWidget.get("type") == "Hidden"
@@ -69,9 +70,9 @@ class DnDFormGenerator:
         if not editWidget.get("type"):
             self.logger.warning("Warning: field '%s' has empty widget type" % field)
             return None
-        editableField = maplayer.find("editable/field[@name='%s']" % field)
+        editableField = element_find_by_attribute(maplayer, 'editable/field', 'name', field)
         editable = editableField is None or editableField.get("editable") == "1"
-        constraintField = maplayer.find("constraints/constraint[@field='%s']" % field)
+        constraintField = element_find_by_attribute(maplayer, 'constraints/constraint', 'field', field)
         required = constraintField is not None and constraintField.get("notnull_strength") == "1"
         if editWidget.get("type") == "CheckBox":
             # Don't translate NOT NULL constraint into required for checkboxes
@@ -83,7 +84,7 @@ class DnDFormGenerator:
         self.__add_widget_property(widget, "required", None, None, "true" if required else "false", "property", "bool")
 
         # Compatibility with deprecated <filename>__upload convention
-        uploadField = maplayer.find("expressionfields/field[@name='%s__upload']" % field)
+        uploadField = element_find_by_attribute(maplayer, 'expressionfields/field', 'name', '%s__upload' % field)
         if uploadField is not None:
             widget.set("class", "QLineEdit")
             widget.set("name", "%s__upload" % (prefix + field))
@@ -413,7 +414,7 @@ class DnDFormGenerator:
             elif child.tag == "attributeEditorRelation":
                 tabWidget = None
 
-                relation = self.project.find(".//relations/relation[@id='%s']" % child.get("relation"))
+                relation = element_find_by_attribute(self.project, './/relations/relation', 'id', child.get("relation"))
                 relationWidget = self.__create_relation_widget(relation, child.get("showLabel") == "1", child.get("label"))
                 if relationWidget is None:
                     continue
