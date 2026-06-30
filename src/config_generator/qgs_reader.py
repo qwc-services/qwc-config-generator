@@ -195,9 +195,11 @@ class QGSReader:
                 with qgis_projects_db.connect() as conn:
                     sql = sql_text("""
                         SELECT content FROM "{schema}"."{table}"
-                        WHERE name = '{project}';
-                    """.format(schema=parts[1], table="qgis_projects", project=parts[2]))
-                    result = conn.execute(sql)
+                        WHERE name = :project;
+                    """.format(schema=parts[1], table="qgis_projects"))
+                    result = conn.execute(sql, {
+                        "project": parts[2],
+                    })
                     row = result.mappings().fetchone()
                     if not row:
                         self.logger.error("Could not find QGS project '%s'" % qgs_filename)
@@ -830,23 +832,24 @@ class QGSReader:
         """ Get column metadata from database. """
 
         # build query SQL for tables and views
-        sql = sql_text("""
-            SELECT data_type, udt_name, character_maximum_length,
-                numeric_precision, numeric_scale
-            FROM information_schema.columns
-            WHERE table_schema = '{schema}' AND table_name = '{table}'
-                AND column_name = '{column}'
-            ORDER BY ordinal_position;
-        """.format(
-            schema=datasource["schema"],
-            table=datasource["table_name"],
-            column=column
-        ))
+        
         db = self.db_engine.db_engine(datasource["database"])
         try:
             with db.connect() as conn:
                 # execute query
-                results = conn.execute(sql)
+                sql = sql_text("""
+                    SELECT data_type, udt_name, character_maximum_length,
+                        numeric_precision, numeric_scale
+                    FROM information_schema.columns
+                    WHERE table_schema = :schema AND table_name = :table
+                        AND column_name = :column
+                    ORDER BY ordinal_position;
+                """)
+                results = conn.execute(sql, {
+                    "schema": datasource["schema"],
+                    "table": datasource["table_name"],
+                    "column": column
+                })
 
                 if results.rowcount == 0:
                     # fallback to query SQL for materialized views
@@ -904,16 +907,17 @@ class QGSReader:
                         WHERE
                             /* tables, views, materialized views */
                             c.relkind in ('r', 'v', 'm')
-                            AND ns.nspname = '{schema}'
-                            AND c.relname = '{table}'
-                            AND a.attname = '{column}'
+                            AND ns.nspname = :schema
+                            AND c.relname = :table
+                            AND a.attname = :column
                         ORDER BY nspname, relname, attnum
-                    """.format(
-                        schema=datasource["schema"],
-                        table=datasource["table_name"],
-                        column=column
-                    ))
-                    results = conn.execute(sql_mv)
+                    """)
+                    results = conn.execute(sql_mv, {
+                        "schema": datasource["schema"],
+                        "table": datasource["table_name"],
+                        "column": column
+                    })
+
 
 
                 row = results.mappings().fetchone()

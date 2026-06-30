@@ -144,15 +144,20 @@ class DnDFormGenerator:
             return widget
         elif editWidget.get("type") == "Enumeration":
             values = {}
-            sql =  sql_text(("""
-            SELECT udt_schema::text ||'.'|| udt_name::text as defined_type
-            FROM information_schema.columns
-            WHERE table_schema = '{schema}' AND column_name = '{column}' and table_name = '{table}'
-            GROUP BY defined_type
-            LIMIT 1;
-        """).format(schema = self.metadata['schema'], table = self.metadata['table_name'], column = field))
+            
             with self.db_engine.db_engine(self.metadata['database']).connect() as conn:
-                result = conn.execute(sql)
+                sql =  sql_text("""
+                    SELECT udt_schema::text ||'.'|| udt_name::text as defined_type
+                    FROM information_schema.columns
+                    WHERE table_schema = :schema AND column_name = :column and table_name = :table
+                    GROUP BY defined_type
+                    LIMIT 1;
+                """)
+                result = conn.execute(sql, {
+                    "schema": self.metadata['schema'],
+                    "column": field,
+                    "table": self.metadata['table_name']
+                })
                 for row in result.mappings():
                     defined_type = row['defined_type']
                 try : 
