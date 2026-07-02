@@ -9,7 +9,8 @@ import traceback
 import uuid
 
 from flask import Flask, jsonify, request, stream_with_context, Response
-from flask_restx import Api, Resource
+from flask_restx import Resource
+from qwc_services_core.api import Api
 
 from config_generator.config_generator import ConfigGenerator
 
@@ -51,9 +52,11 @@ def config_generator(tenant, logger, cancelled_event, use_cached_project_metadat
 @api.param('force_readonly_datasets', 'Whether to force read-only dataset permissions')
 class GenerateConfigs(Resource):
     def get(self):
+        """Generate service configs and permissions."""
         return self.generate_configs()
 
     def post(self):
+        """Generate service configs and permissions."""
         return self.generate_configs()
 
     def generate_configs(self):

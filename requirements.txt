@@ -331,9 +331,9 @@ psycopg2==2.9.12 \
     --hash=sha256:a73d5513bfe929c56555006c7a9cc7ae6e4276aa99dd2b1e2544eb8bb54f8b23 \
     --hash=sha256:d5fbe092315fb007c03544704e6d1e678a6c0378139d01cea433dc59edf041b4
     # via qwc-config-generator
-qwc-services-core==1.5.2 \
-    --hash=sha256:1486702ddebc7847e6801dd0d923d55490a7fdbfdc2661b9e74f9ff80c48e756 \
-    --hash=sha256:c1b8ac16663a6be3d85267b26665cb681da0b4ef317a17c79a0f8a5523e08f63
+qwc-services-core==1.6.0 \
+    --hash=sha256:d69d5351ef3f66409bfa1232d5b3299829e5d02fd757e6fa3c9007a5e166733b \
+    --hash=sha256:d7a3424ba126e50cf5a6c6e8ad7e52266043356a87df52e8f08e483fa271bb8d
     # via qwc-config-generator
 referencing==0.37.0 \
     --hash=sha256:381329a9f99628c9069361716891d34ad94af76e461dcb0335825aecc7692231 \
