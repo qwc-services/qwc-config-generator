@@ -135,11 +135,21 @@ class QGSReader:
         }
 
 
-    def print_layout_metadata(self, layout, shortname_map=None):
-        composer_map = layout.find(".//LayoutItem[@type='65639']")
-        if layout.tag != "Layout" or composer_map is None:
+    def print_layout_metadata(self, layout, shortname_map=None, project_crs=None):
+        composer_maps = layout.findall(".//LayoutItem[@type='65639']")
+        if layout.tag != "Layout" or not composer_maps:
             self.logger.warning("Skipping invalid print template " + layout.get('name') + " (it must contain a layout map element)")
             return None
+
+        # The document order of the layout map items is the mapN index used by
+        # QGIS Server GetPrint: QgsLayout::writeXml serialises the items by
+        # iterating the same item list that layoutItems<QgsLayoutItemMap>() walks.
+        # The interactive map is the first one which is not locked to its own layer set.
+        main_index = next(
+            (index for index, item in enumerate(composer_maps) if item.get('keepLayerSet') != 'true'),
+            0
+        )
+        composer_map = composer_maps[main_index]
 
         size = composer_map.get('size').split(',')
         position = composer_map.get('positionOnPage').split(',')
@@ -158,7 +168,7 @@ class QGSReader:
         print_template['name'] = layout.get('name')
         print_template['title'] = layout.get('name')
         print_map = {}
-        print_map['name'] = "map0"
+        print_map['name'] = "map%d" % main_index
         print_map['x'] = float(position[0]) * tomm.get(position[2], 1)
         print_map['y'] = float(position[1]) * tomm.get(position[2], 1)
         print_map['width'] = float(size[0]) * tomm.get(size[2], 1)
@@ -169,6 +179,36 @@ class QGSReader:
         )
         print_template['map'] = print_map
         print_template['labels'] = []
+
+        # Layout maps locked to their own layer set are printed from their saved
+        # extent. QGIS Server drops any layout map the request has no extent for.
+        fixed_maps = []
+        for index, item in enumerate(composer_maps):
+            if index == main_index or item.get('keepLayerSet') != 'true':
+                continue
+            extent = item.find('Extent')
+            if extent is None:
+                self.logger.warning("Skipping layout map map%d of print template %s (it has no saved extent)" % (index, layout.get('name')))
+                continue
+            if item.find('crs/spatialrefsys') is not None:
+                self.logger.warning("Skipping layout map map%d of print template %s (it has its own map CRS)" % (index, layout.get('name')))
+                continue
+            fixed_extent = [
+                float(extent.get('xmin')), float(extent.get('ymin')),
+                float(extent.get('xmax')), float(extent.get('ymax'))
+            ]
+            if not all(map(math.isfinite, fixed_extent)):
+                self.logger.warning("Skipping layout map map%d of print template %s (it has a non-finite extent)" % (index, layout.get('name')))
+                continue
+            fixed_maps.append({
+                'name': "map%d" % index,
+                'extent': fixed_extent,
+                'crs': project_crs
+            })
+        if project_crs and fixed_maps:
+            print_template['fixedMaps'] = fixed_maps
+        elif fixed_maps:
+            self.logger.warning("Not reporting the fixed maps of print template %s (the project CRS is unknown)" % layout.get('name'))
 
         for label in layout.findall(".//LayoutItem[@type='65641']"):
             if label.get('visibility') == '1' and label.get('id'):
@@ -277,6 +317,7 @@ class QGSReader:
             el.text for el in root.findall("./properties/properties[@name='WMSRestrictedComposers']/value")
         ]
         print_templates = []
+        project_crs = self.__project_crs(root)
         composer_template_map = {}
         for template in root.findall('.//Layout'):
             if template.get('name') not in restrictedLayouts and template.get('name') not in print_template_blacklist:
@@ -287,7 +328,7 @@ class QGSReader:
             if template_name.endswith("_legend") and template_name[:-7] in composer_template_map:
                 continue
 
-            print_template = self.print_layout_metadata(template, shortname_map)
+            print_template = self.print_layout_metadata(template, shortname_map, project_crs)
             if print_template is None:
                 continue
             if template_name + "_legend" in composer_template_map:
