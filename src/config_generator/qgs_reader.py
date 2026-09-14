@@ -144,9 +144,15 @@ class QGSReader:
         # The document order of the layout map items is the mapN index used by
         # QGIS Server GetPrint: QgsLayout::writeXml serialises the items by
         # iterating the same item list that layoutItems<QgsLayoutItemMap>() walks.
-        # The interactive map is the first one which is not locked to its own layer set.
+        def is_frozen(item):
+            """ Whether a layout map renders from its own layer set or its own map theme. """
+            return item.get('keepLayerSet') == 'true' or (
+                item.get('followPreset') == 'true' and bool(item.get('followPresetName'))
+            )
+
+        # The interactive map is the first one the author did not freeze.
         main_index = next(
-            (index for index, item in enumerate(composer_maps) if item.get('keepLayerSet') != 'true'),
+            (index for index, item in enumerate(composer_maps) if not is_frozen(item)),
             0
         )
         composer_map = composer_maps[main_index]
@@ -180,11 +186,11 @@ class QGSReader:
         print_template['map'] = print_map
         print_template['labels'] = []
 
-        # Layout maps locked to their own layer set are printed from their saved
-        # extent. QGIS Server drops any layout map the request has no extent for.
+        # Frozen layout maps are printed from their saved extent. QGIS Server drops
+        # any layout map the request has no extent for.
         fixed_maps = []
         for index, item in enumerate(composer_maps):
-            if index == main_index or item.get('keepLayerSet') != 'true':
+            if index == main_index or not is_frozen(item):
                 continue
             extent = item.find('Extent')
             if extent is None:
@@ -200,11 +206,16 @@ class QGSReader:
             if not all(map(math.isfinite, fixed_extent)):
                 self.logger.warning("Skipping layout map map%d of print template %s (it has a non-finite extent)" % (index, layout.get('name')))
                 continue
-            fixed_maps.append({
+            fixed_map = {
                 'name': "map%d" % index,
                 'extent': fixed_extent,
                 'crs': project_crs
-            })
+            }
+            if item.get('keepLayerSet') != 'true':
+                # Not locked to a layer set, so it follows a map theme: the client
+                # resolves the theme into explicit layers and styles for this map
+                fixed_map['followPresetName'] = item.get('followPresetName')
+            fixed_maps.append(fixed_map)
         if project_crs and fixed_maps:
             print_template['fixedMaps'] = fixed_maps
         elif fixed_maps:

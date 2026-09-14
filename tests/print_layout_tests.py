@@ -90,7 +90,7 @@ class PrintLayoutTestCase(unittest.TestCase):
         self.assertEqual('map0', template['map']['name'])
         self.assertNotIn('fixedMaps', template)
 
-    def test_extra_map_with_only_follow_preset_is_not_reported(self):
+    def test_follow_preset_without_a_preset_name_is_not_reported(self):
         layout = layout_xml([
             {'locked': False, 'extent': (1, 2, 3, 4)},
             {'locked': False, 'extent': (5, 6, 7, 8), 'follow_preset': True}
@@ -98,6 +98,42 @@ class PrintLayoutTestCase(unittest.TestCase):
         template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
         self.assertEqual('map0', template['map']['name'])
         self.assertNotIn('fixedMaps', template)
+
+    def test_map_following_a_theme_is_reported_with_its_preset_name(self):
+        layout = layout_xml([
+            {'locked': False, 'extent': (1, 2, 3, 4)},
+            {'locked': False, 'extent': (5, 6, 7, 8), 'follow_preset': True, 'preset_name': 'winter'}
+        ])
+        template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
+        self.assertEqual('map0', template['map']['name'])
+        self.assertEqual(
+            [{
+                'name': 'map1',
+                'extent': [5.0, 6.0, 7.0, 8.0],
+                'crs': 'EPSG:2056',
+                'followPresetName': 'winter'
+            }],
+            template['fixedMaps']
+        )
+
+    def test_locked_map_is_not_reported_with_a_preset_name(self):
+        layout = layout_xml([
+            {'locked': False, 'extent': (1, 2, 3, 4)},
+            {'locked': True, 'extent': (5, 6, 7, 8), 'follow_preset': True, 'preset_name': 'winter'}
+        ])
+        template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
+        self.assertNotIn('followPresetName', template['fixedMaps'][0])
+
+    def test_interactive_map_is_the_first_unfrozen_one(self):
+        layout = layout_xml([
+            {'locked': False, 'extent': (5, 6, 7, 8), 'follow_preset': True, 'preset_name': 'winter',
+             'size': '300,100,mm'},
+            {'locked': False, 'extent': (1, 2, 3, 4), 'size': '200,150,mm'}
+        ])
+        template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
+        self.assertEqual('map1', template['map']['name'])
+        self.assertEqual(200, template['map']['width'])
+        self.assertEqual(['map0'], [m['name'] for m in template['fixedMaps']])
 
     def test_locked_map_without_extent_is_skipped(self):
         layout = layout_xml([
