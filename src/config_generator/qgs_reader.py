@@ -150,11 +150,23 @@ class QGSReader:
                 item.get('followPreset') == 'true' and bool(item.get('followPresetName'))
             )
 
-        # The interactive map is the first one the author did not freeze.
+        def is_atlas_driven(item):
+            """ Whether the atlas drives this layout map's extent. """
+            atlas = item.find('AtlasMap')
+            return atlas is not None and atlas.get('atlasDriven', '0') != '0'
+
+        # The atlas drives its own map, so that one follows the interactive view even
+        # when the author also locked its layers. Otherwise the interactive map is the
+        # first one the author did not freeze.
         main_index = next(
-            (index for index, item in enumerate(composer_maps) if not is_frozen(item)),
+            (index for index, item in enumerate(composer_maps) if is_atlas_driven(item)),
             None
         )
+        if main_index is None:
+            main_index = next(
+                (index for index, item in enumerate(composer_maps) if not is_frozen(item)),
+                None
+            )
         if main_index is None:
             # Every map is frozen, but one of them has to follow the interactive view.
             # With a single map that is the long-standing behaviour, so only a layout
@@ -198,6 +210,10 @@ class QGSReader:
         fixed_maps = []
         for index, item in enumerate(composer_maps):
             if index == main_index:
+                continue
+            if is_atlas_driven(item):
+                # The atlas supplies this map's extent, and QGIS Server exempts it
+                # from both the removal and the extent assignment
                 continue
             if not is_frozen(item):
                 self.logger.warning("Skipping layout map map%d of print template %s (it is not frozen, so it cannot follow the interactive view and will be dropped from the printed layout)" % (index, layout.get('name')))

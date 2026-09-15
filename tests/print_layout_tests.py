@@ -10,7 +10,7 @@ def layout_xml(maps):
 
     Each entry of maps is a dict with keys: locked (bool), extent (tuple or None),
     item_crs (str or None), size (str, defaults to '200,150,mm'), follow_preset (bool),
-    preset_name (str).
+    preset_name (str), atlas_driven (bool), grid (tuple of (show, intervalX, intervalY)).
     """
     items = []
     for entry in maps:
@@ -20,14 +20,20 @@ def layout_xml(maps):
         item_crs = ''
         if 'item_crs' in entry:
             item_crs = '<crs><spatialrefsys><authid>%s</authid></spatialrefsys></crs>' % (entry['item_crs'] or '')
+        atlas = ''
+        if entry.get('atlas_driven'):
+            atlas = '<AtlasMap atlasDriven="1" scalingMode="0" margin="0.1"/>'
+        grid = ''
+        if entry.get('grid') is not None:
+            grid = '<ComposerMapGrid show="%s" intervalX="%s" intervalY="%s"/>' % entry['grid']
         items.append(
             '<LayoutItem type="65639" size="%s" positionOnPage="10,20,mm" '
-            'keepLayerSet="%s" followPreset="%s" followPresetName="%s">%s%s</LayoutItem>' % (
+            'keepLayerSet="%s" followPreset="%s" followPresetName="%s">%s%s%s%s</LayoutItem>' % (
                 entry.get('size', '200,150,mm'),
                 'true' if entry.get('locked') else 'false',
                 'true' if entry.get('follow_preset') else 'false',
                 entry.get('preset_name', ''),
-                extent, item_crs
+                extent, item_crs, atlas, grid
             )
         )
     return ElementTree.fromstring(
@@ -202,3 +208,23 @@ class PrintLayoutTestCase(unittest.TestCase):
             template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
         self.assertEqual('map0', template['map']['name'])
         self.assertTrue(any('map1' in line for line in logs.output))
+
+    def test_atlas_driven_map_is_preferred_as_the_main_map(self):
+        layout = layout_xml([
+            {'locked': False, 'extent': (1, 2, 3, 4)},
+            {'locked': True, 'extent': (5, 6, 7, 8), 'atlas_driven': True}
+        ])
+        with self.assertLogs(self.reader.logger, level='WARNING'):
+            template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
+        self.assertEqual('map1', template['map']['name'])
+
+    def test_atlas_driven_map_is_never_a_fixed_map(self):
+        layout = layout_xml([
+            {'locked': True, 'extent': (5, 6, 7, 8), 'atlas_driven': True},
+            {'locked': False, 'extent': (1, 2, 3, 4)},
+            {'locked': True, 'extent': (9, 10, 11, 12)}
+        ])
+        with self.assertLogs(self.reader.logger, level='WARNING'):
+            template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
+        self.assertEqual('map0', template['map']['name'])
+        self.assertEqual(['map2'], [entry['name'] for entry in template['fixedMaps']])
