@@ -135,7 +135,7 @@ class QGSReader:
         }
 
 
-    def print_layout_metadata(self, layout, shortname_map=None, project_crs=None):
+    def print_layout_metadata(self, layout, shortname_map=None, project_crs=None, preset_names=None):
         composer_maps = layout.findall(".//LayoutItem[@type='65639']")
         if layout.tag != "Layout" or not composer_maps:
             self.logger.warning("Skipping invalid print template " + layout.get('name') + " (it must contain a layout map element)")
@@ -265,7 +265,10 @@ class QGSReader:
             if item.get('keepLayerSet') != 'true':
                 # Not locked to a layer set, so it follows a map theme: the client
                 # resolves the theme into explicit layers and styles for this map
-                fixed_map['followPresetName'] = item.get('followPresetName')
+                preset_name = item.get('followPresetName')
+                fixed_map['followPresetName'] = preset_name
+                if preset_names is not None and preset_name not in preset_names:
+                    self.logger.warning("Layout map map%d of print template %s follows the map theme '%s', which the project does not define; it will be printed with the visible layers instead" % (index, layout.get('name'), preset_name))
             fixed_maps.append(fixed_map)
         if fixed_maps:
             print_template['fixedMaps'] = fixed_maps
@@ -378,6 +381,10 @@ class QGSReader:
         ]
         print_templates = []
         project_crs = self.__project_crs(root)
+        preset_names = {
+            element.get('name')
+            for element in root.findall('./visibility-presets/visibility-preset')
+        }
         composer_template_map = {}
         for template in root.findall('.//Layout'):
             if template.get('name') not in restrictedLayouts and template.get('name') not in print_template_blacklist:
@@ -388,7 +395,7 @@ class QGSReader:
             if template_name.endswith("_legend") and template_name[:-7] in composer_template_map:
                 continue
 
-            print_template = self.print_layout_metadata(template, shortname_map, project_crs)
+            print_template = self.print_layout_metadata(template, shortname_map, project_crs, preset_names)
             if print_template is None:
                 continue
             if template_name + "_legend" in composer_template_map:

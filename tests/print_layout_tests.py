@@ -280,3 +280,25 @@ class PrintLayoutTestCase(unittest.TestCase):
         entry = template['fixedMaps'][0]
         self.assertEqual(87.0, entry['width'])
         self.assertEqual(60.0, entry['height'])
+
+    def test_missing_theme_is_warned_about(self):
+        layout = layout_xml([
+            {'locked': False, 'extent': (5, 6, 7, 8), 'follow_preset': True, 'preset_name': 'Gone'},
+            {'locked': False, 'extent': (1, 2, 3, 4)}
+        ])
+        with self.assertLogs('print_layout_tests', level='WARNING') as logs:
+            template = self.reader.print_layout_metadata(
+                layout, project_crs='EPSG:2056', preset_names={'Situation'}
+            )
+        self.assertEqual('Gone', template['fixedMaps'][0]['followPresetName'])
+        self.assertTrue(any('Gone' in line for line in logs.output))
+
+    def test_known_theme_is_not_warned_about(self):
+        layout = layout_xml([
+            {'locked': False, 'extent': (5, 6, 7, 8), 'follow_preset': True, 'preset_name': 'Situation'},
+            {'locked': False, 'extent': (1, 2, 3, 4)}
+        ])
+        template = self.reader.print_layout_metadata(
+            layout, project_crs='EPSG:2056', preset_names={'Situation'}
+        )
+        self.assertEqual('Situation', template['fixedMaps'][0]['followPresetName'])
