@@ -241,10 +241,13 @@ class QGSReader:
             if not own_crs and not project_crs:
                 self.logger.warning("Skipping layout map map%d of print template %s (the project CRS is unknown)" % (index, layout.get('name')))
                 continue
+            item_size = item.get('size').split(',')
             fixed_map = {
                 'name': "map%d" % index,
                 'extent': fixed_extent,
-                'crs': item_crs if own_crs else project_crs
+                'crs': item_crs if own_crs else project_crs,
+                'width': float(item_size[0]) * tomm.get(item_size[2], 1),
+                'height': float(item_size[1]) * tomm.get(item_size[2], 1)
             }
             if own_crs:
                 fixed_map['ownCrs'] = True
