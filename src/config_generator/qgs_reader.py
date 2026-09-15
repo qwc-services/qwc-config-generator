@@ -222,9 +222,6 @@ class QGSReader:
             if extent is None:
                 self.logger.warning("Skipping layout map map%d of print template %s (it has no saved extent)" % (index, layout.get('name')))
                 continue
-            if item.find('crs/spatialrefsys') is not None:
-                self.logger.warning("Skipping layout map map%d of print template %s (it has its own map CRS)" % (index, layout.get('name')))
-                continue
             fixed_extent = [
                 float(extent.get('xmin')), float(extent.get('ymin')),
                 float(extent.get('xmax')), float(extent.get('ymax'))
@@ -232,20 +229,32 @@ class QGSReader:
             if not all(map(math.isfinite, fixed_extent)):
                 self.logger.warning("Skipping layout map map%d of print template %s (it has a non-finite extent)" % (index, layout.get('name')))
                 continue
+            # A map item with its own CRS keeps that CRS on the server, which assigns
+            # the requested extent to it verbatim, and the designer reprojects the
+            # saved extent when the CRS is changed. So the saved extent is already in
+            # the item CRS and the client must send it unreprojected.
+            own_crs = item.find('crs/spatialrefsys') is not None
+            item_crs = item.findtext('crs/spatialrefsys/authid') if own_crs else None
+            if own_crs and not item_crs:
+                self.logger.warning("Skipping layout map map%d of print template %s (its own map CRS has no authority identifier)" % (index, layout.get('name')))
+                continue
+            if not own_crs and not project_crs:
+                self.logger.warning("Skipping layout map map%d of print template %s (the project CRS is unknown)" % (index, layout.get('name')))
+                continue
             fixed_map = {
                 'name': "map%d" % index,
                 'extent': fixed_extent,
-                'crs': project_crs
+                'crs': item_crs if own_crs else project_crs
             }
+            if own_crs:
+                fixed_map['ownCrs'] = True
             if item.get('keepLayerSet') != 'true':
                 # Not locked to a layer set, so it follows a map theme: the client
                 # resolves the theme into explicit layers and styles for this map
                 fixed_map['followPresetName'] = item.get('followPresetName')
             fixed_maps.append(fixed_map)
-        if project_crs and fixed_maps:
+        if fixed_maps:
             print_template['fixedMaps'] = fixed_maps
-        elif fixed_maps:
-            self.logger.warning("Not reporting the fixed maps of print template %s (the project CRS is unknown)" % layout.get('name'))
 
         for label in layout.findall(".//LayoutItem[@type='65641']"):
             if label.get('visibility') == '1' and label.get('id'):
