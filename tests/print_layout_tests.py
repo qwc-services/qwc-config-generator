@@ -152,14 +152,34 @@ class PrintLayoutTestCase(unittest.TestCase):
             template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
         self.assertNotIn('fixedMaps', template)
 
-    def test_locked_map_with_own_crs_is_skipped(self):
+    def test_item_crs_is_reported_with_the_own_crs_flag(self):
         layout = layout_xml([
-            {'locked': True, 'extent': (1, 2, 3, 4), 'item_crs': 'EPSG:3857'},
+            {'locked': True, 'extent': (5.9, 45.8, 6.1, 46.0), 'item_crs': 'EPSG:4326'},
             {'locked': False, 'extent': (1, 2, 3, 4)}
         ])
-        with self.assertLogs(self.reader.logger, level='WARNING'):
-            template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
-        self.assertNotIn('fixedMaps', template)
+        template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
+        entry = template['fixedMaps'][0]
+        self.assertEqual('map0', entry['name'])
+        self.assertEqual('EPSG:4326', entry['crs'])
+        self.assertTrue(entry['ownCrs'])
+
+    def test_project_crs_map_has_no_own_crs_flag(self):
+        layout = layout_xml([
+            {'locked': True, 'extent': (2600000, 1190000, 2610000, 1200000)},
+            {'locked': False, 'extent': (1, 2, 3, 4)}
+        ])
+        template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
+        entry = template['fixedMaps'][0]
+        self.assertEqual('EPSG:2056', entry['crs'])
+        self.assertNotIn('ownCrs', entry)
+
+    def test_item_crs_map_is_reported_without_a_project_crs(self):
+        layout = layout_xml([
+            {'locked': True, 'extent': (5.9, 45.8, 6.1, 46.0), 'item_crs': 'EPSG:4326'},
+            {'locked': False, 'extent': (1, 2, 3, 4)}
+        ])
+        template = self.reader.print_layout_metadata(layout)
+        self.assertEqual('EPSG:4326', template['fixedMaps'][0]['crs'])
 
     def test_locked_map_with_empty_authid_is_skipped(self):
         layout = layout_xml([
