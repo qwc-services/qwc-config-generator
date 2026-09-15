@@ -86,7 +86,8 @@ class PrintLayoutTestCase(unittest.TestCase):
             {'locked': False, 'extent': (1, 2, 3, 4)},
             {'locked': False, 'extent': (5, 6, 7, 8)}
         ])
-        template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
+        with self.assertLogs(self.reader.logger, level='WARNING'):
+            template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
         self.assertEqual('map0', template['map']['name'])
         self.assertNotIn('fixedMaps', template)
 
@@ -95,7 +96,8 @@ class PrintLayoutTestCase(unittest.TestCase):
             {'locked': False, 'extent': (1, 2, 3, 4)},
             {'locked': False, 'extent': (5, 6, 7, 8), 'follow_preset': True}
         ])
-        template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
+        with self.assertLogs(self.reader.logger, level='WARNING'):
+            template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
         self.assertEqual('map0', template['map']['name'])
         self.assertNotIn('fixedMaps', template)
 
@@ -176,9 +178,11 @@ class PrintLayoutTestCase(unittest.TestCase):
             {'locked': True, 'extent': (1, 2, 3, 4)},
             {'locked': True, 'extent': (5, 6, 7, 8)}
         ])
-        template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
+        with self.assertLogs(self.reader.logger, level='WARNING') as logs:
+            template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
         self.assertEqual('map0', template['map']['name'])
         self.assertEqual(['map1'], [m['name'] for m in template['fixedMaps']])
+        self.assertTrue(any('map0' in line for line in logs.output))
 
     def test_project_crs_absent_omits_fixed_maps(self):
         layout = layout_xml([
@@ -188,3 +192,13 @@ class PrintLayoutTestCase(unittest.TestCase):
         with self.assertLogs(self.reader.logger, level='WARNING'):
             template = self.reader.print_layout_metadata(layout)
         self.assertNotIn('fixedMaps', template)
+
+    def test_extra_non_frozen_map_is_warned_about(self):
+        layout = layout_xml([
+            {'locked': False, 'extent': (1, 2, 3, 4)},
+            {'locked': False, 'extent': (5, 6, 7, 8)}
+        ])
+        with self.assertLogs('print_layout_tests', level='WARNING') as logs:
+            template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
+        self.assertEqual('map0', template['map']['name'])
+        self.assertTrue(any('map1' in line for line in logs.output))

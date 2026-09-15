@@ -153,8 +153,15 @@ class QGSReader:
         # The interactive map is the first one the author did not freeze.
         main_index = next(
             (index for index, item in enumerate(composer_maps) if not is_frozen(item)),
-            0
+            None
         )
+        if main_index is None:
+            # Every map is frozen, but one of them has to follow the interactive view.
+            # With a single map that is the long-standing behaviour, so only a layout
+            # that actually loses an authored freeze is worth warning about.
+            main_index = 0
+            if len(composer_maps) > 1:
+                self.logger.warning("Layout map map0 of print template %s is frozen, but every map of the layout is, so it follows the interactive view and its own extent and layers are ignored" % layout.get('name'))
         composer_map = composer_maps[main_index]
 
         size = composer_map.get('size').split(',')
@@ -190,7 +197,10 @@ class QGSReader:
         # any layout map the request has no extent for.
         fixed_maps = []
         for index, item in enumerate(composer_maps):
-            if index == main_index or not is_frozen(item):
+            if index == main_index:
+                continue
+            if not is_frozen(item):
+                self.logger.warning("Skipping layout map map%d of print template %s (it is not frozen, so it cannot follow the interactive view and will be dropped from the printed layout)" % (index, layout.get('name')))
                 continue
             extent = item.find('Extent')
             if extent is None:
