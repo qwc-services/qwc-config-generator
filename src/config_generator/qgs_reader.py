@@ -248,6 +248,17 @@ class QGSReader:
             }
             if own_crs:
                 fixed_map['ownCrs'] = True
+            # The server resets a layout map's grid interval to zero unless the
+            # request resends it, so carry the authored interval of enabled grids.
+            for grid in item.findall('ComposerMapGrid'):
+                if grid.get('show', '0') == '0':
+                    continue
+                interval_x = float(grid.get('intervalX', 0))
+                interval_y = float(grid.get('intervalY', 0))
+                if interval_x > 0 and interval_y > 0:
+                    fixed_map['gridIntervalX'] = interval_x
+                    fixed_map['gridIntervalY'] = interval_y
+                break
             if item.get('keepLayerSet') != 'true':
                 # Not locked to a layer set, so it follows a map theme: the client
                 # resolves the theme into explicit layers and styles for this map

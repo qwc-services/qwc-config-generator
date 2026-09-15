@@ -248,3 +248,21 @@ class PrintLayoutTestCase(unittest.TestCase):
             template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
         self.assertEqual('map0', template['map']['name'])
         self.assertEqual(['map2'], [entry['name'] for entry in template['fixedMaps']])
+
+    def test_enabled_grid_interval_is_reported(self):
+        layout = layout_xml([
+            {'locked': True, 'extent': (5, 6, 7, 8), 'grid': ('1', '500', '250')},
+            {'locked': False, 'extent': (1, 2, 3, 4)}
+        ])
+        template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
+        entry = template['fixedMaps'][0]
+        self.assertEqual(500.0, entry['gridIntervalX'])
+        self.assertEqual(250.0, entry['gridIntervalY'])
+
+    def test_disabled_grid_is_not_reported(self):
+        layout = layout_xml([
+            {'locked': True, 'extent': (5, 6, 7, 8), 'grid': ('0', '500', '250')},
+            {'locked': False, 'extent': (1, 2, 3, 4)}
+        ])
+        template = self.reader.print_layout_metadata(layout, project_crs='EPSG:2056')
+        self.assertNotIn('gridIntervalX', template['fixedMaps'][0])
