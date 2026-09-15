@@ -163,7 +163,10 @@ class QGSReader:
         print_map['y'] = float(position[1]) * tomm.get(position[2], 1)
         print_map['width'] = float(size[0]) * tomm.get(size[2], 1)
         print_map['height'] = float(size[1]) * tomm.get(size[2], 1)
-        print_map['followPresetName'] = composer_map.get('followPresetName')
+        print_map['followPresetName'] = (
+            composer_map.get('followPresetName')
+            if composer_map.get('followPreset') == 'true' else None
+        )
         print_template['map'] = print_map
         print_template['labels'] = []
 

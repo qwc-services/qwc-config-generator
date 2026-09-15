@@ -1,6 +1,7 @@
 import unittest
 
 from tests.permissions_tests import *
+from tests.print_layout_tests import *
 
 
 if __name__ == '__main__':
