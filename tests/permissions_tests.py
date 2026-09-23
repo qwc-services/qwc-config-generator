@@ -339,6 +339,31 @@ class PermissionsTests(unittest.TestCase):
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.data_datasets[?(@.name=='qwc_demo.edit_points' & @.deletable==false)]").find(perm)), 1)
 
 
+        # Check that geometry is not read-only only for admin is corresponding attribute permission is set
+        self.cursor.execute(f"""
+            DELETE FROM qwc_config.permissions;
+            DELETE FROM qwc_config.resources;
+            INSERT INTO qwc_config.resources (id, parent_id, type, name)
+            VALUES
+            (1, NULL, 'map', 'qwc_demo'),
+            (2, 1, 'data', 'edit_polygons'),
+            (3, 2, 'attribute', 'geometry');
+            INSERT INTO qwc_config.permissions (id, role_id, resource_id, priority, write)
+            VALUES
+            (1, {ROLE_PUBLIC}, 1, 0, FALSE),
+            (2, {ROLE_PUBLIC}, 2, 0, TRUE),
+            (3, {ROLE_ADMIN}, 3, 0, FALSE)
+        """)
+        PermissionsTests.conn.commit()
+
+        perm = self.__run_config_generator({})
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons')]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.data_datasets[?(@.name=='qwc_demo.edit_polygons')]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.data_datasets[?(@.name=='qwc_demo.edit_polygons' & @.geomreadonly==true)]").find(perm)), 1)
+        self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.data_datasets[?(@.name=='qwc_demo.edit_polygons' & @.geomreadonly==false)]").find(perm)), 1)
+
+
     def test_wfs_permissions(self):
         """ Test WFS permissions. """
 

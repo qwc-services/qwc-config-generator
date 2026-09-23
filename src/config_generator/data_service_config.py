@@ -279,6 +279,7 @@ class DataServiceConfig(ServiceConfig):
 
                 dataset_permissions = OrderedDict()
                 dataset_permissions['name'] = ("%s.%s" % (map_name, layer_name))
+                dataset_permissions['attributes'] = []
 
                  # collect CRUD permissions
                 writable = layer_name in role_writeable_datasets.get(map_name, {})
@@ -324,17 +325,25 @@ class DataServiceConfig(ServiceConfig):
 
                 # collect data attribute permissions
                 # NOTE: attributes are always allowed by default
-                restricted_attributes = set(
+                attributes_restricted_for_public = set(
                     public_restrictions['attributes'].
                     get(map_name, {}).get(layer_name, {}).keys()
                 )
-                permitted_attributes = set(
+                attributes_permitted_for_role = set(
                     role_permissions['attributes'].
                     get(map_name, {}).get(layer_name, {}).keys()
                 )
+                geometry_restricted_for_public = 'geometry' in attributes_restricted_for_public
+                geometry_permitted_for_role = 'geometry' in attributes_permitted_for_role
+
+                dataset_permissions['geomreadonly'] = geometry_restricted_for_public and not geometry_permitted_for_role
+
+                if not is_public_role and geometry_restricted_for_public and geometry_permitted_for_role:
+                    additional_crud = True
+
                 if dataset_restricted_for_public:
                     # collect attributes which are unrestricted or permitted for role
-                    restricted_attributes -= permitted_attributes
+                    restricted_attributes = attributes_restricted_for_public - attributes_permitted_for_role
 
                     # collect all permitted attributes
                     dataset_permissions['attributes'] = [
@@ -345,17 +354,17 @@ class DataServiceConfig(ServiceConfig):
                     # collect all permitted attributes
                     dataset_permissions['attributes'] = [
                         attr for attr in meta['fields']
-                        if attr not in restricted_attributes
+                        if attr not in attributes_restricted_for_public
                     ]
                 else:
                     # collect additional attributes which are restricted for public and permitted for role
-                    permitted_attributes = (
+                    attributes_permitted_for_role = (
                         role_permissions['attributes'].
                         get(map_name, {}).get(layer_name, {}).keys()
                     )
                     attributes = [
                         attr for attr in meta['fields']
-                        if attr in permitted_attributes and attr in restricted_attributes
+                        if attr in attributes_permitted_for_role and attr in attributes_restricted_for_public
                     ]
                     if attributes:
                         dataset_permissions['attributes'] = attributes
