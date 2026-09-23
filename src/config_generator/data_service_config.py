@@ -232,37 +232,20 @@ class DataServiceConfig(ServiceConfig):
             'attributes': non_public_resources('data_attribute', session)
         }
 
-        # collect write permissions for role
-        # with highest priority for all datasets
+        # collect write permissions for role for all datasets
         role_writeable_datasets = {}
         if not self.force_readonly_datasets:
-            examined_datasets = {}
             data_permissions = self.permissions_query.resource_permissions(
                 'data', None, role, session
             )
             for permission in data_permissions:
-                # lookup map resource for dataset
-                if not permission.resource.parent_id:
-                    continue
-                map_obj = self.permissions_query.get_resource(
-                    permission.resource.parent_id
-                )
-                map_name = map_obj.name
+                if permission.write and permission.resource.parent:
+                    map_name = permission.resource.parent.name
+                    if map_name not in role_writeable_datasets:
+                        role_writeable_datasets[map_name] = set()
+                    role_writeable_datasets[map_name].add(permission.resource.name)
 
-                if map_name not in role_writeable_datasets:
-                    # init lookup for map
-                    role_writeable_datasets[map_name] = set()
-                    examined_datasets[map_name] = set()
-
-                dataset = permission.resource.name
-                if dataset not in examined_datasets[map_name]:
-                    # check permission with highest priority
-                    if permission.write:
-                        # mark as writable
-                        role_writeable_datasets[map_name].add(dataset)
-                    examined_datasets[map_name].add(dataset)
-
-        is_public_role = (role == self.permissions_query.public_role())
+        is_public_role = (role == public_role)
 
         # collect edit dataset permissions for each map
         for map_name, datasets in self.available_datasets(session).items():
