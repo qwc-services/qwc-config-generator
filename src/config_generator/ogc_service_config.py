@@ -406,7 +406,7 @@ class OGCServiceConfig(ServiceConfig):
         wms_layer = OrderedDict()
         wms_layer['name'] = layer['name']
 
-        wms_layer['queryable'] = (
+        wms_layer['queryable'] = layer['queryable'] and (
             not info_service_restricted_for_public or info_service_permitted_for_role
         ) and (
             not info_layer_restricted_for_public or info_layer_permitted_for_role

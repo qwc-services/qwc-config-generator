@@ -124,6 +124,9 @@ class PermissionsTests(unittest.TestCase):
         self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons')].attributes[?(@=='name')]").find(perm)), 1)
         self.assertGreater(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='qwc_demo')].layers[?(@.name=='edit_polygons')].attributes.`len`").find(perm)[0].value, 1)
 
+        # Check that queryable is false if layer is not queryable at project level
+        self.assertEqual(len(parse("$.roles[?(@.role=='public')].permissions.wms_services[?(@.name=='scan/wfs_test')].layers[?(@.name=='ÖV: Linien' & @.queryable==false)]").find(perm)), 1)
+
         # No additional permissions for role admin, as they are public
         self.assertEqual(len(parse("$.roles[?(@.role=='admin')].permissions.wms_services[?(@.name=='qwc_demo')]").find(perm)), 0)
 

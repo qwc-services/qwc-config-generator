@@ -756,7 +756,7 @@ def my_form_open(dialog, layer, feature):
       <auxiliaryLayer/>
       <metadataUrls/>
       <flags>
-        <Identifiable>1</Identifiable>
+        <Identifiable>0</Identifiable>
         <Removable>1</Removable>
         <Searchable>1</Searchable>
         <Private>0</Private>
