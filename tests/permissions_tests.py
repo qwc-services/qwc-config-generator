@@ -1,13 +1,13 @@
-from jsonpath_ng.ext import parse
+# ruff: noqa: E501
 import os
-import psycopg2
 import shutil
 import tempfile
 import unittest
-from urllib.parse import urlparse, parse_qs, unquote, urlencode
 
+import psycopg2
 from flask import Response, json
 from flask.testing import FlaskClient
+from jsonpath_ng.ext import parse
 
 import server
 
@@ -16,9 +16,6 @@ ROLE_ADMIN = 2
 
 class PermissionsTests(unittest.TestCase):
     """Test generated permissions"""
-
-    def tearDown(self):
-        pass
 
     @classmethod
     def setUpClass(cls):
@@ -49,7 +46,7 @@ class PermissionsTests(unittest.TestCase):
             os.makedirs(os.path.join(tmpdirpath, "config", "default"))
 
             # Copy and adjust tenantConfig.json
-            with open('qwc-docker/volumes/config-in/default/tenantConfig.json', 'r') as fh:
+            with open('qwc-docker/volumes/config-in/default/tenantConfig.json') as fh:
                 data = json.load(fh)
 
             data["config"].update(generator_config)
@@ -60,8 +57,10 @@ class PermissionsTests(unittest.TestCase):
             for serviceConfig in data["services"]:
                 if serviceConfig["name"] == "mapViewer":
                     serviceConfig["config"]["qwc2_path"] = os.path.join(tmpdirpath, "qwc2")
-                    serviceConfig["generator_config"]["qwc2_config"]["qwc2_config_file"] = os.path.join(tmpdirpath, "config-in", "default", "config.json")
-                    serviceConfig["generator_config"]["qwc2_config"]["qwc2_index_file"] = os.path.join(tmpdirpath, "config-in", "default", "index.html")
+                    serviceConfig["generator_config"]["qwc2_config"]["qwc2_config_file"] = \
+                         os.path.join(tmpdirpath, "config-in", "default", "config.json")
+                    serviceConfig["generator_config"]["qwc2_config"]["qwc2_index_file"] = \
+                        os.path.join(tmpdirpath, "config-in", "default", "index.html")
 
             with open(os.path.join(tmpdirpath, "config-in", "default", "tenantConfig.json"), "w") as fh:
                 json.dump(data, fh)
@@ -84,7 +83,7 @@ class PermissionsTests(unittest.TestCase):
                 print(response.text)
             self.assertEqual(response.status_code, 200)
 
-            with open(os.path.join(tmpdirpath, "config", "default", "permissions.json"), 'r') as fh:
+            with open(os.path.join(tmpdirpath, "config", "default", "permissions.json")) as fh:
                 permissions = json.load(fh)
 
         return permissions
@@ -371,7 +370,7 @@ class PermissionsTests(unittest.TestCase):
         """ Test WFS permissions. """
 
         ## Test that no WFS service permissions are generated if wfs_service is not permitted
-        self.cursor.execute(f"""
+        self.cursor.execute("""
             DELETE FROM qwc_config.permissions;
             DELETE FROM qwc_config.resources;
         """)

@@ -1,7 +1,6 @@
-import html
 import glob
+import html
 import io
-import json
 import math
 import os
 import re
@@ -10,11 +9,12 @@ import time
 import traceback
 import zipfile
 from collections import OrderedDict
-from sqlalchemy.sql import text as sql_text
 from urllib.parse import quote as urlquote
 from xml.etree import ElementTree
 
 from qwc_services_core.database import DatabaseEngine
+from sqlalchemy.sql import text as sql_text
+
 from .dnd_form_generator import DnDFormGenerator
 from .qgs_reader_utils import element_attr, element_find_by_attribute, element_text, find_maplayer
 
@@ -56,7 +56,7 @@ class QGSReader:
         if map_prefix.startswith("pg/"):
             parts = map_prefix.split("/")
             qgs_dir = self.qgs_resources_path
-            qgs_filename = 'postgresql:///?service=qgisprojects&schema=%s&project=%s' % (parts[1], parts[2])
+            qgs_filename = f'postgresql:///?service=qgisprojects&schema={parts[1]}&project={parts[2]}'
             qgs_path = qgs_filename
         else:
             qgs_filename = map_prefix + self.qgs_ext
@@ -72,8 +72,8 @@ class QGSReader:
             or element_text(root.find("./properties/properties[@name='WMSUseLayerIDs']")) == "true"\
         :
             self.logger.warning(
-                "'Use layer ids as names' is checked in the QGIS Server properties of '%s', which is not properly supported by QWC"
-                % qgs_filename
+                f"'Use layer ids as names' is checked in the QGIS Server properties of '{qgs_filename}', "
+                "which is not properly supported by QWC"
             )
 
         # Check if WMSSkipNameForGroup is set
@@ -81,8 +81,8 @@ class QGSReader:
             or element_text(root.find("./properties/properties[@name='WMSSkipNameForGroup']")) == "true"\
         :
             self.logger.warning(
-                "'Skip name attribute for groups' is checked in the QGIS Server properties of '%s', which is not properly supported by QWC"
-                % qgs_filename
+                f"'Skip name attribute for groups' is checked in the QGIS Server properties of '{qgs_filename}', "
+                "which is not properly supported by QWC"
             )
 
         # Build layername -> shortname lookup and layerid -> shortname lookup
@@ -115,10 +115,10 @@ class QGSReader:
             child = relation.get('referencingLayer')
             fieldRef = relation.find('fieldRef')
             if child in shortname_id_map:
-                if not parent in relations:
+                if parent not in relations:
                     relations[parent] = {}
                 relation = {
-                    "id": "nrel__%s__%s" % (shortname_id_map[child], fieldRef.get('referencingField')),
+                    "id": f"nrel__{shortname_id_map[child]}__{fieldRef.get('referencingField')}",
                     "layerName": shortname_id_map[child],
                     "referencingField": fieldRef.get("referencingField"),
                     "referencedField": fieldRef.get("referencedField")
@@ -131,14 +131,18 @@ class QGSReader:
             "print_templates": self.__print_templates(root, shortname_map, theme_item, global_print_layouts),
             "visibility_presets": self.__visibility_presets(root, theme_item, shortname_id_map, geom_types),
             "variables": self.__project_variables(root),
-            "layer_metadata": self.__layer_metadata(root, shortname_map, map_prefix, edit_datasets, relations, theme_item, qgs_dir),
+            "layer_metadata": self.__layer_metadata(
+                root, shortname_map, map_prefix, edit_datasets, relations, theme_item, qgs_dir
+            )
         }
 
 
     def print_layout_metadata(self, layout, shortname_map=None, project_crs=None, preset_names=None):
         composer_maps = layout.findall(".//LayoutItem[@type='65639']")
         if layout.tag != "Layout" or not composer_maps:
-            self.logger.warning("Skipping invalid print template " + layout.get('name') + " (it must contain a layout map element)")
+            self.logger.warning(
+                "Skipping invalid print template " + layout.get('name') + " (it must contain a layout map element)"
+            )
             return None
 
         # The document order of the layout map items is the mapN index used by
@@ -173,7 +177,10 @@ class QGSReader:
             # that actually loses an authored freeze is worth warning about.
             main_index = 0
             if len(composer_maps) > 1:
-                self.logger.warning("Layout map map0 of print template %s is frozen, but every map of the layout is, so it follows the interactive view and its own extent and layers are ignored" % layout.get('name'))
+                self.logger.warning(
+                    f"Layout map map0 of print template {layout.get('name')} is frozen, but every map of the layout is, "
+                    "so it follows the interactive view and its own extent and layers are ignored"
+                )
         composer_map = composer_maps[main_index]
 
         size = composer_map.get('size').split(',')
@@ -193,7 +200,7 @@ class QGSReader:
         print_template['name'] = layout.get('name')
         print_template['title'] = layout.get('name')
         print_map = {}
-        print_map['name'] = "map%d" % main_index
+        print_map['name'] = f"map{main_index}"
         print_map['x'] = float(position[0]) * tomm.get(position[2], 1)
         print_map['y'] = float(position[1]) * tomm.get(position[2], 1)
         print_map['width'] = float(size[0]) * tomm.get(size[2], 1)
@@ -216,18 +223,25 @@ class QGSReader:
                 # from both the removal and the extent assignment
                 continue
             if not is_frozen(item):
-                self.logger.warning("Skipping layout map map%d of print template %s (it is not frozen, so it cannot follow the interactive view and will be dropped from the printed layout)" % (index, layout.get('name')))
+                self.logger.warning(
+                    f"Skipping layout map map{index} of print template {layout.get('name')} (it is not frozen, "
+                    "so it cannot follow the interactive view and will be dropped from the printed layout)"
+                )
                 continue
             extent = item.find('Extent')
             if extent is None:
-                self.logger.warning("Skipping layout map map%d of print template %s (it has no saved extent)" % (index, layout.get('name')))
+                self.logger.warning(
+                    f"Skipping layout map map{index} of print template {layout.get('name')} (it has no saved extent)"
+                )
                 continue
             fixed_extent = [
                 float(extent.get('xmin')), float(extent.get('ymin')),
                 float(extent.get('xmax')), float(extent.get('ymax'))
             ]
             if not all(map(math.isfinite, fixed_extent)):
-                self.logger.warning("Skipping layout map map%d of print template %s (it has a non-finite extent)" % (index, layout.get('name')))
+                self.logger.warning(
+                    f"Skipping layout map map{index} of print template {layout.get('name')} (it has a non-finite extent)"
+                )
                 continue
             # A map item with its own CRS keeps that CRS on the server, which assigns
             # the requested extent to it verbatim, and the designer reprojects the
@@ -236,14 +250,19 @@ class QGSReader:
             own_crs = item.find('crs/spatialrefsys') is not None
             item_crs = item.findtext('crs/spatialrefsys/authid') if own_crs else None
             if own_crs and not item_crs:
-                self.logger.warning("Skipping layout map map%d of print template %s (its own map CRS has no authority identifier)" % (index, layout.get('name')))
+                self.logger.warning(
+                    f"Skipping layout map map{index} of print template {layout.get('name')} "
+                    "(its own map CRS has no authority identifier)"
+                )
                 continue
             if not own_crs and not project_crs:
-                self.logger.warning("Skipping layout map map%d of print template %s (the project CRS is unknown)" % (index, layout.get('name')))
+                self.logger.warning(
+                    f"Skipping layout map map{index} of print template {layout.get('name')} (the project CRS is unknown)"
+                )
                 continue
             item_size = item.get('size').split(',')
             fixed_map = {
-                'name': "map%d" % index,
+                'name': f"map{index}",
                 'extent': fixed_extent,
                 'crs': item_crs if own_crs else project_crs,
                 'width': float(item_size[0]) * tomm.get(item_size[2], 1),
@@ -268,7 +287,10 @@ class QGSReader:
                 preset_name = item.get('followPresetName')
                 fixed_map['followPresetName'] = preset_name
                 if preset_names is not None and preset_name not in preset_names:
-                    self.logger.warning("Layout map map%d of print template %s follows the map theme '%s', which the project does not define; it will be printed with the visible layers instead" % (index, layout.get('name'), preset_name))
+                    self.logger.warning(
+                        f"Layout map map{index} of print template {layout.get('name')} follows the map theme '{preset_name}', "
+                        "which the project does not define; it will be printed with the visible layers instead"
+                    )
             fixed_maps.append(fixed_map)
         if fixed_maps:
             print_template['fixedMaps'] = fixed_maps
@@ -308,7 +330,7 @@ class QGSReader:
                     })
                     row = result.mappings().fetchone()
                     if not row:
-                        self.logger.error("Could not find QGS project '%s'" % qgs_filename)
+                        self.logger.error(f"Could not find QGS project '{qgs_filename}'")
                         self.qgs_project_cache[qgs_path] = None
                         return None
 
@@ -322,7 +344,7 @@ class QGSReader:
 
             else:
                 if not os.path.exists(qgs_path):
-                    self.logger.error("Could not find QGS project '%s'" % qgs_filename)
+                    self.logger.error(f"Could not find QGS project '{qgs_filename}'")
                     self.qgs_project_cache[qgs_path] = None
                     return None
 
@@ -340,12 +362,12 @@ class QGSReader:
                     tree = ElementTree.parse(qgs_path)
 
             if tree is None or tree.getroot().tag != 'qgis':
-                self.logger.error("'%s' is not a QGS file" % qgs_filename)
+                self.logger.error(f"'{qgs_filename}' is not a QGS file")
                 self.qgs_project_cache[qgs_path] = None
                 return None
 
             root = tree.getroot()
-            self.logger.info("Read '%s'" % qgs_filename)
+            self.logger.info(f"Read '{qgs_filename}'")
             self.qgs_project_cache[qgs_path] = root
             return root
 
@@ -399,7 +421,7 @@ class QGSReader:
             if print_template is None:
                 continue
             if template_name + "_legend" in composer_template_map:
-                print_template["legendLayout"] = template_name + "_legend";
+                print_template["legendLayout"] = template_name + "_legend"
 
             print_templates.append(print_template)
 
@@ -421,7 +443,8 @@ class QGSReader:
                     print_template['name'] = print_template['title'] = os.path.join(relpath, print_template['name'])
                     all_print_templates.append(print_template)
                     self.logger.info(
-                        "Adding extra print template " + os.path.relpath(match, qgis_print_layouts_dir) + " (" + print_template['name'] + ")"
+                        f"Adding extra print template {os.path.relpath(match, qgis_print_layouts_dir)} "
+                        f"({print_template['name']})"
                     )
 
         return all_print_templates
@@ -513,13 +536,16 @@ class QGSReader:
             layer_metadata["refresh_interval"] = int(maplayer.get('autoRefreshTime', 0))
 
             # Dimensions
-            layer_metadata["dimensions"] = dict([(
-                dim.get('name'), {'fieldName': dim.get('fieldName'), 'endFieldName': dim.get('endFieldName')}
-            ) for dim in maplayer.findall("wmsDimensions/dimension")])
+            layer_metadata["dimensions"] = {
+                dim.get('name'): {'fieldName': dim.get('fieldName'), 'endFieldName': dim.get('endFieldName')}
+                for dim in maplayer.findall("wmsDimensions/dimension")
+            }
 
             # Edit metadata
             if editable:
-                self.__layer_edit_metadata(root, layer_metadata, maplayer, layername, map_prefix, shortname_map, relations, qgs_dir, theme_item)
+                self.__layer_edit_metadata(
+                    root, layer_metadata, maplayer, layername, map_prefix, shortname_map, relations, qgs_dir, theme_item
+                )
 
             # Map tips
             mapTips = maplayer.find('mapTip')
@@ -539,7 +565,9 @@ class QGSReader:
             if parent is not None:
                 for i, element in enumerate(parent.findall('./Option[@name="variableNames"]/Option')):
                     if element.get('value').startswith('qwc_'):
-                        variables[element.get('value')] = parent.find(f'./Option[@name="variableValues"]/Option[{i+1}]').get('value')
+                        variables[element.get('value')] = parent.find(
+                            f'./Option[@name="variableValues"]/Option[{i+1}]'
+                        ).get('value')
             layer_metadata["variables"] = variables
 
             # Searchable fields
@@ -556,7 +584,8 @@ class QGSReader:
                     }
 
                 fieldConfiguration = element_find_by_attribute(maplayer, 'fieldConfiguration/field', 'name', fieldname)
-                configurationFlags = fieldConfiguration.get('configurationFlags', 'NoFlag').split('|') if fieldConfiguration is not None else []
+                configurationFlags = fieldConfiguration.get('configurationFlags', 'NoFlag').split('|') \
+                    if fieldConfiguration is not None else []
                 layer_metadata['fields'][fieldname].update({
                     'searchable': 'NotSearchable' not in configurationFlags,
                 })
@@ -566,15 +595,19 @@ class QGSReader:
         # Warn about non-existing datasets
         shortnames = shortname_map.values()
         invalid_datasets = [
-            dataset for dataset in edit_datasets if not dataset in shortnames
+            dataset for dataset in edit_datasets if dataset not in shortnames
         ]
         if invalid_datasets:
-            self.logger.warn("The following data resources did not match any layer in the project %s: %s" % (map_prefix, ",".join(invalid_datasets)))
+            self.logger.warn(
+                f"The following data resources didn't match any layer in the project {map_prefix}: {','.join(invalid_datasets)}"
+            )
 
         return layers_metadata
 
 
-    def __layer_edit_metadata(self, root, layer_metadata, maplayer, layername, map_prefix, shortnames, relations, qgs_dir, theme_item):
+    def __layer_edit_metadata(
+        self, root, layer_metadata, maplayer, layername, map_prefix, shortnames, relations, qgs_dir, theme_item
+    ):
         """ Read layer metadata relevant for editing from QGS. """
 
         provider = maplayer.find('provider').text
@@ -594,7 +627,7 @@ class QGSReader:
         joinfields = {}
         jointables = {}
         for join in maplayer.findall('vectorjoins/join'):
-            joinlayer = root.find(".//maplayer[id='%s']" % join.get('joinLayerId'))
+            joinlayer = root.find(f".//maplayer[id='{join.get('joinLayerId')}']")
             if joinlayer is not None:
                 jointable = joinlayer.find('layername').text
                 if join.find('joinFieldsSubset') is not None:
@@ -603,13 +636,13 @@ class QGSReader:
                     jointablefields = joinlayer.find('fieldConfiguration').findall('field')
 
                 for field in jointablefields:
-                    if not jointable in jointables:
+                    if jointable not in jointables:
                         jointables[jointable] = self.__datasource_metadata(joinlayer.find('datasource').text, joinlayer)
                         jointables[jointable]['targetField'] = join.get('targetFieldName')
                         jointables[jointable]['joinField'] = join.get('joinFieldName')
 
                     prefix = join.get('customPrefix', jointable + '_')
-                    joinfieldname = '%s%s' % (prefix, field.get('name'))
+                    joinfieldname = prefix + field.get('name')
                     joinfields[joinfieldname] = {
                         'field': field.get('name'),
                         'table': jointable
@@ -625,12 +658,12 @@ class QGSReader:
                 referencingLayerName = relation.get('layerName')
                 shortnames.get(referencingLayerName, referencingLayerName)
                 layer_metadata["reltables"].append({
-                    "id": "nrel__%s__%s" % (referencingLayerName, fieldRef.get('referencingField')),
+                    "id": f"nrel__{referencingLayerName}__{fieldRef.get('referencingField')}",
                     "layerName": referencingLayerName,
                     "referencedField": fieldRef.get('referencedField'),
                     "referencingField": fieldRef.get('referencingField')
                 })
-                added_relations.add(f'{referencingLayerName}:{fieldRef.get('referencedField')}:{fieldRef.get('referencingField')}')
+                added_relations.add(f"{referencingLayerName}:{fieldRef.get('referencedField')}:{fieldRef.get('referencingField')}")
         layerid = maplayer.find('./id').text
         # For some reason (buggy QGIS projects?) some times maplayer/referencingLayer does not list a reference which
         # is listed in the toplevel relations element
@@ -668,10 +701,12 @@ class QGSReader:
             ) if fieldConfiguration is not None else None
 
             # Widget constraints
-            field['constraints'] = self.__field_constraints(root, maplayer, fieldname, map_prefix, shortnames, layer_metadata["keyvaltables"], layer_metadata["reltables"])
+            field['constraints'] = self.__field_constraints(
+                root, maplayer, fieldname, map_prefix, shortnames, layer_metadata["keyvaltables"], layer_metadata["reltables"]
+            )
 
             # Join field
-            field['joinfield'] = joinfields.get(fieldname, None)
+            field['joinfield'] = joinfields.get(fieldname)
 
             # Lookup DB column type
             if field['joinfield']:
@@ -690,12 +725,12 @@ class QGSReader:
 
             layer_metadata["fields"][fieldname] = field
             if field.get('data_type') in [None, 'geometry']:
-                self.logger.warn("Edit field %s has unsupported data-type %s" % (fieldname, field.get('data_type')))
+                self.logger.warn(f"Edit field {fieldname} has unsupported data-type {field.get('data_type')}")
 
-        if not layer_metadata['primary_key'] in layer_metadata["fields"]:
+        if layer_metadata['primary_key'] not in layer_metadata["fields"]:
             self.logger.warn(
-                "Primary key '%s' does not match any existing field. Check that a valid primary key has been set on the table '%s'."
-                % (layer_metadata['primary_key'], layer_metadata['schema'] + "." + layer_metadata['table_name'])
+                f"Primary key '{layer_metadata['primary_key']}' does not match any existing field. "
+                f"Check that the table '{layer_metadata['schema']}.{layer_metadata['table_name']} has a valid primary key."
             )
 
         # Display field
@@ -730,7 +765,7 @@ class QGSReader:
 
         # Parse DB connection
         if params.get('service'):
-            metadata["database"] = 'postgresql:///?service=%s' % params['service']
+            metadata["database"] = f"postgresql:///?service={params['service']}"
 
         elif params.get('dbname'):
             dbname = params['dbname']
@@ -740,9 +775,7 @@ class QGSReader:
             password = params.get('password')
 
             # postgresql://user:password@host:port/dbname
-            credentials = "%s:%s@" % (
-                urlquote(user), urlquote(password)
-            ) if user and password else ""
+            credentials = f"{urlquote(user)}:{urlquote(password)}@" if user and password else ""
 
             metadata["database"] = f'postgresql://{credentials}{host}:{port}/{dbname}'
 
@@ -849,18 +882,11 @@ class QGSReader:
                 constraints['values'] = values
 
         elif edit_widget.get('type') == 'ValueRelation':
-            key = edit_widget.find(
-                        "config/Option/Option[@name='Key']").get('value')
-            value = edit_widget.find(
-                        "config/Option/Option[@name='Value']").get('value')
-            layerId = edit_widget.find(
-                        "config/Option/Option[@name='Layer']").get('value')
-            layerName = edit_widget.find(
-                        "config/Option/Option[@name='LayerName']").get('value')
-            layerSource = edit_widget.find(
-                        "config/Option/Option[@name='LayerSource']").get('value')
-            allowMulti = edit_widget.find(
-                        "config/Option/Option[@name='AllowMulti']").get('value') == "true"
+            key = edit_widget.find("config/Option/Option[@name='Key']").get('value')
+            value = edit_widget.find("config/Option/Option[@name='Value']").get('value')
+            layerId = edit_widget.find("config/Option/Option[@name='Layer']").get('value')
+            layerName = edit_widget.find("config/Option/Option[@name='LayerName']").get('value')
+            allowMulti = edit_widget.find("config/Option/Option[@name='AllowMulti']").get('value') == "true"
 
             # Lookup shortname
             layerName = shortnames.get(layerName, layerName)
@@ -870,17 +896,23 @@ class QGSReader:
 
             kvlayer = find_maplayer(root, layerId, layerName)
             if kvlayer is None:
-                self.logger.warning(f"Cannot generate keyvalrel config for field {field}: the referenced relation table {layerName} does not exist in the project")
+                self.logger.warning(
+                    f"Cannot generate keyvalrel config for field {field}: "
+                    f"the referenced relation table {layerName} does not exist in the project"
+                )
             elif kvlayer.find('provider').text != 'postgres':
-                self.logger.warning(f"Cannot generate keyvalrel config for field {field}: relation table {layerName} is not a postgres layer")
+                self.logger.warning(
+                    f"Cannot generate keyvalrel config for field {field}: relation table {layerName} is not a postgres layer"
+                )
             else:
                 # NOTE: could use layerSource, but in certain QGIS projects it does not match the datasource of the actual layer
                 keyvaltable_metadata = self.__datasource_metadata(kvlayer.find('datasource').text)
                 keyvaltable_metadata['fields'] = []
                 for kvlayer_field in kvlayer.findall('fieldConfiguration/field'):
-                    if element_find_by_attribute(kvlayer, 'expressionfields/field', 'name', kvlayer_field.get('name')) is not None:
+                    kvlayer_name = kvlayer_field.get('name')
+                    if element_find_by_attribute(kvlayer, 'expressionfields/field', 'name', kvlayer_name) is not None:
                         continue
-                    kvlayer_field_metadata = {"name": kvlayer_field.get('name')}
+                    kvlayer_field_metadata = {"name": kvlayer_name}
                     self.__column_metadata(kvlayer_field_metadata, keyvaltable_metadata, kvlayer_field_metadata['name'], True)
                     keyvaltable_metadata['fields'].append(kvlayer_field_metadata)
                 keyvaltables[map_prefix + "." + layerName] = keyvaltable_metadata
@@ -892,14 +924,9 @@ class QGSReader:
                 return constraints
 
             layerId = refLayerIdOpt.get('value')
-            layerName = edit_widget.find(
-                        "config/Option/Option[@name='ReferencedLayerName']").get('value')
-            layerSource = edit_widget.find(
-                        "config/Option/Option[@name='ReferencedLayerDataSource']").get('value')
-            allowAddFeatures = edit_widget.find(
-                        "config/Option/Option[@name='AllowAddFeatures']").get('value') == "true"
-            allowEditFeatures = edit_widget.find(
-                        "config/Option/Option[@name='ShowOpenFormButton']").get('value') == "true"
+            layerName = edit_widget.find("config/Option/Option[@name='ReferencedLayerName']").get('value')
+            allowAddFeatures = edit_widget.find("config/Option/Option[@name='AllowAddFeatures']").get('value') == "true"
+            allowEditFeatures = edit_widget.find("config/Option/Option[@name='ShowOpenFormButton']").get('value') == "true"
 
 
             # Lookup shortname
@@ -907,17 +934,23 @@ class QGSReader:
 
             kvlayer = find_maplayer(root, layerId, layerName)
             if kvlayer is None:
-                self.logger.warning(f"Cannot generate keyvalrel config for field {field}: the referenced relation table {layerName} does not exist in the project")
+                self.logger.warning(
+                    f"Cannot generate keyvalrel config for field {field}: "
+                    f"the referenced relation table {layerName} does not exist in the project"
+                )
             elif kvlayer.find('provider').text != 'postgres':
-                self.logger.warning(f"Cannot generate keyvalrel config for field {field}: relation table {layerName} is not a postgres layer")
+                self.logger.warning(
+                    f"Cannot generate keyvalrel config for field {field}: relation table {layerName} is not a postgres layer"
+                )
             else:
                 # NOTE: could use layerSource, but in certain QGIS projects it does not match the datasource of the actual layer
                 keyvaltable_metadata = self.__datasource_metadata(kvlayer.find('datasource').text)
                 keyvaltable_metadata['fields'] = []
                 for kvlayer_field in kvlayer.findall('fieldConfiguration/field'):
-                    if element_find_by_attribute(kvlayer, 'expressionfields/field', 'name', kvlayer_field.get('name')) is not None:
+                    kvlayer_name = kvlayer_field.get('name')
+                    if element_find_by_attribute(kvlayer, 'expressionfields/field', 'name', kvlayer_name) is not None:
                         continue
-                    kvlayer_field_metadata = {"name": kvlayer_field.get('name')}
+                    kvlayer_field_metadata = {"name": kvlayer_name}
                     self.__column_metadata(kvlayer_field_metadata, keyvaltable_metadata, kvlayer_field_metadata['name'], True)
                     keyvaltable_metadata['fields'].append(kvlayer_field_metadata)
                 keyvaltables[map_prefix + "." + layerName] = keyvaltable_metadata
@@ -930,7 +963,10 @@ class QGSReader:
                     if field['name'] == value:
                         break
                 else:
-                    self.logger.warning(f"The displayField of the layer {layerName} does not match a filed name. Note that currenlty expressions are not supported as displayFields.")
+                    self.logger.warning(
+                        f"The displayField of the layer {layerName} does not match a filed name. "
+                        "Note that currenlty expressions are not supported as displayFields."
+                    )
                 constraints['keyvalrel'] = map_prefix + "." + layerName + ":" + key + ":" + value
                 constraints['showAdd'] = allowAddFeatures
                 constraints['showEdit'] = allowEditFeatures
@@ -955,7 +991,7 @@ class QGSReader:
         """ Get column metadata from database. """
 
         # build query SQL for tables and views
-        
+
         db = self.db_engine.db_engine(datasource["database"])
         try:
             with db.connect() as conn:
@@ -1045,12 +1081,14 @@ class QGSReader:
 
                 row = results.mappings().fetchone()
                 if not row:
-                    self.logger.warn(f"Failed to query column metadata of column {column} from table {datasource["schema"]}.{datasource["table_name"]} of {datasource["database"]}")
+                    self.logger.warn(
+                        f'Failed to query column metadata of column {column} from table '
+                        f'{datasource["schema"]}.{datasource["table_name"]} of {datasource["database"]}'
+                    )
                     return
 
                 # Field data type
                 data_type = row['data_type']
-                udt_name = row['udt_name']
                 if data_type == 'ARRAY':
                     array_types = {
                         "_int2": "smallint[]",
@@ -1081,18 +1119,21 @@ class QGSReader:
                         ) - step
                         constraints['numeric_precision'] = row['numeric_precision']
                         constraints['numeric_scale'] = row['numeric_scale']
-                        if not 'step' in constraints:
+                        if 'step' not in constraints:
                             constraints['step'] = step
                         ranges['numeric'] = {'min': -max_value, 'max': max_value}
 
                     if data_type in ranges:
-                        if not 'min' in constraints:
+                        if 'min' not in constraints:
                             constraints['min'] = ranges[data_type]['min']
-                        if not 'max' in constraints:
+                        if 'max' not in constraints:
                             constraints['max'] = ranges[data_type]['max']
 
-        except:
-            self.logger.warn(f"Failed to query column metadata of column {column} from table {datasource["schema"]}.{datasource["table_name"]} of {datasource["database"]}")
+        except Exception:
+            self.logger.warn(
+                f'Failed to query column metadata of column {column} from table '
+                f'{datasource["schema"]}.{datasource["table_name"]} of {datasource["database"]}'
+            )
             return
 
 
@@ -1106,12 +1147,12 @@ class QGSReader:
             return None
 
         outputdir = os.path.join(self.assets_dir, 'forms', 'autogen')
-        outputfile = os.path.join(outputdir, "%s_%s.ui" % (projectname, layername))
+        outputfile = os.path.join(outputdir, f"{projectname}_{layername}.ui")
 
         uipath = None
         if self.use_cached_project_metadata and os.path.exists(outputfile):
             self.logger.info(f"Using cached edit form {projectname}_{layername}.ui")
-            uipath = ":/forms/autogen/%s_%s.ui?v=%d" % (projectname, layername, int(time.time()))
+            uipath = f":/forms/autogen/{projectname}_{layername}.ui?v={round(time.time())}"
 
         elif editorlayout.text == "uifilelayout":
             formpath = element_text(maplayer.find('editform'))
@@ -1122,9 +1163,9 @@ class QGSReader:
                     os.makedirs(outputdir, exist_ok=True)
                     shutil.copy(formpath, outputfile)
                     self.logger.info(f"Copied edit form to {projectname}_{layername}.ui")
-                    uipath = ":/forms/autogen/%s_%s.ui?v=%d" % (projectname, layername, int(time.time()))
+                    uipath = f":/forms/autogen/{projectname}_{layername}.ui?v={round(time.time())}"
                 except Exception as e:
-                    self.logger.warning(f"Failed to copy edit form: {str(e)}")
+                    self.logger.warning(f"Failed to copy edit form: {e!s}")
 
         elif editorlayout.text == "tablayout" or editorlayout.text == "generatedlayout":
 
@@ -1142,9 +1183,9 @@ class QGSReader:
                 with open(outputfile, "wb") as fh:
                     fh.write(form)
                     self.logger.info(f"Wrote edit form to {projectname}_{layername}.ui")
-                    uipath = ":/forms/autogen/%s_%s.ui?v=%d" % (projectname, layername, int(time.time()))
+                    uipath = f":/forms/autogen/{projectname}_{layername}.ui?v={round(time.time())}"
             except Exception as e:
-                self.logger.warning(f"Failed to write edit form: {str(e)}")
+                self.logger.warning(f"Failed to write edit form: {e!s}")
 
         return uipath
 
@@ -1173,7 +1214,7 @@ class QGSReader:
         in_dquote = False
 
         def commit():
-            nonlocal key, value, state, quote_char
+            nonlocal key, value, state, quote_char, in_dquote
             if key:
                 result[key] = value
             key = ''
@@ -1244,22 +1285,13 @@ class QGSReader:
         if value is None:
             return default
 
-        result = value
-
         try:
-            result = int(value)
+            return float(value)
         except ValueError:
-            # int conversion failed
-            try:
-                result = float(value)
-            except ValueError:
-                # float conversion failed
-                pass
-
-        return result
+            return value
 
     def __parse_fileextensions(self, value):
         """ Parse string as a comma separated list of file extensions of the form *.ext,
             returning array of file extensions [".ext1", ".ext2", ...]
         """
-        return list(map(lambda x: x.strip().lstrip('*'), value.lower().split(",")))
+        return [x.strip().lstrip('*') for x in value.lower().split(",")]

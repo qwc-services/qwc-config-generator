@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 
-class ServiceConfig():
+class ServiceConfig:
     """ServiceConfig base class
 
     Base class for generating service configs and permissions.
@@ -22,9 +22,7 @@ class ServiceConfig():
         self.service_name_in_config = service_name_in_config
         self.schema = schema_url
         if not self.schema:
-            logger.error(
-                "Schema URL for service '%s' may not be blank" % service_name
-            )
+            logger.error(f"Schema URL for service '{service_name}' may not be blank")
             self.schema = ""
         self.service_config = service_config
         self.logger = logger

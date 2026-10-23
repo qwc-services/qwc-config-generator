@@ -1,6 +1,4 @@
-from sqlalchemy import distinct
 from sqlalchemy.orm import aliased
-from sqlalchemy.sql import text as sql_text
 
 
 class PermissionsQuery:
@@ -45,8 +43,7 @@ class PermissionsQuery:
         query = self.role_permissions_query(role, session)
 
         # filter permissions by QWC resource type
-        query = query.join(Permission.resource) \
-            .filter(Resource.type == resource_type)
+        query = query.join(Permission.resource).filter(Resource.type == resource_type)
 
         if resource_name is not None:
             # filter by resource name

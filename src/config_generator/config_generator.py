@@ -1,34 +1,33 @@
-import deepmerge
 import json
-import jsonschema
 import os
 import re
-import requests
 import tempfile
-
-from concurrent.futures import CancelledError
 from collections import OrderedDict
-from datetime import datetime, UTC
+from concurrent.futures import CancelledError
+from datetime import UTC, datetime
+from logging import Logger as Log
 from pathlib import Path
-from shutil import move, copyfile, rmtree
-from urllib.parse import urljoin, urlparse
+from shutil import copyfile, rmtree
+from urllib.parse import urlparse
 
+import deepmerge
+import jsonschema
+import requests
 from qwc_services_core.config_models import ConfigModels
 from qwc_services_core.database import DatabaseEngine
 from qwc_services_core.runtime_config import RuntimeConfig
-from .theme_reader import ThemeReader
+
 from .data_service_config import DataServiceConfig
+from .document_service_config import DocumentServiceConfig
 from .ext_service_config import ExtServiceConfig
 from .map_viewer_config import MapViewerConfig
+from .mapinfo_service_config import MapInfoServiceConfig
 from .ogc_service_config import OGCServiceConfig
 from .permissions_config import PermissionsConfig
-from .search_service_config import SearchServiceConfig
-from .document_service_config import DocumentServiceConfig
-from .mapinfo_service_config import MapInfoServiceConfig
-from .service_config import ServiceConfig
 from .permissions_query import PermissionsQuery
-
-from logging import Logger as Log
+from .search_service_config import SearchServiceConfig
+from .service_config import ServiceConfig
+from .theme_reader import ThemeReader
 
 
 class Logger:
@@ -118,7 +117,7 @@ class Logger:
         })
 
 
-class ConfigGenerator():
+class ConfigGenerator:
     """ConfigGenerator class
 
     Generate JSON files for service configs and permissions
@@ -139,18 +138,18 @@ class ConfigGenerator():
         self.cancelled_event = cancelled_event
 
         config_file_dir = os.path.dirname(config_file)
-        self.logger.info("Reading tenantConfig '%s'" % config_file_dir)
+        self.logger.info(f"Reading tenantConfig '{config_file_dir}'")
         try:
             with open(config_file, encoding='utf-8') as f:
                 # parse config JSON with original order of keys
                 config = json.load(f, object_pairs_hook=OrderedDict)
         except Exception as e:
-            msg = "Error loading ConfigGenerator config file %s:\n%s" % (config_file, e)
+            msg = f"Error loading ConfigGenerator config file {config_file}:\n{e}"
             self.logger.critical(msg)
-            raise Exception(msg)
+            raise Exception(msg) from e
 
         self.tenant = config.get('config', {}).get('tenant', 'default')
-        self.logger.info("Configuring tenant '%s'" % self.tenant)
+        self.logger.info(f"Configuring tenant '{self.tenant}'")
 
         # Handle themesConfig in tenantConfig.json
         themes_config = config.get("themesConfig", None)
@@ -161,9 +160,9 @@ class ConfigGenerator():
                 with open(themes_config, encoding='utf-8') as f:
                     config["themesConfig"] = json.load(f)
             except Exception as e:
-                msg = "Failed to read themes configuration %s:\n%s" % (themes_config, str(e))
+                msg = f"Failed to read themes configuration {themes_config}:\n{e!s}"
                 self.logger.critical(msg)
-                raise Exception(msg)
+                raise Exception(msg) from e
         elif not isinstance(themes_config, dict):
             msg = "Missing or invalid themes configuration in tenantConfig.json"
             self.logger.critical(msg)
@@ -171,11 +170,11 @@ class ConfigGenerator():
 
         if config.get('template', None):
             config_template_path = config.get('template')
-            self.logger.info("Merging tenantConfig template '%s'" % config_template_path)
+            self.logger.info(f"Merging tenantConfig template '{config_template_path}'")
             if not os.path.isabs(config_template_path):
                 config_template_path = os.path.join(config_file_dir, config_template_path)
             try:
-                with open(config_template_path, 'r', encoding='utf-8') as fh:
+                with open(config_template_path, encoding='utf-8') as fh:
                     config_template_data = fh.read().replace('$tenant$', self.tenant)
                     config_template = json.loads(config_template_data, object_pairs_hook=OrderedDict)
 
@@ -184,16 +183,17 @@ class ConfigGenerator():
                     if isinstance(themes_config_template, str):
                         try:
                             if not os.path.isabs(themes_config_template):
-                                themes_config_template_path = os.path.join(os.path.dirname(config_template_path), themes_config_template)
+                                config_template_dir = os.path.dirname(config_template_path)
+                                themes_config_template_path = os.path.join(config_template_dir, themes_config_template)
                             with open(themes_config_template_path, encoding='utf-8') as f:
                                 config_template["themesConfig"] = json.load(f)
                         except Exception as e:
-                            msg = "Failed to read themes configuration %s:\n%s" % (themes_config_template_path, str(e))
+                            msg = f"Failed to read themes configuration {themes_config_template_path}:\n{e!s}"
                             self.logger.critical(msg)
-                            raise Exception(msg)
+                            raise Exception(msg) from e
 
-                    config_services = dict(map(lambda entry: (entry["name"], entry), config.get("services", [])))
-                    config_template_services = dict(map(lambda entry: (entry["name"], entry), config_template.get("services", [])))
+                    config_services = {entry["name"]: entry for entry in config.get("services", [])}
+                    config_template_services = {entry["name"]: entry for entry in config_template.get("services", [])}
 
                     config = deepmerge.always_merger.merge(config_template, config)
                     config["services"] = list(deepmerge.always_merger.merge(config_template_services, config_services).values())
@@ -201,9 +201,9 @@ class ConfigGenerator():
                     # Get themesConfig from config because it could have been merged with a template
                     themes_config = config.get("themesConfig")
             except Exception as e:
-                msg = "Failed to merge config template %s: %s."  % (config_template_path, str(e))
+                msg = f"Failed to merge config template {config_template_path}: {e!s}."
                 self.logger.critical(msg)
-                raise Exception(msg)
+                raise Exception(msg) from e
 
         self.config = config
 
@@ -225,7 +225,7 @@ class ConfigGenerator():
         )
         self.qwc_config_schema = generator_config.get('qwc_config_schema', 'qwc_config')
         self.tenant_path = os.path.join(self.config_path, self.tenant)
-        self.logger.info("Config destination: %s" % self.tenant_path)
+        self.logger.info(f"Config destination: {self.tenant_path}")
 
         self.temp_config_path = tempfile.mkdtemp(prefix='qwc_')
         self.temp_tenant_path = os.path.join(self.temp_config_path, self.tenant)
@@ -248,12 +248,9 @@ class ConfigGenerator():
                 qwc_config_schema=self.qwc_config_schema
             )
         except Exception as e:
-            msg = (
-                "Could not load ConfigModels for ConfigDB at '%s':\n%s" %
-                (config_db_url, e)
-            )
+            msg = f"Could not load ConfigModels for ConfigDB at '{config_db_url}':\n{e}"
             self.logger.error(msg)
-            raise Exception(msg)
+            raise Exception(msg) from e
 
         # lookup for additional service configs by name
         self.service_configs = {}
@@ -287,19 +284,12 @@ class ConfigGenerator():
 
         # load schema-versions.json
         schema_versions = {}
-        schema_versions_path = os.path.join(
-            os.path.dirname(os.path.realpath(__file__)),
-            '..',
-            'schema-versions.json'
-        )
+        schema_versions_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'schema-versions.json')
         try:
             with open(schema_versions_path, encoding='utf-8') as f:
                 schema_versions = json.load(f)
         except Exception as e:
-            msg = (
-                "Could not load JSON schema versions from %s:\n%s" %
-                (schema_versions_path, e)
-            )
+            msg = f"Could not load JSON schema versions from {schema_versions_path}:\n{e}"
             self.logger.warn(msg)
 
         # lookup for JSON schema URLs by service name
@@ -364,32 +354,30 @@ class ConfigGenerator():
             self.check_cancelled()
             # config-only services
             if service_name not in self.config_handler:
-                # if service is not yet in config handler, it has not a specific service configuration, it is a config-only service
+                # If service is not yet in config handler, it is a config-only service
                 schema_url = self.schema_urls.get(service_name, service_config.get('schema_url', ''))
-                config = ServiceConfig(service_name, schema_url,
-                    self.service_config(service_name), self.logger, 
-                    re.sub(r'(?=[A-Z])', '-', service_name).lower())
+                config = ServiceConfig(
+                    service_name, schema_url, self.service_config(service_name), self.logger,
+                    re.sub(r'(?=[A-Z])', '-', service_name).lower()
+                )
                 self.config_handler[service_name] = config
                 self.logger.debug(f"Add configuration for service {service_name}")
-            else: self.logger.debug(f"Specific configuration for service {service_name} already exists")
+            else:
+                self.logger.debug(f"Specific configuration for service {service_name} already exists")
 
         try:
             # check tenant dirs
             if not os.path.isdir(self.temp_tenant_path):
                 # create temp tenant dir
-                self.logger.debug(
-                    "Creating temp tenant dir %s" % self.temp_tenant_path
-                )
+                self.logger.debug(f"Creating temp tenant dir {self.temp_tenant_path}")
                 os.mkdir(self.temp_tenant_path)
 
             if not os.path.isdir(self.tenant_path):
                 # create tenant dir
-                self.logger.info(
-                    "Creating tenant dir %s" % self.tenant_path
-                )
+                self.logger.info(f"Creating tenant dir {self.tenant_path}")
                 os.mkdir(self.tenant_path)
         except Exception as e:
-            self.logger.critical("Could not create tenant dir:\n%s" % e)
+            self.logger.critical(f"Could not create tenant dir:\n{e}")
 
     def check_cancelled(self):
         """Checks whether the config generator run has been cancelled and, if yes, throws an exception.
@@ -400,26 +388,27 @@ class ConfigGenerator():
     def read_viewer_config(self):
         """ Read the viewer config file (config.json), merging any template if one is referenced. """
         map_viewer_config = self.service_config('mapViewer')
-        viewer_config_file = map_viewer_config.get('generator_config', {}).get('qwc2_config', {}).get('qwc2_config_file', 'config.json')
+        viewer_config_file = map_viewer_config.get(
+            'generator_config', {}).get('qwc2_config', {}).get('qwc2_config_file', 'config.json')
 
         try:
-            self.logger.info("Reading viewer config '%s'" % viewer_config_file)
+            self.logger.info(f"Reading viewer config '{viewer_config_file}'")
             with open(viewer_config_file, encoding='utf-8') as f:
                 # parse config JSON with original order of keys
                 viewer_config = json.load(f, object_pairs_hook=OrderedDict)
         except Exception as e:
-            msg = "Error loading viewer config file %s:\n%s" % (viewer_config_file, e)
+            msg = f"Error loading viewer config file {viewer_config_file}:\n{e}"
             self.logger.critical(msg)
-            raise Exception(msg)
+            raise Exception(msg) from e
 
         if viewer_config.get('template'):
             viewer_config_template_path = viewer_config.get('template')
-            self.logger.info("Merging viewer config template '%s'" % viewer_config_template_path)
+            self.logger.info(f"Merging viewer config template '{viewer_config_template_path}'")
             if not os.path.isabs(viewer_config_template_path):
                 viewer_config_file_dir = os.path.dirname(viewer_config_file)
                 viewer_config_template_path = os.path.join(viewer_config_file_dir, viewer_config_template_path)
             try:
-                with open(viewer_config_template_path, 'r', encoding='utf-8') as fh:
+                with open(viewer_config_template_path, encoding='utf-8') as fh:
                     viewer_config_template_data = fh.read().replace('$tenant$', self.tenant)
                     viewer_config_template = json.loads(viewer_config_template_data, object_pairs_hook=OrderedDict)
 
@@ -427,20 +416,27 @@ class ConfigGenerator():
                     viewer_config_template_plugins = {}
                     for section in "common", "desktop", "mobile":
                         # NOTE: append cfg.task to name to handle TaskButton plugin entries
-                        viewer_config_plugins[section] = dict(map(lambda entry: (entry["name"] + entry.get("cfg", {}).get("task", ""), entry), viewer_config.get("plugins", {}).get(section, [])))
-                        viewer_config_template_plugins[section] = dict(map(lambda entry: (entry["name"] + entry.get("cfg", {}).get("task", ""), entry), viewer_config_template.get("plugins", {}).get(section, [])))
+                        viewer_config_plugins[section] = {
+                            entry["name"] + entry.get("cfg", {}).get("task", ""): entry
+                            for entry in viewer_config.get("plugins", {}).get(section, [])
+                        }
+                        viewer_config_template_plugins[section] = {
+                            entry["name"] + entry.get("cfg", {}).get("task", ""): entry
+                            for entry in viewer_config_template.get("plugins", {}).get(section, [])
+                        }
 
                     viewer_config = deepmerge.always_merger.merge(viewer_config_template, viewer_config)
                     viewer_config["plugins"] = viewer_config.get("plugins", {})
                     for section in "common", "desktop", "mobile":
                         viewer_config["plugins"][section] = list(
-                            deepmerge.always_merger.merge(viewer_config_template_plugins[section], viewer_config_plugins[section]).values()
+                            deepmerge.always_merger.merge(viewer_config_template_plugins[section],
+                            viewer_config_plugins[section]).values()
                         )
 
             except Exception as e:
-                msg = "Failed to merge viewer config template %s: %s."  % (viewer_config_template_path, str(e))
+                msg = f"Failed to merge viewer config template {viewer_config_template_path}: {e!s}."
                 self.logger.critical(msg)
-                raise Exception(msg)
+                raise Exception(msg) from e
 
         return viewer_config
 
@@ -474,13 +470,13 @@ class ConfigGenerator():
                 copyfile(
                     file_path, os.path.join(self.tenant_path, file_name)
                 )
-                self.logger.info("Wrote '%s' service config file" % file_name)
+                self.logger.info(f"Wrote '{file_name}' service config file")
 
         self.logger.info(
             '<b style="color: green">The generation of the configuration files was successful</b>')
         self.logger.info('<b style="color: green">Configuration files were updated!</b>')
         if errors:
-            self.logger.warn('Some errors occured and have been ignored, please check the logs to resolve some problems in configuration or projects.')
+            self.logger.warn('Some errors occured and have been ignored, please check the logs to resolve these.')
         return True
 
     def write_service_config(self, service):
@@ -490,26 +486,22 @@ class ConfigGenerator():
         """
         config_handler = self.config_handler.get(service)
         if config_handler:
-            self.logger.info("<b>Generating '%s' service config</b>" % service)
+            self.logger.info(f"<b>Generating '{service}' service config</b>")
 
             # generate service config
             config = config_handler.config()
 
             # validate JSON schema
             if self.validate_schema(config, config_handler.schema):
-                self.logger.debug(
-                    "'%s' service config validates against schema" % service
-                )
+                self.logger.debug(f"'{service}' service config validates against schema")
             else:
-                self.logger.error(
-                    "'%s' service config failed schema validation" % service
-                )
+                self.logger.error(f"'{service}' service config failed schema validation")
 
             # write service config file
-            filename = '%sConfig.json' % config_handler.service_name
+            filename = f'{config_handler.service_name}Config.json'
             self.write_json_file(config, filename)
         else:
-            self.logger.warning("Service '%s' not found" % service)
+            self.logger.warning(f"Service '{service}' not found")
 
     def write_permissions(self):
         """Generate and save service permissions.
@@ -530,16 +522,14 @@ class ConfigGenerator():
             service = service_config['name']
             config_handler = self.config_handler.get(service)
             if config_handler:
-                self.logger.info(
-                    "<b>Generating '%s' service permissions</b>" % service
-                )
+                self.logger.info(f"<b>Generating '{service}' service permissions</b>")
                 for role in permissions['roles']:
                     permissions_config.merge_service_permissions(
                         role['permissions'],
                         config_handler.permissions(role['role'])
                     )
             else:
-                self.logger.warning("Service '%s' not found" % service)
+                self.logger.warning(f"Service '{service}' not found")
 
         # write permissions for custom resources
         custom_resource_types = self.config.get('custom_resource_types', [])
@@ -550,7 +540,7 @@ class ConfigGenerator():
                 with self.config_models.session() as session:
                     permitted_resources = permissions_query.permitted_resources
                     resources = permitted_resources(resource_type, role['role'], session).keys()
-                    res_permissions[resource_type] = sorted(list(resources))
+                    res_permissions[resource_type] = sorted(resources)
 
                 permissions_config.merge_service_permissions(
                     role['permissions'], res_permissions
@@ -581,7 +571,7 @@ class ConfigGenerator():
             '<b style="color: green">The generation of the permission files was successful</b>')
         self.logger.info('<b style="color: green">Permission files were updated!</b>')
         if errors:
-            self.logger.warn('Some errors occured and have been ignored, please check the logs to resolve some problems in configuration or projects.')
+            self.logger.warn('Some errors occured and have been ignored, please check the logs to resolve these.')
         return True
 
     def write_json_file(self, config, filename):
@@ -593,24 +583,18 @@ class ConfigGenerator():
             path = os.path.join(self.temp_tenant_path, filename)
             with open(path, 'wb') as f:
                 # NOTE: keep order of keys
-                f.write(json.dumps(
-                    config, sort_keys=False, ensure_ascii=False, indent=2
-                ).encode('utf8'))
+                f.write(json.dumps(config, sort_keys=False, ensure_ascii=False, indent=2).encode('utf8'))
         except Exception as e:
-            self.logger.critical(
-                "Could not write '%s' config file:\n%s" % (filename, e)
-            )
+            self.logger.critical(f"Could not write '{filename}' config file:\n{e}")
 
     def cleanup_temp_dir(self):
         """Remove temporary config dir."""
         try:
             if os.path.isdir(self.temp_config_path):
-                self.logger.debug(
-                    "Removing temp config dir %s" % self.temp_config_path
-                )
+                self.logger.debug(f"Removing temp config dir {self.temp_config_path}")
                 rmtree(self.temp_config_path)
         except Exception as e:
-            self.logger.warn("Could not remove temp config dir:\n%s" % e)
+            self.logger.warn(f"Could not remove temp config dir:\n{e}")
 
     def validate_schema(self, config, schema_url):
         """Validate config against its JSON schema.
@@ -631,34 +615,26 @@ class ConfigGenerator():
             with open(file_path, encoding='utf-8') as f:
                 schema = json.load(f)
         except Exception as e:
-            self.logger.warning(
-                "Could not load JSON schema from %s:\n%s" % (file_path, e)
-            )
+            self.logger.warning(f"Could not load JSON schema from {file_path}:\n{e}")
 
         if not schema:
             # download JSON schema
-            self.logger.info("Downloading JSON schema from %s" % schema_url)
+            self.logger.info(f"Downloading JSON schema from {schema_url}")
             try:
                 response = requests.get(schema_url)
             except Exception as e:
-                self.logger.warn(
-                    "Could not download JSON schema from %s:\n%s" %
-                    (schema_url, str(e))
-                )
+                self.logger.warn(f"Could not download JSON schema from {schema_url}:\n{e!s}")
                 return False
 
             if response.status_code != requests.codes.ok:
-                self.logger.warn(
-                    "Could not download JSON schema from %s:\n%s" %
-                    (schema_url, response.text)
-                )
+                self.logger.warn(f"Could not download JSON schema from {schema_url}:\n{response.text}")
                 return False
 
             # parse JSON
             try:
                 schema = json.loads(response.text)
             except Exception as e:
-                self.logger.warn("Could not parse JSON schema:\n%s" % e)
+                self.logger.warn(f"Could not parse JSON schema:\n{e}")
                 return False
 
         # validate against schema
@@ -680,9 +656,9 @@ class ConfigGenerator():
             path = ""
             for p in error.absolute_path:
                 if isinstance(p, int):
-                    path += "[%d]" % p
+                    path += f"[{p}]"
                 else:
-                    path += ".%s" % p
+                    path += f".{p}"
             context = config
             for p in list(error.absolute_path)[:-1]:
                 context = context[p]
@@ -694,7 +670,7 @@ class ConfigGenerator():
                 instance = OrderedDict()
                 for key, value in error.instance.items():
                     if isinstance(value, dict) and value.keys():
-                        first_value_key = list(value.keys())[0]
+                        first_value_key = next(iter(value.keys()))
                         instance[key] = {
                             first_value_key: '...'
                         }
@@ -706,20 +682,15 @@ class ConfigGenerator():
             # log errors
             message = ""
             if len(messages) == 1:
-                message = "Validation error: %s" % messages[0]
+                message = f"Validation error: {messages[0]}"
             else:
                 message = "\nValidation errors:\n"
                 for msg in messages:
-                    message += "  * %s\n" % msg
+                    message += f"  * {msg}\n"
             self.logger.error(message)
-            self.logger.warning("Location: %s" % path)
-            self.logger.warning(
-                "Value: %s" %
-                json.dumps(instance, sort_keys=False, indent=2, ensure_ascii=False)
-            )
-            self.logger.warning(
-                "Context: %s" % json.dumps(context, sort_keys=False, indent=2, ensure_ascii=False)
-            )
+            self.logger.warning(f"Location: {path}")
+            self.logger.warning(f"Value: {json.dumps(instance, sort_keys=False, indent=2, ensure_ascii=False)}")
+            self.logger.warning(f"Context: {json.dumps(context, sort_keys=False, indent=2, ensure_ascii=False)}")
 
         return valid
 
@@ -738,8 +709,7 @@ class ConfigGenerator():
             return
 
         if os.path.exists(qgis_projects_scan_base_dir):
-            self.logger.info(
-                "<b>Searching for projects files in %s</b>" % qgis_projects_scan_base_dir)
+            self.logger.info(f"<b>Searching for projects files in {qgis_projects_scan_base_dir}</b>")
         else:
             self.logger.warn(
                 "The qgis_projects_scan_base_dir sub directory" +
@@ -777,7 +747,7 @@ class ConfigGenerator():
                         self.logger.info(f"Group {item.name} already exists in themes configuration")
                 else:
                     # Get group parent
-                    group_parent = list(filter(lambda group: group["title"] == item.parent.name, groups))[0]
+                    group_parent = next(filter(lambda group: group["title"] == item.parent.name, groups))
                     # Search if dir is already a group in group parent
                     if not list(filter(lambda group: group["title"] == item.name, group_parent["groups"])):
                         self.logger.info(f"Create group {item.name} in themes configuration group {group_parent['title']}")
@@ -787,12 +757,16 @@ class ConfigGenerator():
                         group["groups"] = []
                         group_parent["groups"].append(group)
                     else:
-                        self.logger.info(f"Group {item.name} already exists in themes configuration group {group_parent['title']}")            
+                        self.logger.info(
+                            f"Group {item.name} already exists in themes configuration group {group_parent['title']}"
+                        )
             elif item.is_file() and item.suffix == qgis_project_extension:
                 relpath = item.parent.relative_to(qgis_projects_base_dir)
                 wmspath = os.path.join(self.ows_prefix, relpath, item.stem)
                 if ' ' in wmspath:
-                    self.logger.warning(f"The project file '{os.path.join(relpath, item.stem)}' contains spaces, it will be ignored")
+                    self.logger.warning(
+                        f"The project file '{os.path.join(relpath, item.stem)}' contains spaces, it will be ignored"
+                    )
                     continue
 
                 # Add to themes items
@@ -810,15 +784,16 @@ class ConfigGenerator():
                 # Add theme to items or group
                 if group_scanned_projects_by_dir and (item.parent != base_path):
                     if list(filter(lambda group: group["title"] == item.parent.name, groups)):
-                        item_group = list(filter(lambda group: group["title"] == item.parent.name, groups))[0]
+                        item_group = next(filter(lambda group: group["title"] == item.parent.name, groups))
                     else:
                         for group in groups:
                             if list(filter(lambda g: g["title"] == item.parent.name, group["groups"])):
-                                item_group = list(filter(lambda g: g["title"] == item.parent.name, group["groups"]))[0]
+                                item_group = next(filter(lambda g: g["title"] == item.parent.name, group["groups"]))
                     if not list(filter(lambda item: item["url"] == wmspath, item_group["items"])):
                         self.logger.info(f"Adding project {item.stem} to group {item.parent.name}")
                         item_group["items"].append(theme_item)
-                    else: self.logger.info(f"Project {item.stem} already exists in group {item.parent.name}")
+                    else:
+                        self.logger.info(f"Project {item.stem} already exists in group {item.parent.name}")
                 else:
                     # Search for theme if it already exists in items
                     if not list(filter(lambda item: item["url"] == wmspath, items)):
@@ -836,7 +811,7 @@ class ConfigGenerator():
                 'INPUT_CONFIG_PATH', 'config-in/'
             )
             config_file_dir = os.path.join(config_in_path, self.tenant)
-            baksuffix = "%s.bak" % datetime.now(UTC).strftime("-%Y%m%d-%H%M%S")
+            baksuffix = datetime.now(UTC).strftime("-%Y%m%d-%H%M%S") + ".bak"
             if isinstance(base_themes_config, str):
                 themes_config_path = base_themes_config
                 try:
@@ -852,9 +827,10 @@ class ConfigGenerator():
                         with open(themes_config_path, "w", encoding="utf-8") as fh:
                             json.dump(themes_config, fh, indent=2, separators=(',', ': '))
                         self.logger.info("Themes configuration has been updated.")
-                    else: self.logger.info("Themes configuration did not change.")
-                except IOError as e:
-                    msg = "Failed to backup/save themes configuration %s: %s" % (themes_config_path, e.strerror)
+                    else:
+                        self.logger.info("Themes configuration did not change.")
+                except OSError as e:
+                    msg = f"Failed to backup/save themes configuration {themes_config_path}: {e.strerror}"
                     self.logger.error(msg)
             elif isinstance(base_themes_config, dict):
                 tenant_config_path = os.path.join(
@@ -864,9 +840,8 @@ class ConfigGenerator():
                 try:
                     with open(tenant_config_path, encoding='utf-8') as fh:
                         tenant_config = json.load(fh, object_pairs_hook=OrderedDict)
-                except IOError as e:
-                    self.logger.error("Error reading tenantConfig.json: {}".format(
-                        e.strerror))
+                except OSError as e:
+                    self.logger.error(f"Error reading tenantConfig.json: {e.strerror}")
                 if tenant_config["themesConfig"] != themes_config:
                     # Backup and save config file with new themes_config
                     try:
@@ -877,10 +852,11 @@ class ConfigGenerator():
                         with open(tenant_config_path, "w", encoding="utf-8") as fh:
                             json.dump(tenant_config, fh, indent=2, separators=(',', ': '))
                         self.logger.info("Themes configuration has been updated.")
-                    except IOError as e:
-                        msg = "Failed to backup/save themes configuration %s: %s" % (tenant_config_path, e.strerror)
+                    except OSError as e:
+                        msg = f"Failed to backup/save themes configuration {tenant_config_path}: {e.strerror}"
                         self.logger.error(msg)
-                else: self.logger.info("Themes configuration did not change.")
+                else:
+                    self.logger.info("Themes configuration did not change.")
             else:
                 msg = "Missing or invalid themes configuration in tenantConfig.json"
                 self.logger.error(msg)
@@ -957,6 +933,12 @@ class ConfigGenerator():
 
         Return number of CRITICAL and ERROR messages.
         """
-        criticals = [log_entry for log_entry in self.logger.log_entries() if log_entry.get('level', self.logger.LEVEL_INFO) == self.logger.LEVEL_CRITICAL]
-        errors = [log_entry for log_entry in self.logger.log_entries() if log_entry.get('level', self.logger.LEVEL_INFO) == self.logger.LEVEL_ERROR]
+        criticals = [
+            log_entry for log_entry in self.logger.log_entries()
+            if log_entry.get('level', self.logger.LEVEL_INFO) == self.logger.LEVEL_CRITICAL
+        ]
+        errors = [
+            log_entry for log_entry in self.logger.log_entries()
+            if log_entry.get('level', self.logger.LEVEL_INFO) == self.logger.LEVEL_ERROR
+        ]
         return (len(criticals), len(errors))

@@ -53,15 +53,11 @@ class SearchServiceConfig(ServiceConfig):
                 permitted_resources = self.permissions_query.permitted_resources
 
                 # collect role permissions from ConfigDB
-                solr_facets = permitted_resources(
-                    'solr_facet', role, session
-                ).keys()
-                permissions['solr_facets'] = sorted(list(solr_facets))
+                solr_facets = permitted_resources('solr_facet', role, session).keys()
+                permissions['solr_facets'] = sorted(solr_facets)
 
-                dataproducts = permitted_resources(
-                    'dataproducts', role, session
-                ).keys()
-                permissions['dataproducts'] = sorted(list(dataproducts))
+                dataproducts = permitted_resources('dataproducts', role, session).keys()
+                permissions['dataproducts'] = sorted(dataproducts)
         else:
             # use permissions from additional service config if present
             self.logger.debug("Reading permissions from tenantConfig")
@@ -73,15 +69,11 @@ class SearchServiceConfig(ServiceConfig):
                 # find role in permissions
                 if role_permissions.get('role') == role:
                     # get permissions for role directly from service config
-                    search_permissions = role_permissions.get(
-                        'permissions', {}
-                    )
+                    search_permissions = role_permissions.get('permissions', {})
                     if 'dataproducts' in search_permissions:
-                        permissions['dataproducts'] = \
-                            search_permissions['dataproducts']
+                        permissions['dataproducts'] = search_permissions['dataproducts']
                     if 'solr_facets' in search_permissions:
-                        permissions['solr_facets'] = \
-                            search_permissions['solr_facets']
+                        permissions['solr_facets'] = search_permissions['solr_facets']
 
                     break
 

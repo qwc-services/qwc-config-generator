@@ -1,21 +1,23 @@
-import json
 import os
 from collections import OrderedDict
 from pathlib import Path
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlparse
 from xml.etree import ElementTree
 
 from .capabilities_reader import CapabilitiesReader
 from .qgs_reader import QGSReader
 
 
-class ThemeReader():
+class ThemeReader:
     """ThemeReader class
 
     Reads project metadata for all theme items in the QWC2 theme configuration.
     """
 
-    def __init__(self, config, logger, check_cancelled, config_models, themes_config, assets_dir, viewer_languages, use_cached_project_metadata, cache_dir):
+    def __init__(
+        self, config, logger, check_cancelled, config_models, themes_config, assets_dir, viewer_languages,
+        use_cached_project_metadata, cache_dir
+    ):
         """Constructor
 
         :param obj config: ConfigGenerator config
@@ -63,15 +65,13 @@ class ThemeReader():
                 qgis_print_layouts_dir,
                 qgis_print_layouts_tenant_subdir.lstrip('/')
             ).rstrip('/')
-            self.logger.info(
-                "<b>Searching for print layouts in %s</b>" % subdirpath)
+            self.logger.info(f"<b>Searching for print layouts in {subdirpath}</b>")
         else:
-            self.logger.info(
-                "<b>Searching for print layouts in %s</b>" % qgis_print_layouts_dir)
+            self.logger.info(f"<b>Searching for print layouts in {qgis_print_layouts_dir}</b>")
 
         print_layouts = {}
         legend_layout_names = []
-        for dirpath, dirs, files in os.walk(qgis_print_layouts_dir, followlinks=True):
+        for dirpath, _dirs, files in os.walk(qgis_print_layouts_dir, followlinks=True):
             if subdirpath and not dirpath.startswith(subdirpath):
                 continue
             relpath = dirpath[len(qgis_print_layouts_dir.rstrip('/')) + 1:]
@@ -91,7 +91,9 @@ class ThemeReader():
                 layout_name = print_template['name']
                 print_template['name'] = os.path.join(relpath, layout_name)
                 print_template['title'] = os.path.join(subdirrelpath, layout_name)
-                self.logger.info("Found print template " + os.path.join(relpath, filename) + " (" + print_template['name'] + ")")
+                self.logger.info(
+                    "Found print template " + os.path.join(relpath, filename) + " (" + print_template['name'] + ")"
+                )
                 print_layouts[print_template['name']] = print_template
                 if print_template['name'].endswith("_legend"):
                     legend_layout_names.append(print_template['name'])
@@ -122,7 +124,7 @@ class ThemeReader():
 
         # check if theme is disabled
         if item.get('disabled', False):
-            self.logger.info(f"<b>Theme {url} {"(" + item["title"] + ")" if item.get("title") else ""} has been disabled</b>")
+            self.logger.info(f"<b>Theme {url} {'(' + item['title'] + ')' if item.get('title') else ''} has been disabled</b>")
             return
 
         service_name = self.service_name(url)
@@ -130,7 +132,7 @@ class ThemeReader():
             # Return if theme already read
             return
 
-        self.logger.info("<b>Reading theme %s</b>" % url)
+        self.logger.info(f"<b>Reading theme {url}</b>")
 
         wms_capabilities = self.capabilities_reader.read_wms_service_capabilities(service_name, item, self.themes_config)
         self.check_cancelled()
@@ -139,7 +141,9 @@ class ThemeReader():
         self.check_cancelled()
 
         project_translations = self.capabilities_reader.read_project_translations(service_name, self.viewer_languages)
-        project_metadata = self.qgs_reader.read(service_name, item, self.__get_edit_datasets(service_name), self.global_print_layouts)
+        project_metadata = self.qgs_reader.read(
+            service_name, item, self.__get_edit_datasets(service_name), self.global_print_layouts
+        )
 
         self.theme_metadata[service_name] = {
             'service_name': service_name,

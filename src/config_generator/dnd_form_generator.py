@@ -1,8 +1,10 @@
 import re
-from sqlalchemy.sql import text as sql_text
 from xml.etree import ElementTree
 
-from .qgs_reader_utils import element_attr, element_find_by_attribute, element_text, find_maplayer
+from sqlalchemy.sql import text as sql_text
+
+from .qgs_reader_utils import element_find_by_attribute, element_text, find_maplayer
+
 
 class DnDFormGenerator:
     def __init__(self, logger, assets_dir, db_engine, project, shortnames, maplayer, metadata, generate_nested_nrel_forms):
@@ -14,7 +16,7 @@ class DnDFormGenerator:
         self.maplayer = maplayer
         self.metadata = metadata
         self.generate_nested_nrel_forms = generate_nested_nrel_forms
-        
+
     def generate_form(self, editorlayout):
         widget = self.__generate_form_widget(editorlayout)
         if widget is None:
@@ -68,7 +70,7 @@ class DnDFormGenerator:
         ):
             return None
         if not editWidget.get("type"):
-            self.logger.warning("Warning: field '%s' has empty widget type" % field)
+            self.logger.warning(f"Warning: field '{field}' has empty widget type")
             return None
         editableField = element_find_by_attribute(maplayer, 'editable/field', 'name', field)
         editable = editableField is None or editableField.get("editable") == "1"
@@ -84,11 +86,13 @@ class DnDFormGenerator:
         self.__add_widget_property(widget, "required", None, None, "true" if required else "false", "property", "bool")
 
         # Compatibility with deprecated <filename>__upload convention
-        uploadField = element_find_by_attribute(maplayer, 'expressionfields/field', 'name', '%s__upload' % field)
+        uploadField = element_find_by_attribute(maplayer, 'expressionfields/field', 'name', f'{field}__upload')
         if uploadField is not None:
             widget.set("class", "QLineEdit")
             widget.set("name", "%s__upload" % (prefix + field))
-            filterOpt = ",".join(map(lambda entry: "*" + entry, list(filter(bool, re.split(r"[\s,]", uploadField.get("expression", ""))))))
+            filterOpt = ",".join(
+                "*" + entry for entry in filter(bool, re.split(r"[\s,]", uploadField.get("expression", "")))
+            )
             self.__add_widget_property(widget, "text", None, "value", filterOpt)
             return widget
 
@@ -144,7 +148,7 @@ class DnDFormGenerator:
             return widget
         elif editWidget.get("type") == "Enumeration":
             values = {}
-            
+
             with self.db_engine.db_engine(self.metadata['database']).connect() as conn:
                 sql =  sql_text("""
                     SELECT udt_schema::text ||'.'|| udt_name::text as defined_type
@@ -160,21 +164,20 @@ class DnDFormGenerator:
                 })
                 for row in result.mappings():
                     defined_type = row['defined_type']
-                try : 
+                try :
                     widget.set("class", "QComboBox")
-                    sql = sql_text("SELECT unnest(enum_range(NULL:: %s))::text as values ;" % defined_type)
+                    sql = sql_text(f"SELECT unnest(enum_range(NULL:: {defined_type}))::text as values ;")
                     result = conn.execute(sql)
-                    for row in result.mappings() : 
+                    for row in result.mappings():
                         values['value'] = row['values']
                         values['name'] = row['values']
                         item = ElementTree.Element("item")
                         self.__add_widget_property(item, "value", values, "value")
                         self.__add_widget_property(item, "text", values, "name")
                         widget.append(item)
-                except Exception: 
+                except Exception:
                     widget.set("class", "QLineEdit")
-                    self.logger.warning("Failed to add Enumeration widget in %s for %s" % (self.metadata['table_name'], field))
-                    pass
+                    self.logger.warning(f"Failed to add Enumeration widget in {self.metadata['table_name']} for {field}")
             return widget
         elif editWidget.get("type") == "ValueRelation":
             widget.set("class", "QComboBox")
@@ -184,9 +187,7 @@ class DnDFormGenerator:
             allowMulti = editWidget.find("config/Option/Option[@name='AllowMulti']").get('value') == "true"
             # Lookup shortname
             layer = self.shortnames.get(layer, layer)
-            widget.set("name", "kvrel__{field}__{kvtable}__{keyfield}__{valuefield}".format(
-                field=prefix + field, kvtable=layer, keyfield=key, valuefield=value
-            ))
+            widget.set("name", f"kvrel__{prefix + field}__{layer}__{key}__{value}")
             self.__add_widget_property(widget, "allowMulti", None, None, "true" if allowMulti else "false", "property", "bool")
             return widget
         elif editWidget.get("type") == "RelationReference":
@@ -201,16 +202,16 @@ class DnDFormGenerator:
             refLayerDS = editWidget.find("config/Option/Option[@name='ReferencedLayerDataSource']").get('value')
             try:
                 key=re.search(r"key='(\w+)'", refLayerDS).group(1)
-            except:
-                self.logger.warning("Warning: failed to determine key of ReferencedLayerDataSource %s, falling back to 'id'" % (refLayerName))
+            except Exception:
+                self.logger.warning(
+                    f"Warning: failed to determine key of ReferencedLayerDataSource {refLayerName}, falling back to 'id'"
+                )
                 key="id"
             refLayer = find_maplayer(self.project, refLayerId, refLayerName)
             if refLayer is None:
                 return None
             value = element_text(refLayer.find('previewExpression'), "").strip('"')
-            widget.set("name", "kvrel__{field}__{kvtable}__{keyfield}__{valuefield}".format(
-                field=prefix + field, kvtable=refLayerName, keyfield=key, valuefield=value
-            ))
+            widget.set("name", f"kvrel__{prefix + field}__{refLayerName}__{key}__{value}")
             return widget
 
         elif editWidget.get("type") == "ExternalResource":
@@ -226,14 +227,14 @@ class DnDFormGenerator:
             # Expected to be unhandled
             return None
         else:
-            self.logger.warning("Warning: field %s has unhandled widget type %s" % (field, editWidget.get("type")))
+            self.logger.warning(f"Warning: field {field} has unhandled widget type {editWidget.get('type')}")
             return None
 
     def __create_relation_widget(self, relation, showlabel, label=""):
         if not relation:
             return None
 
-        referencingLayer = self.project.find(".//maplayer[id='%s']" % relation.get("referencingLayer"))
+        referencingLayer = self.project.find(f".//maplayer[id='{relation.get('referencingLayer')}']")
         fieldRef = relation.find("./fieldRef")
         if referencingLayer is None or fieldRef is None:
             return None
@@ -253,7 +254,7 @@ class DnDFormGenerator:
 
         groupBox = ElementTree.Element("widget")
         groupBox.set("class", "QGroupBox")
-        groupBox.set("name", "nrel__%s__%s" % (referencingLayerName, fkField))
+        groupBox.set("name", f"nrel__{referencingLayerName}__{fkField}")
         if showlabel:
             if label:
                 self.__add_widget_property(groupBox, "title", None, None, label)
@@ -284,7 +285,7 @@ class DnDFormGenerator:
 
             buttonWidget = ElementTree.Element("widget")
             buttonWidget.set("class", "QPushButton")
-            buttonWidget.set("name", "featurelink__%s__%s__%s" % (referencingLayerName, referencingLayerName, buttonLabelField))
+            buttonWidget.set("name", f"featurelink__{referencingLayerName}__{referencingLayerName}__{buttonLabelField}")
 
             buttonItem = ElementTree.Element("item")
             buttonItem.set("row", "0")
@@ -359,7 +360,8 @@ class DnDFormGenerator:
 
                     widget = ElementTree.Element("widget")
                     widget.set("class", "QWidget")
-                    visibilityExpression = child.get("visibilityExpression") if child.get("visibilityExpressionEnabled", "0") == "1" else ""
+                    visibilityExpressionEnabled = child.get("visibilityExpressionEnabled", "0")
+                    visibilityExpression = child.get("visibilityExpression") if visibilityExpressionEnabled == "1" else ""
                     self.__add_widget_property(widget, "visibilityExpression", None, None, visibilityExpression)
                     self.__add_widget_property(widget, "title", child, "name", "", "attribute")
                     tabWidget.append(widget)
@@ -381,7 +383,8 @@ class DnDFormGenerator:
                         self.__add_label_style_properties(widget, child.find("labelStyle"))
                     else:
                         widget.set("class", "QFrame")
-                    visibilityExpression = child.get("visibilityExpression") if child.get("visibilityExpressionEnabled", "0") == "1" else ""
+                    visibilityExpressionEnabled = child.get("visibilityExpressionEnabled", "0")
+                    visibilityExpression = child.get("visibilityExpression") if visibilityExpressionEnabled == "1" else ""
                     self.__add_widget_property(widget, "visibilityExpression", None, None, visibilityExpression)
                     item.append(widget)
 
@@ -473,7 +476,7 @@ class DnDFormGenerator:
 
         layerid = self.maplayer.find('id').text
         for relation in self.project.findall(".//relations/relation"):
-            referencingLayer = self.project.find(".//maplayer[id='%s']" % relation.get("referencingLayer"))
+            referencingLayer = self.project.find(f".//maplayer[id='{relation.get('referencingLayer')}']")
             fieldRef = relation.find("./fieldRef")
             if relation.get("referencedLayer") != layerid or referencingLayer is None or fieldRef is None:
                 continue

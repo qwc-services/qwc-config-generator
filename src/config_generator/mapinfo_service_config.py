@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from .permissions_query import PermissionsQuery
 from .service_config import ServiceConfig
 
@@ -49,8 +47,7 @@ class MapInfoServiceConfig(ServiceConfig):
         permissions = {'mapinfo_query': []}
 
         mapinfo_ids = [
-            query.get('info_id') for query in
-            self.service_config.get('config', {}).get('queries', [])
+            query.get('info_id') for query in self.service_config.get('config', {}).get('queries', [])
             if query.get('info_id')
         ]
 
@@ -76,11 +73,9 @@ class MapInfoServiceConfig(ServiceConfig):
             for mapinfo_id in mapinfo_ids:
                 # lookup permissions
                 if self.permissions_default_allow:
-                    mapinfo_restricted_for_public = mapinfo_id in \
-                        public_restrictions
+                    mapinfo_restricted_for_public = mapinfo_id in public_restrictions
                 else:
-                    mapinfo_restricted_for_public = mapinfo_id not in \
-                        public_permissions
+                    mapinfo_restricted_for_public = mapinfo_id not in public_permissions
 
                 mapinfo_permitted_for_role = mapinfo_id in role_permissions
 

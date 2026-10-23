@@ -1,9 +1,7 @@
 from collections import OrderedDict
-from sqlalchemy.orm import joinedload
-
-from .service_config import ServiceConfig
 
 from .permissions_query import PermissionsQuery
+from .service_config import ServiceConfig
 
 
 class DataServiceConfig(ServiceConfig):
@@ -29,9 +27,7 @@ class DataServiceConfig(ServiceConfig):
 
         self.config_models = config_models
         self.permissions_query = PermissionsQuery(config_models, logger)
-        self.permissions_default_allow = generator_config.get(
-            'permissions_default_allow', True
-        )
+        self.permissions_default_allow = generator_config.get('permissions_default_allow', True)
 
         self.generator_config = generator_config
         self.themes_reader = themes_reader
@@ -79,9 +75,7 @@ class DataServiceConfig(ServiceConfig):
 
         Resource = self.config_models.model('resources')
 
-        query = session.query(Resource) \
-            .filter(Resource.type == 'map') \
-            .order_by(Resource.name)
+        query = session.query(Resource).filter(Resource.type == 'map').order_by(Resource.name)
         for map_obj in query.all():
 
             project_metadata = self.themes_reader.project_metadata(map_obj.name)
@@ -90,17 +84,13 @@ class DataServiceConfig(ServiceConfig):
                 continue
 
             # collect unique datasets for each map resource
-            resource_types = [
-                'data',
-                'data_create', 'data_update', 'data_delete'
-            ]
+            resource_types = ['data', 'data_create', 'data_update', 'data_delete']
             datasets_query = session.query(Resource) \
                 .filter(Resource.parent_id == map_obj.id) \
                 .filter(Resource.type.in_(resource_types)) \
                 .distinct(Resource.name) \
                 .order_by(Resource.name)
             available_datasets[map_obj.name] = []
-            invalid_datasets = list()
             for resource in datasets_query.all():
                 if project_metadata['layer_metadata'].get(resource.name, {}).get('editable'):
                     available_datasets[map_obj.name].append(resource.name)
@@ -133,8 +123,8 @@ class DataServiceConfig(ServiceConfig):
                 dataset['table_name'] = meta.get('table_name')
                 dataset['primary_key'] = meta.get('primary_key')
 
-                if not dataset['primary_key'] in meta['fields']:
-                    self.logger.warn("The dataset %s.%s does not appear to have a valid primary key" % (dataset['schema'], dataset['table_name']))
+                if dataset['primary_key'] not in meta['fields']:
+                    self.logger.warn("The dataset {}.{} does not appear to have a valid primary key".format(dataset['schema'], dataset['table_name']))  # noqa: E501
 
                 dataset['fields'] = []
                 for key, attr_meta in meta.get('fields', {}).items():
@@ -169,7 +159,7 @@ class DataServiceConfig(ServiceConfig):
                 datasets.append(dataset)
 
         for dataset_name, dataset_config in keyvaltables.items():
-            if not dataset_name in added_datasets:
+            if dataset_name not in added_datasets:
                 if autogen_keyvaltable_datasets:
                     dataset = OrderedDict()
                     dataset['name'] = dataset_name
@@ -183,16 +173,17 @@ class DataServiceConfig(ServiceConfig):
                     dataset['readonlypermitted'] = True
                     datasets.append(dataset)
                 else:
-                    self.logger.warn("No Data resource exists for the keyval relation '%s', either create the resource or set 'autogen_keyvaltable_datasets: true'" % dataset_name)
+                    self.logger.warn(
+                        f"No Data resource exists for the keyval relation '{dataset_name}', "
+                        "either create the resource or set 'autogen_keyvaltable_datasets: true'"
+                    )
 
         return datasets
 
     def dataset_permissions(self, role, session):
         """Collect edit dataset permissions from ConfigDB.
 
-        NOTE: datasets are restricted by default and require
-              explicit permissions
-              attributes are allowed by default
+        NOTE: datasets are restricted by default and require explicit permissions attributes are allowed by default
 
         :param str role: Role name
         :param Session session: DB session
@@ -278,7 +269,7 @@ class DataServiceConfig(ServiceConfig):
                 meta = self.themes_reader.project_metadata(map_name)['layer_metadata'][layer_name]
 
                 dataset_permissions = OrderedDict()
-                dataset_permissions['name'] = ("%s.%s" % (map_name, layer_name))
+                dataset_permissions['name'] = (f"{map_name}.{layer_name}")
                 dataset_permissions['attributes'] = []
 
                  # collect CRUD permissions
@@ -291,15 +282,10 @@ class DataServiceConfig(ServiceConfig):
 
                 # combine with detailed CRUD data permissions
                 if not self.force_readonly_datasets:
-                    creatable |= layer_name in \
-                        role_permissions['data_create'].get(map_name, {})
-                    updatable |= layer_name in \
-                        role_permissions['data_update'].get(map_name, {})
-                    deletable |= layer_name in \
-                        role_permissions['data_delete'].get(map_name, {})
-                    writable |= (
-                        creatable and readable and updatable and deletable
-                    )
+                    creatable |= layer_name in role_permissions['data_create'].get(map_name, {})
+                    updatable |= layer_name in role_permissions['data_update'].get(map_name, {})
+                    deletable |= layer_name in role_permissions['data_delete'].get(map_name, {})
+                    writable |= creatable and readable and updatable and deletable
 
                 if is_public_role or dataset_restricted_for_public:
                     # collect all CRUD permissions
@@ -326,12 +312,10 @@ class DataServiceConfig(ServiceConfig):
                 # collect data attribute permissions
                 # NOTE: attributes are always allowed by default
                 attributes_restricted_for_public = set(
-                    public_restrictions['attributes'].
-                    get(map_name, {}).get(layer_name, {}).keys()
+                    public_restrictions['attributes'].get(map_name, {}).get(layer_name, {}).keys()
                 )
                 attributes_permitted_for_role = set(
-                    role_permissions['attributes'].
-                    get(map_name, {}).get(layer_name, {}).keys()
+                    role_permissions['attributes'].get(map_name, {}).get(layer_name, {}).keys()
                 )
                 geometry_restricted_for_public = 'geometry' in attributes_restricted_for_public
                 geometry_permitted_for_role = 'geometry' in attributes_permitted_for_role
@@ -347,20 +331,17 @@ class DataServiceConfig(ServiceConfig):
 
                     # collect all permitted attributes
                     dataset_permissions['attributes'] = [
-                        attr for attr in meta['fields']
-                        if attr not in restricted_attributes
+                        attr for attr in meta['fields'] if attr not in restricted_attributes
                     ]
                 elif is_public_role:
                     # collect all permitted attributes
                     dataset_permissions['attributes'] = [
-                        attr for attr in meta['fields']
-                        if attr not in attributes_restricted_for_public
+                        attr for attr in meta['fields'] if attr not in attributes_restricted_for_public
                     ]
                 else:
                     # collect additional attributes which are restricted for public and permitted for role
                     attributes_permitted_for_role = (
-                        role_permissions['attributes'].
-                        get(map_name, {}).get(layer_name, {}).keys()
+                        role_permissions['attributes'].get(map_name, {}).get(layer_name, {}).keys()
                     )
                     attributes = [
                         attr for attr in meta['fields']

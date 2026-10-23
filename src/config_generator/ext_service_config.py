@@ -3,9 +3,6 @@ from collections import OrderedDict
 from .permissions_query import PermissionsQuery
 from .service_config import ServiceConfig
 
-import os
-import glob
-
 
 class ExtServiceConfig(ServiceConfig):
     """ExtServiceConfig class
@@ -52,9 +49,7 @@ class ExtServiceConfig(ServiceConfig):
             permitted_resources = self.permissions_query.permitted_resources
 
             # collect role permissions from ConfigDB
-            external_links = permitted_resources(
-                'external_links', role, session
-            ).keys()
-            permissions['external_links'] = sorted(list(external_links))
+            external_links = permitted_resources('external_links', role, session).keys()
+            permissions['external_links'] = sorted(external_links)
 
         return permissions

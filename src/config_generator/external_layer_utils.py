@@ -2,6 +2,7 @@ import os
 import re
 import urllib.request
 from xml.dom.minidom import parseString
+
 from qwc_services_core.cache import ExpiringDict
 
 capabilites_cache = ExpiringDict()
@@ -23,19 +24,21 @@ def getChildElement(parent, path):
 def getFirstElementByTagName(parent, name):
     try:
         return parent.getElementsByTagName(name)[0]
-    except:
+    except Exception:
         return None
 
 def getFirstElementValueByTagName(parent, name):
     try:
         return parent.getElementsByTagName(name)[0].firstChild.nodeValue
-    except:
+    except Exception:
         return ""
 
 
 def getWmsRequestUrl(WMS_Capabilities, reqType, urlObj):
     try:
-        reqUrl = getChildElement(WMS_Capabilities, "Capability/Request/%s/DCPType/HTTP/Get/OnlineResource" % reqType).getAttribute('xlink:href')
+        reqUrl = getChildElement(
+            WMS_Capabilities, f"Capability/Request/{reqType}/DCPType/HTTP/Get/OnlineResource"
+        ).getAttribute('xlink:href')
         reqUrlObj = urllib.parse.urlparse(reqUrl)
         # Clear scheme to ensure same scheme as viewer is used
         reqUrlObj = reqUrlObj._replace(scheme='')
@@ -43,7 +46,7 @@ def getWmsRequestUrl(WMS_Capabilities, reqType, urlObj):
         params.update(dict(urllib.parse.parse_qsl(reqUrlObj.query)))
         reqUrlObj = reqUrlObj._replace(query=params)
         return urllib.parse.urlunparse(reqUrlObj)
-    except:
+    except Exception:
         return urllib.parse.urlunparse(urlObj)
 
 def resolve_external_layer(resource, logger, timeout, crs, use_cached_project_metadata, cache_dir):
@@ -67,7 +70,9 @@ def resolve_external_layer(resource, logger, timeout, crs, use_cached_project_me
             urlobj = urlobj._replace(query=urllib.parse.urlencode(params))
             url = urllib.parse.urlunparse(urlobj)
 
-        return get_external_wms_layer(resource, url, layername, infoFormat, logger, timeout, use_cached_project_metadata, cache_dir)
+        return get_external_wms_layer(
+            resource, url, layername, infoFormat, logger, timeout, use_cached_project_metadata, cache_dir
+        )
     elif type == "wmts":
         if not crs:
             urlobj = urllib.parse.urlparse(url)
@@ -77,7 +82,7 @@ def resolve_external_layer(resource, logger, timeout, crs, use_cached_project_me
     elif type == "mvt":
         return get_extermal_mvt_layer(resource, url, layername)
     else:
-        logger.warn("Unknown external layer: %s" % resource)
+        logger.warn(f"Unknown external layer: {resource}")
         return None
 
 def fetch_capabilities(capabilitiesUrl, resource, logger, timeout, use_cached_project_metadata, cache_dir):
@@ -90,8 +95,8 @@ def fetch_capabilities(capabilitiesUrl, resource, logger, timeout, use_cached_pr
         try:
             with open(cache_file) as fh:
                 capabilitiesXml = fh.read()
-                logger.info("Using cached capabilities for external layer %s" % resource)
-        except:
+                logger.info(f"Using cached capabilities for external layer {resource}")
+        except Exception:
             pass
     else:
         cache_entry = capabilites_cache.lookup(capabilitiesUrl)
@@ -101,14 +106,14 @@ def fetch_capabilities(capabilitiesUrl, resource, logger, timeout, use_cached_pr
     if not capabilitiesXml:
         try:
             response = urllib.request.urlopen(capabilitiesUrl, timeout=timeout)
-        except:
-            logger.warn("Failed to download capabilities for external layer %s" % resource)
+        except Exception:
+            logger.warn(f"Failed to download capabilities for external layer {resource}")
             return None
 
         try:
             capabilitiesXml = response.read()
-        except:
-            logger.warn("Failed to parse capabilities for external layer %s" % resource)
+        except Exception:
+            logger.warn(f"Failed to parse capabilities for external layer {resource}")
             return None
 
         capabilites_cache.set(capabilitiesUrl, capabilitiesXml)
@@ -117,7 +122,7 @@ def fetch_capabilities(capabilitiesUrl, resource, logger, timeout, use_cached_pr
             with open(cache_file, "w") as fh:
                 fh.write(capabilitiesXml.decode('utf-8'))
         except Exception as e:
-            logger.debug("Failed to store capabilities for external layer %s: %s" % (resource, str(e)))
+            logger.debug(f"Failed to store capabilities for external layer {resource}: {e!s}")
 
     return capabilitiesXml
 
@@ -156,7 +161,7 @@ def get_external_wms_layer(resource, url, layerName, infoFormat, logger, timeout
     if not contents:
         contents = getFirstElementByTagName(capabilities, "WMT_MS_Capabilities")
     if not contents:
-        logger.warn("Could not parse capabilities for external layer %s" % resource)
+        logger.warn(f"Could not parse capabilities for external layer {resource}")
         return None
 
     targetLayer = None
@@ -167,7 +172,7 @@ def get_external_wms_layer(resource, url, layerName, infoFormat, logger, timeout
             break
 
     if not targetLayer:
-        logger.warn("Could not find external layer %s in capabilities" % resource)
+        logger.warn(f"Could not find external layer {resource} in capabilities")
         return None
 
     # Info formats
@@ -175,8 +180,7 @@ def get_external_wms_layer(resource, url, layerName, infoFormat, logger, timeout
     capability = getFirstElementByTagName(contents, "Capability")
     getFeatureInfo = getFirstElementByTagName(capability, "GetFeatureInfo")
     if getFeatureInfo:
-        for format in getFeatureInfo.getElementsByTagName("Format"):
-            infoFormats.append(format.firstChild.nodeValue)
+        infoFormats = [format.firstChild.nodeValue for format in getFeatureInfo.getElementsByTagName("Format")]
     # Prefer specified infoFormat if any
     if infoFormat and infoFormat in infoFormats:
         infoFormats = [infoFormat]
@@ -228,9 +232,7 @@ def get_external_wms_layer(resource, url, layerName, infoFormat, logger, timeout
         "extwmsparams": extwmsparams,
         "minScale": getFirstElementValueByTagName(targetLayer, "MinScaleDenominator") or None,
         "maxScale": getFirstElementValueByTagName(targetLayer, "MaxScaleDenominator") or None,
-        "params": {
-            "LAYERS": layerName
-        }
+        "params": {"LAYERS": layerName}
     }
 
 
@@ -271,13 +273,14 @@ def get_external_wmts_layer(resource, url, layerName, crs, logger, timeout, use_
             break
 
     if not targetLayer:
-        logger.warn("Could not find external layer %s in capabilities %s" % (layerName, capabilitiesUrl))
+        logger.warn(f"Could not find external layer {layerName} in capabilities {capabilitiesUrl}")
         return None
 
     # Get supported tile matrix
-    layerTileMatrixSet = []
-    for tileMatrixSetLink in targetLayer.getElementsByTagName("TileMatrixSetLink"):
-        layerTileMatrixSet.append(getFirstElementValueByTagName(tileMatrixSetLink, "TileMatrixSet"))
+    layerTileMatrixSet = [
+        getFirstElementValueByTagName(tileMatrixSetLink, "TileMatrixSet")
+        for tileMatrixSetLink in targetLayer.getElementsByTagName("TileMatrixSetLink")
+    ]
 
     # Get best tile matrix
     tileMatrix = None
@@ -293,7 +296,7 @@ def get_external_wmts_layer(resource, url, layerName, crs, logger, timeout, use_
                 break
 
     if not tileMatrix:
-        logger.warn("Could not find compatible tile matrix for external layer %s" % resource)
+        logger.warn(f"Could not find compatible tile matrix for external layer {resource}")
         return None
 
     # Compute origin and resolutions
@@ -334,7 +337,7 @@ def get_external_wmts_layer(resource, url, layerName, crs, logger, timeout, use_
     for dimension in targetLayer.getElementsByTagName("Dimension"):
         dimensionIdentifier = getFirstElementValueByTagName(dimension, "ows:Identifier")
         dimensionValue = getFirstElementValueByTagName(dimension, "Default")
-        tileUrl = tileUrl.replace("{%s}" % dimensionIdentifier, dimensionValue)
+        tileUrl = tileUrl.replace(f"{{{dimensionIdentifier}}}", dimensionValue)
 
     # Title
     title = getFirstElementValueByTagName(targetLayer, "ows:Title")
@@ -348,8 +351,12 @@ def get_external_wmts_layer(resource, url, layerName, crs, logger, timeout, use_
     bounds = []
     wgs84BoundingBox = getFirstElementByTagName(targetLayer, "ows:WGS84BoundingBox")
     if wgs84BoundingBox is not None:
-        lowerCorner = list(map(float, filter(bool, getFirstElementValueByTagName(wgs84BoundingBox,"ows:LowerCorner").split(" "))))
-        upperCorner = list(map(float, filter(bool, getFirstElementValueByTagName(wgs84BoundingBox,"ows:UpperCorner").split(" "))))
+        lowerCorner = [
+            float(x) for x in filter(bool, getFirstElementValueByTagName(wgs84BoundingBox,"ows:LowerCorner").split(" "))
+        ]
+        upperCorner = [
+            float(x) for x in filter(bool, getFirstElementValueByTagName(wgs84BoundingBox,"ows:UpperCorner").split(" "))
+        ]
         bounds = lowerCorner + upperCorner
 
     # Attribution

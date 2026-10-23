@@ -16,7 +16,7 @@ def layout_xml(maps):
     for entry in maps:
         extent = ''
         if entry.get('extent') is not None:
-            extent = '<Extent xmin="%s" ymin="%s" xmax="%s" ymax="%s"/>' % entry['extent']
+            extent = '<Extent xmin="{}" ymin="{}" xmax="{}" ymax="{}"/>'.format(*entry['extent'])
         item_crs = ''
         if 'item_crs' in entry:
             item_crs = '<crs><spatialrefsys><authid>%s</authid></spatialrefsys></crs>' % (entry['item_crs'] or '')
@@ -25,10 +25,10 @@ def layout_xml(maps):
             atlas = '<AtlasMap atlasDriven="1" scalingMode="0" margin="0.1"/>'
         grid = ''
         if entry.get('grid') is not None:
-            grid = '<ComposerMapGrid show="%s" intervalX="%s" intervalY="%s"/>' % entry['grid']
+            grid = '<ComposerMapGrid show="{}" intervalX="{}" intervalY="{}"/>'.format(*entry['grid'])
         items.append(
-            '<LayoutItem type="65639" size="%s" positionOnPage="10,20,mm" '
-            'keepLayerSet="%s" followPreset="%s" followPresetName="%s">%s%s%s%s</LayoutItem>' % (
+            '<LayoutItem type="65639" size="{}" positionOnPage="10,20,mm" '
+            'keepLayerSet="{}" followPreset="{}" followPresetName="{}">{}{}{}{}</LayoutItem>'.format(
                 entry.get('size', '200,150,mm'),
                 'true' if entry.get('locked') else 'false',
                 'true' if entry.get('follow_preset') else 'false',
@@ -37,7 +37,7 @@ def layout_xml(maps):
             )
         )
     return ElementTree.fromstring(
-        '<Layout name="A4" printResolution="300">%s</Layout>' % ''.join(items)
+        f'<Layout name="A4" printResolution="300">{"".join(items)}</Layout>'
     )
 
 

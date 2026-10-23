@@ -1,19 +1,16 @@
-from collections import OrderedDict
-from concurrent.futures import CancelledError
 import logging
 import os
-import queue
 import threading
 import time
 import traceback
 import uuid
+from concurrent.futures import CancelledError
 
-from flask import Flask, jsonify, request, stream_with_context, Response
+from flask import Flask, Response, jsonify, request, stream_with_context
 from flask_restx import Resource
 from qwc_services_core.api import Api
 
 from config_generator.config_generator import ConfigGenerator
-
 
 # Flask application
 app = Flask(__name__)
@@ -88,13 +85,13 @@ class GenerateConfigs(Resource):
 
                 level = record.levelname.upper()
                 if level == "CRITICAL":
-                    log_output = '<b style="color: red">CRITICAL: %s</b>' % str(record.msg)
+                    log_output = f'<b style="color: red">CRITICAL: {record.msg!s}</b>'
                 elif level == "ERROR":
-                    log_output = '<span style="color: red">ERROR: %s</span>' % str(record.msg)
+                    log_output = f'<span style="color: red">ERROR: {record.msg!s}</span>'
                 elif level == "WARNING":
-                    log_output = '<span style="color: orange">WARNING: %s</span>' % str(record.msg)
+                    log_output = f'<span style="color: orange">WARNING: {record.msg!s}</span>'
                 else:
-                    log_output = level + ": " + str(record.msg)
+                    log_output = f"{level}: {record.msg!s}"
                 logs.append(log_output + "\n")
 
         stream_handler = StreamingLogHandler()
@@ -105,7 +102,7 @@ class GenerateConfigs(Resource):
 
     def log_stream(self, task_id, logs, running_event):
         start = 0
-        yield '{"task_id": "%s"}\n' % task_id
+        yield f'{{"task_id": "{task_id}"}}\n'
         while running_event.is_set():
             part_logs = logs[start:]
             start += len(part_logs)
@@ -124,10 +121,10 @@ class GenerateConfigs(Resource):
             generator.write_configs()
             generator.write_permissions()
             generator.cleanup_temp_dir()
-        except CancelledError as e:
+        except CancelledError:
             logger.error("<b>Cancelled</b>")
         except Exception as e:
-            logger.error("<b>Internal error: %s\n%s</b>" % (str(e), traceback.format_exc()))
+            logger.error(f"<b>Internal error: {e!s}\n{traceback.format_exc()}</b>")
 
         for handler in logger.handlers:
             handler.flush()
@@ -140,7 +137,7 @@ class GenerateConfigsStatus(Resource):
         """Query the status of an active generate_configs task."""
         task_id = request.args.get('task_id')
         start = int(request.args.get('start', '0'))
-        if not task_id in active_tasks:
+        if task_id not in active_tasks:
             return {"error": "Unknown task id"}, 400
 
         task = active_tasks[task_id]
@@ -160,7 +157,7 @@ class GenerateConfigsCancel(Resource):
     def get(self):
         """Cancel an active generate_configs task."""
         task_id = request.args.get('task_id')
-        if not task_id in active_tasks:
+        if task_id not in active_tasks:
             return {"error": "Unknown task id"}, 400
 
         task = active_tasks[task_id]
@@ -210,19 +207,14 @@ class QueryResources(Resource):
     def get(self):
         """Return details for all maps (e.g. their layers) from capabilities."""
 
-        maps_details = []
-
         try:
             # get maps from ConfigGenerator
             tenant = request.args.get('tenant')
             use_cached_project_metadata = str(request.args.get("use_cached_project_metadata", "")).lower() in ["1","true"]
             generator = config_generator(tenant, app.logger, threading.Event(), use_cached_project_metadata)
             maps = generator.maps()
-            for map_name in maps:
-                maps_details.append(generator.map_details(
-                    map_name, with_attributes=True))
+            maps_details = [generator.map_details(map_name, with_attributes=True) for map_name in maps]
             generator.cleanup_temp_dir()
-
             return maps_details
         except Exception as e:
             return {'error': str(e)}, 500

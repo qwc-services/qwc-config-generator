@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 
-class PermissionsConfig():
+class PermissionsConfig:
     """PermissionsConfig class
 
     Collect and generate QWC service permissions.
@@ -45,12 +45,8 @@ class PermissionsConfig():
             # NOTE: use ordered keys
             user_config = OrderedDict()
             user_config['name'] = user.name
-            user_config['groups'] = [
-                group.name for group in user.sorted_groups
-            ]
-            user_config['roles'] = [
-                role.name for role in user.sorted_roles
-            ]
+            user_config['groups'] = [group.name for group in user.sorted_groups]
+            user_config['roles'] = [role.name for role in user.sorted_roles]
 
             users.append(user_config)
 
@@ -87,8 +83,7 @@ class PermissionsConfig():
 
         Role = self.config_models.model('roles')
         query = session.query(Role).order_by(Role.name)
-        index = 0
-        for role in query.all():
+        for index, role in enumerate(query.all()):
             # NOTE: use ordered keys
             role_config = OrderedDict()
             role_config['role'] = role.name
@@ -114,7 +109,6 @@ class PermissionsConfig():
 
             if role.name == 'public':
                 public_index = index
-            index += 1
 
             roles.append(role_config)
 
@@ -133,7 +127,7 @@ class PermissionsConfig():
         """
         for resource_key in service_permissions:
             # merge resource type from service permissions
-            if not resource_key in role_permissions:
+            if resource_key not in role_permissions:
                 role_permissions[resource_key] = []
             self.merge_list(
                 role_permissions.get(resource_key, []),
@@ -199,10 +193,7 @@ class PermissionsConfig():
                     self.merge_list(target[key], value)
                 else:
                     if value != target[key]:
-                        self.logger.warning(
-                            "Values for '%s' differ: %s != %s" %
-                            (key, target[key], value)
-                        )
+                        self.logger.warning(f"Values for '{key}' differ: {target[key]} != {value}")
             else:
                 # add new key
                 target[key] = value

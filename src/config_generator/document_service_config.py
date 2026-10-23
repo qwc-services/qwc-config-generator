@@ -1,5 +1,5 @@
-from collections import OrderedDict
 import os
+from collections import OrderedDict
 
 from .permissions_query import PermissionsQuery
 from .service_config import ServiceConfig
@@ -22,9 +22,7 @@ class DocumentServiceConfig(ServiceConfig):
         super().__init__('document', schema_url, service_config, logger)
 
         self.report_dir = generator_config.get("document_templates_dir", "/reports")
-        self.permissions_default_allow = generator_config.get(
-            'permissions_default_allow', True
-        )
+        self.permissions_default_allow = generator_config.get('permissions_default_allow', True)
 
         self.config_models = config_models
         self.permissions_query = PermissionsQuery(config_models, logger)
@@ -39,7 +37,7 @@ class DocumentServiceConfig(ServiceConfig):
 
         # scan for reports
         scanned_document_templates = []
-        for root, dirs, files in os.walk(self.report_dir):
+        for root, _dirs, files in os.walk(self.report_dir):
             subdir = os.path.relpath(root, self.report_dir)
             if subdir == ".":
                 subdir = ""
@@ -56,9 +54,9 @@ class DocumentServiceConfig(ServiceConfig):
 
         # add templates from scanned_document_templates which are not already manually defined
         for entry in resources['document_templates']:
-            try:
+            try:  # noqa: SIM105
                 scanned_document_templates.remove(entry["template"])
-            except:
+            except Exception:  # noqa: PERF203
                 pass
 
         for template in scanned_document_templates:
@@ -106,7 +104,7 @@ class DocumentServiceConfig(ServiceConfig):
 
                 # Collect available templates
                 available_document_templates = []
-                for root, dirs, files in os.walk(self.report_dir):
+                for root, _dirs, files in os.walk(self.report_dir):
                     subdir = os.path.relpath(root, self.report_dir)
                     if subdir == ".":
                         subdir = ""
@@ -114,8 +112,7 @@ class DocumentServiceConfig(ServiceConfig):
                         os.path.join(subdir, file[:-6]) for file in files if file.endswith(".jrxml")
                     ]
                 available_document_templates += [
-                    entry["template"]
-                    for entry in self.service_config.get('resources', {}).get('document_templates', [])
+                    entry["template"] for entry in self.service_config.get('resources', {}).get('document_templates', [])
                 ]
                 available_document_templates = list(set(available_document_templates))
 
@@ -130,15 +127,10 @@ class DocumentServiceConfig(ServiceConfig):
                     template_permitted_for_role = template in role_permissions['document_templates']
 
                     # If map is not permitted, skip
-                    if (
-                        template_restricted_for_public
-                        and not template_permitted_for_role
-                    ):
+                    if template_restricted_for_public and not template_permitted_for_role:
                         continue
 
-                    if is_public_role:
-                        permitted_templates.append(template)
-                    elif template_restricted_for_public:
+                    if is_public_role or template_restricted_for_public:
                         permitted_templates.append(template)
 
                 permissions['document_templates'] = permitted_templates
@@ -154,9 +146,7 @@ class DocumentServiceConfig(ServiceConfig):
                 # find role in permissions
                 if role_permissions.get('role') == role:
                     # get permissions for role directly from service config
-                    document_permissions = role_permissions.get(
-                        'permissions', {}
-                    )
+                    document_permissions = role_permissions.get('permissions', {})
                     if 'document_templates' in document_permissions:
                         permissions['document_templates'] = \
                             document_permissions['document_templates']

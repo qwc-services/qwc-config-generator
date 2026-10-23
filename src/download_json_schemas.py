@@ -1,33 +1,22 @@
 import json
 import os
-import sys
-import requests
-
 from urllib.parse import urlparse
 
+import requests
 
 # get target path
 json_schemas_path = os.environ.get('JSON_SCHEMAS_PATH', '/tmp/')
 
-print(
-    "Downloading JSON schemas for all QWC service configs to %s" %
-    json_schemas_path
-)
+print(f"Downloading JSON schemas for all QWC service configs to {json_schemas_path}")
 
 # load schema-versions.json
 schema_versions = {}
-schema_versions_path = os.path.join(
-    os.path.dirname(os.path.realpath(__file__)),
-    f'schema-versions.json'
-)
+schema_versions_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'schema-versions.json')
 try:
     with open(schema_versions_path, encoding='utf-8') as f:
         schema_versions = json.load(f)
 except Exception as e:
-    print(
-        "Error: Could not load JSON schema versions from %s:\n%s" %
-        (schema_versions_path, e)
-    )
+    print(f"Error: Could not load JSON schema versions from {schema_versions_path}:\n{e!s}")
     exit(1)
 
 # download and save JSON schemas
@@ -43,21 +32,15 @@ for schema in schema_versions.get('schemas', []):
         # download JSON schema
         response = requests.get(schema_url)
         if response.status_code != requests.codes.ok:
-            raise Exception(
-                "Download error: Status %s\n%s..." %
-                (response.status_code, response.text[0:150])
-            )
+            raise Exception(f"Download error: Status {response.status_code}\n{response.text[0:150]}...")
             errors = True
 
         # save to file
         with open(file_path, 'wb') as f:
             f.write(response.content)
-            print("Downloaded %s" % file_name)
-    except Exception as e:
-        print(
-            "Error: Could not download JSON schema for service '%s' from %s\n"
-            "%s" % (service, schema_url, e)
-        )
+            print(f"Downloaded {file_name}")
+    except Exception as e:  # noqa: PERF203
+        print(f"Error: Could not download JSON schema for service '{service}' from {schema_url}\n{e!s}")
         errors = True
 
 if errors:

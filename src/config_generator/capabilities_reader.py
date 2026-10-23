@@ -1,16 +1,16 @@
-from collections import OrderedDict
-from urllib.parse import urljoin, urlparse
-from xml.etree import ElementTree
-
 import json
 import os
 import posixpath
 import re
-import requests
 import traceback
+from collections import OrderedDict
+from urllib.parse import urljoin, urlparse
+from xml.etree import ElementTree
+
+import requests
 
 
-class CapabilitiesReader():
+class CapabilitiesReader:
     """CapabilitiesReader class
 
     Load and parse WMS GetProjectSettings.and WFS Capabilities
@@ -32,17 +32,12 @@ class CapabilitiesReader():
         self.default_qgis_server_url = generator_config.get(
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
-        self.qgis_server_url_tenant_suffix = generator_config.get(
-            'qgis_server_url_tenant_suffix', ''
-        ).strip('/')
+        self.qgis_server_url_tenant_suffix = generator_config.get('qgis_server_url_tenant_suffix', '').strip('/')
 
         # Skip group layers containing print layers
-        self.skip_print_layer_groups = generator_config.get(
-            'skip_print_layer_groups', False)
+        self.skip_print_layer_groups = generator_config.get('skip_print_layer_groups', False)
 
-        self.project_settings_read_timeout = generator_config.get(
-            "project_settings_read_timeout", 60
-        )
+        self.project_settings_read_timeout = generator_config.get("project_settings_read_timeout", 60)
 
         self.have_get_translations = None
 
@@ -55,8 +50,8 @@ class CapabilitiesReader():
                 with open(cache_file) as fh:
                     document = fh.read()
                     if not silent:
-                        self.logger.info("Using cached %s for %s" % (description, request_url))
-            except:
+                        self.logger.info(f"Using cached {description} for {request_url}")
+            except Exception:
                 pass
 
         if not document:
@@ -67,16 +62,11 @@ class CapabilitiesReader():
             )
 
             if response.status_code != requests.codes.ok:
-                self.logger.error(
-                    "Could not get %s from %s:\n%s" %
-                    (description, request_url, response.content)
-                )
+                self.logger.error(f"Could not get {description} from {request_url}:\n{response.content}")
                 return None
 
             if not silent:
-                self.logger.info(
-                    "Downloaded %s from %s" % (description, request_url)
-                )
+                self.logger.info(f"Downloaded {description} from {request_url}")
 
             document = response.content
             try:
@@ -84,7 +74,7 @@ class CapabilitiesReader():
                 with open(cache_file, "w") as fh:
                     fh.write(document.decode('utf-8'))
             except Exception as e:
-                self.logger.debug("Failed to store %s for %s in cache: %s" % (description, request_url, str(e)))
+                self.logger.debug(f"Failed to store {description} for {request_url} in cache: {e!s}")
 
         return document
 
@@ -131,12 +121,9 @@ class CapabilitiesReader():
                 ns = {}
                 np = ''
 
-            root_layer = root.find('%sCapability/%sLayer' % (np, np), ns)
+            root_layer = root.find(f'{np}Capability/{np}Layer', ns)
             if root_layer is None:
-                self.logger.warning(
-                    "No root layer found for %s: %s" %
-                    (full_url, document)
-                )
+                self.logger.warning(f"No root layer found for {full_url}: {document}")
                 return {}
 
             # NOTE: use ordered keys
@@ -146,40 +133,48 @@ class CapabilitiesReader():
             capabilities['wms_url'] = full_url
 
             # get service title
-            service_title = root.find('%sService/%sTitle' % (np, np), ns)
+            service_title = root.find(f'{np}Service/{np}Title', ns)
             if service_title is not None:
                 capabilities['title'] = service_title.text
                 if capabilities['title'] == "Untitled":
                     capabilities['title'] = re.sub('.*/', '', service_name)
 
             # get service abstract
-            service_abstract = root.find('%sService/%sAbstract' % (np, np), ns)
+            service_abstract = root.find(f'{np}Service/{np}Abstract', ns)
             if service_abstract is not None:
                 capabilities['abstract'] = service_abstract.text
 
             # collect service keywords
-            keyword_list = root.find('%sService/%sKeywordList' % (np, np), ns)
+            keyword_list = root.find(f'{np}Service/{np}KeywordList', ns)
             if keyword_list is not None:
                 keywords = [
-                    keyword.text for keyword
-                    in keyword_list.findall('%sKeyword' % np, ns)
+                    keyword.text for keyword in keyword_list.findall(f'{np}Keyword', ns)
                     if keyword.text != 'infoMapAccessService'
                 ]
                 if keywords:
                     capabilities['keywords'] = ', '.join(keywords)
 
             # service online resouce
-            online_resource = root.find('%sService/%sOnlineResource' % (np, np), ns)
+            online_resource = root.find(f'{np}Service/{np}OnlineResource', ns)
             if online_resource is not None:
                 capabilities['online_resource'] = online_resource.get('{http://www.w3.org/1999/xlink}href')
 
             # service contact
-            contact_person = root.find("%sService/%sContactInformation/%sContactPersonPrimary/%sContactPerson" % (np, np, np, np), ns)
-            contact_organization = root.find("%sService/%sContactInformation/%sContactPersonPrimary/%sContactOrganization" % (np, np, np, np), ns)
-            contact_position = root.find("%sService/%sContactInformation/%sContactPosition" % (np, np, np), ns)
-            contact_phone = root.find("%sService/%sContactInformation/%sContactVoiceTelephone" % (np, np, np), ns)
-            contact_email = root.find("%sService/%sContactInformation/%sContactElectronicMailAddress" % (np, np, np), ns)
-
+            contact_person = root.find(
+                f"{np}Service/{np}ContactInformation/{np}ContactPersonPrimary/{np}ContactPerson", ns
+            )
+            contact_organization = root.find(
+                f"{np}Service/{np}ContactInformation/{np}ContactPersonPrimary/{np}ContactOrganization", ns
+            )
+            contact_position = root.find(
+                f"{np}Service/{np}ContactInformation/{np}ContactPosition", ns
+            )
+            contact_phone = root.find(
+                f"{np}Service/{np}ContactInformation/{np}ContactVoiceTelephone", ns
+            )
+            contact_email = root.find(
+                f"{np}Service/{np}ContactInformation/{np}ContactElectronicMailAddress", ns
+            )
 
             capabilities["contact"] = {
                 "person": contact_person.text if contact_person is not None else None,
@@ -207,10 +202,7 @@ class CapabilitiesReader():
                 root_layer, layer_names, internal_print_layers, ns, np, default_root_name
             )
             if capabilities['root_layer'] is None:
-                self.logger.warning(
-                    "No layers found for %s: %s" %
-                    (full_url, response.content)
-                )
+                self.logger.warning("No layers found for {full_url}")
                 return {}
             # Check if a layer has the same name as the root layer - and if so, abort
             root_layer_name = capabilities['root_layer'].get('name')
@@ -219,36 +211,31 @@ class CapabilitiesReader():
                 for layer in layers:
                     if layer.get('name') == root_layer_name:
                         self.logger.critical(
-                            "The service %s contains a layer with the same name as the service. Please rename the service or the layer."
-                            % root_layer_name
+                            f"The service {root_layer_name} contains a layer with the same name as the service. "
+                            "Please rename the service or the layer."
                         )
 
             # get drawing order
-            drawing_order = root.find(
-                '%sCapability/%sLayerDrawingOrder' % (np, np), ns
-            )
+            drawing_order = root.find(f'{np}Capability/{np}LayerDrawingOrder', ns)
             if drawing_order is not None:
                 capabilities['drawing_order'] = drawing_order.text.split(',')
 
             # GetMap formats
-            capabilities['map_formats'] = list(map(lambda el: el.text, root.findall(
-                '%sCapability/%sRequest/%sGetMap/%sFormat' % (np, np, np, np), ns
-            )))
+            capabilities['map_formats'] = [el.text for el in root.findall(
+                f'{np}Capability/{np}Request/{np}GetMap/{np}Format', ns
+            )]
 
             # GetFeatureInfo formats
-            capabilities['info_formats'] = list(map(lambda el: el.text, root.findall(
-                '%sCapability/%sRequest/%sGetFeatureInfo/%sFormat' % (np, np, np, np), ns
-            )))
+            capabilities['info_formats'] = [el.text for el in root.findall(
+                f'{np}Capability/{np}Request/{np}GetFeatureInfo/{np}Format', ns
+            )]
 
             if internal_print_layers:
                 capabilities['internal_print_layers'] = internal_print_layers
 
             return capabilities
         except Exception as e:
-            self.logger.error(
-                "Could not parse WMS GetProjectSettings from %s:\n%s" %
-                (full_url, e)
-            )
+            self.logger.error(f"Could not parse WMS GetProjectSettings from {full_url}:\n{e}")
             self.logger.debug(traceback.format_exc())
             return {}
 
@@ -267,35 +254,28 @@ class CapabilitiesReader():
         # NOTE: use ordered keys
         wms_layer = OrderedDict()
 
-        layer_name_tag = layer.find('%sName' % np, ns)
-        if layer_name_tag is not None:
-            layer_name = layer_name_tag.text
-        else:
-            layer_name = fallback_name
+        layer_name_tag = layer.find(f'{np}Name', ns)
+        layer_name = layer_name_tag.text if layer_name_tag is not None else fallback_name
 
         if "," in layer_name:
             self.logger.critical(
-                f"The layer '{layer_name}' contains a comma! "
-                "The WMS name of a layer must not contain a comma! "
+                f"The layer '{layer_name}' contains a comma! The WMS name of a layer must not contain a comma! "
                 "Either remove the comma or specify 'short_name' in the QGIS project."
             )
         if layer_name in layer_names:
-            self.logger.critical(
-                f"Duplicate layer name '{layer_name}'! "
-                "Please rename the duplicate occurrences."
-            )
+            self.logger.critical(f"Duplicate layer name '{layer_name}'! Please rename the duplicate occurrences.")
         else:
             layer_names.append(layer_name)
 
         wms_layer['name'] = layer_name
 
-        layer_title_tag = layer.find('%sTitle' % np, ns)
+        layer_title_tag = layer.find(f'{np}Title', ns)
         if layer_title_tag is not None:
             wms_layer['title'] = layer_title_tag.text
 
         # collect dimensions
         wms_layer['dimensions'] = []
-        for dim in layer.findall("%sDimension" % np, ns):
+        for dim in layer.findall(f"{np}Dimension", ns):
             wms_layer['dimensions'].append({
                 'units': dim.get('units'),
                 'name': dim.get('name'),
@@ -307,14 +287,12 @@ class CapabilitiesReader():
 
         # collect sub layers if group layer
         group_layers = []
-        for sub_layer in layer.findall('%sLayer' % np, ns):
-            sub_layer_name = sub_layer.find('%sName' % np, ns).text
+        for sub_layer in layer.findall(f'{np}Layer', ns):
+            sub_layer_name = sub_layer.find(f'{np}Name', ns).text
 
             if sub_layer_name in internal_print_layers:
                 sublayer_names = []
-                self.collect_wms_layers(
-                    sub_layer, sublayer_names, internal_print_layers, ns, np
-                )
+                self.collect_wms_layers(sub_layer, sublayer_names, internal_print_layers, ns, np)
                 internal_print_layers += sublayer_names
                 # skip internal print layers
                 if self.skip_print_layer_groups:
@@ -322,32 +300,28 @@ class CapabilitiesReader():
                 else:
                     continue
 
-            sub_wms_layer = self.collect_wms_layers(
-                sub_layer, layer_names, internal_print_layers, ns, np
-            )
+            sub_wms_layer = self.collect_wms_layers(sub_layer, layer_names, internal_print_layers, ns, np)
             if sub_wms_layer is not None:
                 group_layers.append(sub_wms_layer)
 
         if group_layers:
             # group layer
-            wms_layer["expanded"] = layer.get(
-                'expanded', '1') == '1'
-            wms_layer["mutuallyExclusive"] = layer.get(
-                'mutuallyExclusive') == '1'
+            wms_layer["expanded"] = layer.get('expanded', '1') == '1'
+            wms_layer["mutuallyExclusive"] = layer.get('mutuallyExclusive') == '1'
             wms_layer['layers'] = group_layers
         else:
             # layer
 
             # get primary key
-            pk_tag = layer.find('%sPrimaryKey/%sPrimaryKeyAttribute' % (np, np), ns)
+            pk_tag = layer.find(f'{np}PrimaryKey/{np}PrimaryKeyAttribute', ns)
             if pk_tag is not None:
                 wms_layer['primary_key'] = pk_tag.text
 
             # collect attributes
             attributes = {}
-            attrs = layer.find('%sAttributes' % np, ns)
+            attrs = layer.find(f'{np}Attributes', ns)
             if attrs is not None:
-                for attr in attrs.findall('%sAttribute' % np, ns):
+                for attr in attrs.findall(f'{np}Attribute', ns):
                     attributes[attr.get('name')] = {
                         'alias': attr.get('alias', attr.get('name')),
                         'type': attr.get('type'),  # Qt type
@@ -370,38 +344,37 @@ class CapabilitiesReader():
             if attributes:
                 wms_layer['attributes'] = attributes
 
-        if layer.find('%sAbstract' % np, ns) is not None:
-            wms_layer["abstract"] = layer.find('%sAbstract' % np, ns).text
+        if layer.find(f'{np}Abstract', ns) is not None:
+            wms_layer["abstract"] = layer.find(f'{np}Abstract', ns).text
 
-        if layer.find('%sKeywordList' % np, ns) is not None:
-            keywords = []
-            for keyword in layer.find('%sKeywordList' % np, ns).findall(
-                    '%sKeyword' % np, ns):
-                keywords.append(keyword.text)
+        if layer.find(f'{np}KeywordList', ns) is not None:
+            keywords = [
+                keyword.text for keyword in layer.find(f'{np}KeywordList', ns).findall(f'{np}Keyword', ns)
+            ]
             wms_layer["keywords"] = ", ".join(keywords)
 
 
         try:
-            wms_layer["attribution"] = layer.find('%sAttribution' % np, ns).find('%sTitle' % np, ns).text
-            wms_layer["attributionUrl"] = layer.find('%sAttribution' % np, ns).find('%sOnlineResource' % np, ns).get('{http://www.w3.org/1999/xlink}href')
-        except:
+            wms_layer["attribution"] = layer.find(f'{np}Attribution', ns).find(f'{np}Title', ns).text
+            wms_layer["attributionUrl"] = layer.find(f'{np}Attribution', ns).find(f'{np}OnlineResource', ns).get('{http://www.w3.org/1999/xlink}href')
+        except Exception:
             pass
 
-        try:
-            wms_layer["dataUrl"] = layer.find('%sDataURL' % np, ns).find('%sOnlineResource' % np, ns).get('{http://www.w3.org/1999/xlink}href')
-        except:
+        try:  # noqa: SIM105
+            wms_layer["dataUrl"] = layer.find(f'{np}DataURL', ns).find(f'{np}OnlineResource', ns).get('{http://www.w3.org/1999/xlink}href')
+        except Exception:
             pass
 
-        try:
-            wms_layer["metadataUrl"] = layer.find('%sMetadataURL' % np, ns).find('%sOnlineResource' % np, ns).get('{http://www.w3.org/1999/xlink}href')
-        except:
+        try:  # noqa: SIM105
+            wms_layer["metadataUrl"] = layer.find(f'{np}MetadataURL', ns).find(f'{np}OnlineResource', ns).get('{http://www.w3.org/1999/xlink}href')
+        except Exception:
             pass
 
         # styles
         styles = {}
-        for style in layer.findall('%sStyle' % np, ns):
-            style_name = style.find('%sName' % np, ns).text
-            style_title = style.find('%sTitle' % np, ns).text
+        for style in layer.findall(f'{np}Style', ns):
+            style_name = style.find(f'{np}Name', ns).text
+            style_title = style.find(f'{np}Title', ns).text
             styles[style_name] = style_title
         wms_layer["styles"] = styles
 
@@ -414,8 +387,8 @@ class CapabilitiesReader():
         else:
             wms_layer['opacity'] = 255
 
-        minScale = layer.find('%sMinScaleDenominator' % np, ns)
-        maxScale = layer.find('%sMaxScaleDenominator' % np, ns)
+        minScale = layer.find(f'{np}MinScaleDenominator', ns)
+        maxScale = layer.find(f'{np}MaxScaleDenominator', ns)
         if minScale is not None:
             wms_layer["minScale"] = minScale.text
         if maxScale is not None:
@@ -433,7 +406,7 @@ class CapabilitiesReader():
             wms_layer['display_field'] = layer.get('displayField')
 
         # get default CRS (first CRS)
-        crsEl = layer.find('%sCRS' %np, ns)
+        crsEl = layer.find(f'{np}CRS', ns)
         if crsEl is not None:
             wms_layer['crs'] = crsEl.text
         else:
@@ -441,13 +414,13 @@ class CapabilitiesReader():
 
         # NOTE: get geographic bounding box, as default CRS may have
         #       inverted axis order with WMS 1.3.0
-        bbox = layer.find('%sEX_GeographicBoundingBox' % np, ns)
+        bbox = layer.find(f'{np}EX_GeographicBoundingBox', ns)
         if bbox is not None:
             wms_layer['bbox'] = [
-                float(bbox.find('%swestBoundLongitude' % np, ns).text),
-                float(bbox.find('%ssouthBoundLatitude' % np, ns).text),
-                float(bbox.find('%seastBoundLongitude' % np, ns).text),
-                float(bbox.find('%snorthBoundLatitude' % np, ns).text)
+                float(bbox.find(f'{np}westBoundLongitude', ns).text),
+                float(bbox.find(f'{np}southBoundLatitude', ns).text),
+                float(bbox.find(f'{np}eastBoundLongitude', ns).text),
+                float(bbox.find(f'{np}northBoundLatitude', ns).text)
             ]
 
         return wms_layer
@@ -481,9 +454,7 @@ class CapabilitiesReader():
             ElementTree.register_namespace('ows', 'http://www.opengis.net/ows')
             ElementTree.register_namespace('gml', 'http://www.opengis.net/gml')
             ElementTree.register_namespace('ogc', 'http://www.opengis.net/ogc')
-            ElementTree.register_namespace(
-                'xlink', 'http://www.w3.org/1999/xlink'
-            )
+            ElementTree.register_namespace('xlink', 'http://www.w3.org/1999/xlink')
             root = ElementTree.fromstring(document)
 
             # use default namespace for XML search
@@ -500,16 +471,13 @@ class CapabilitiesReader():
                 ns = {}
                 np = ''
 
-            feature_type_list = root.find('%sFeatureTypeList' % np, ns)
+            feature_type_list = root.find(f'{np}FeatureTypeList', ns)
             if feature_type_list is None:
-                self.logger.warning(
-                    "No FeatureTypeList found for %s: %s" %
-                    (full_url, document)
-                )
+                self.logger.warning(f"No FeatureTypeList found for {full_url}: {document}")
                 return {}
 
-            if feature_type_list.find('%sFeatureType' % np, ns) is None:
-                self.logger.debug("No WFS layers found for %s" % full_url)
+            if feature_type_list.find(f'{np}FeatureType', ns) is None:
+                self.logger.debug(f"No WFS layers found for {full_url}")
                 return {}
 
             # NOTE: use ordered keys
@@ -519,31 +487,30 @@ class CapabilitiesReader():
             capabilities['wfs_url'] = full_url
 
             # get service title
-            service_title = root.find('%sServiceIdentification/%sTitle' % (np_ows, np_ows), ns)
+            service_title = root.find(f'{np_ows}ServiceIdentification/{np_ows}Title', ns)
             if service_title is not None:
                 capabilities['title'] = service_title.text
                 if capabilities['title'] == "Untitled":
                     capabilities['title'] = re.sub('.*/', '', service_name)
 
             # get service abstract
-            service_abstract = root.find('%sServiceIdentification/%sAbstract' % (np_ows, np_ows), ns)
+            service_abstract = root.find(f'{np_ows}ServiceIdentification/{np_ows}Abstract', ns)
             if service_abstract is not None:
                 capabilities['abstract'] = service_abstract.text
 
             # collect service keywords
-            keyword_list = root.find('%sServiceIdentification/%sKeywords' % (np_ows, np_ows), ns)
+            keyword_list = root.find(f'{np_ows}ServiceIdentification/{np_ows}Keywords', ns)
             if keyword_list is not None:
                 keywords = [
-                    keyword.text for keyword
-                    in keyword_list.findall('%sKeyword' % np_ows, ns)
+                    keyword.text for keyword in keyword_list.findall(f'{np_ows}Keyword', ns)
                 ]
                 if keywords:
                     capabilities['keywords'] = ', '.join(keywords)
 
             # service provider
-            provider_name = root.find("%sServiceProvider/%sProviderName" % (np_ows, np_ows), ns)
-            individual_name = root.find("%sServiceProvider/%sServiceContact/%sIndividualName" % (np_ows, np_ows, np_ows), ns)
-            position_name = root.find("%sServiceProvider/%sServiceContact/%sPositionName" % (np_ows, np_ows, np_ows), ns)
+            provider_name = root.find(f"{np_ows}ServiceProvider/{np_ows}ProviderName", ns)
+            individual_name = root.find(f"{np_ows}ServiceProvider/{np_ows}ServiceContact/{np_ows}IndividualName", ns)
+            position_name = root.find(f"{np_ows}ServiceProvider/{np_ows}ServiceContact/{np_ows}PositionName", ns)
 
             capabilities["contact"] = {
                 "person": individual_name.text if individual_name is not None else None,
@@ -556,16 +523,16 @@ class CapabilitiesReader():
 
             # collect WFS layers
             wfs_layers = []
-            for layer in feature_type_list.findall('%sFeatureType' % np, ns):
+            for layer in feature_type_list.findall(f'{np}FeatureType', ns):
                 # NOTE: use ordered keys
                 wfs_layer = OrderedDict()
 
-                layer_name = layer.find('%sName' % np, ns).text
+                layer_name = layer.find(f'{np}Name', ns).text
                 # NOTE: ensure special characters in layer names are consistently replaced (varies across QGIS WFS versions)
                 layer_name = layer_name.replace(' ', '_').replace(':', '-')
 
                 wfs_layer['name'] = layer_name
-                wfs_layer['title'] = layer.find('%sTitle' % np, ns).text
+                wfs_layer['title'] = layer.find(f'{np}Title', ns).text
                 wfs_layer['attributes'] = wfs_layers_attributes.get(layer_name, [])
 
                 wfs_layers.append(wfs_layer)
@@ -574,10 +541,7 @@ class CapabilitiesReader():
 
             return capabilities
         except Exception as e:
-            self.logger.error(
-                "Could not parse WFS GetCapabilities from %s:\n%s" %
-                (full_url, e)
-            )
+            self.logger.error(f"Could not parse WFS GetCapabilities from {full_url}:\n{e}")
             self.logger.debug(traceback.format_exc())
             return {}
 
@@ -619,15 +583,15 @@ class CapabilitiesReader():
             layers_attributes = {}
             replace_unicode_pat = re.compile(r'[^\w.\-_]', flags=re.UNICODE)
 
-            for complex_type in root.findall('%scomplexType' % np, ns):
+            for complex_type in root.findall(f'{np}complexType', ns):
                 # extract layer name from complexType by removing "Type" suffix
                 # e.g. "edit_pointsType" -> "edit_points"
                 layer_name = complex_type.get('name').removesuffix('Type')
 
                 attributes = {}
-                for element in complex_type.findall('%scomplexContent/%sextension/%ssequence/%selement' % (np, np, np, np), ns):
+                for element in complex_type.findall(f'{np}complexContent/{np}extension/{np}sequence/{np}element', ns):
                     attribute_name = element.get('name')
-                    # NOTE: ensure special characters in attribute names are consistently replaced (varies across QGIS WFS versions)
+                    # NOTE: ensure special chars in attribute names are consistently replaced (varies across QGIS WFS versions)
                     attribute_name = replace_unicode_pat.sub('', attribute_name.replace(' ', '_'))
                     attributes[attribute_name] = element.get('alias', attribute_name)
 
@@ -635,10 +599,7 @@ class CapabilitiesReader():
 
             return layers_attributes
         except Exception as e:
-            self.logger.error(
-                "Could not parse WFS DescribeFeatureType from %s:\n%s" %
-                (full_url, e)
-            )
+            self.logger.error(f"Could not parse WFS DescribeFeatureType from {full_url}:\n{e}")
             self.logger.debug(traceback.format_exc())
             return {}
 
@@ -648,13 +609,10 @@ class CapabilitiesReader():
         :param list viewer_languages: viewer languages
 
         """
-        if self.have_get_translations == None:
+        if self.have_get_translations is None:
             # Send one request to check whether GetTranslations is available
             response = requests.get(
-                urljoin(
-                    self.default_qgis_server_url,
-                    posixpath.join(self.qgis_server_url_tenant_suffix, service_name)
-                ),
+                urljoin(self.default_qgis_server_url, posixpath.join(self.qgis_server_url_tenant_suffix, service_name)),
                 params={'SERVICE': 'GetTranslations', 'LANG': 'en-US'},
                 timeout=self.project_settings_read_timeout
             )
@@ -671,21 +629,22 @@ class CapabilitiesReader():
         for language in viewer_languages:
             try:
                 full_url = urljoin(
-                    self.default_qgis_server_url,
-                    posixpath.join(self.qgis_server_url_tenant_suffix, service_name)
+                    self.default_qgis_server_url, posixpath.join(self.qgis_server_url_tenant_suffix, service_name)
                 )
                 params = {
                     'SERVICE': 'GetTranslations',
                     'LANG': language
                 }
-                document = self.fetch_cached(full_url, params, "GetTranslations_" + language, "GetTranslations " + language, True)
+                document = self.fetch_cached(
+                    full_url, params, "GetTranslations_" + language, "GetTranslations " + language, True
+                )
                 if not document:
                     continue
                 all_translations[language] = json.loads(document)
                 if all_translations[language]:
                     self.logger.info("Read " + language + " translations for " + service_name)
 
-            except Exception as e:
+            except Exception:
                 continue
 
         return all_translations

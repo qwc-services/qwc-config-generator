@@ -1,5 +1,5 @@
-from collections import OrderedDict
 import re
+from collections import OrderedDict
 
 from .permissions_query import PermissionsQuery
 from .service_config import ServiceConfig
@@ -29,24 +29,16 @@ class OGCServiceConfig(ServiceConfig):
         self.default_qgis_server_url = generator_config.get(
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
-        self.qgis_server_url_tenant_suffix = generator_config.get(
-            'qgis_server_url_tenant_suffix', ''
-        ).strip('/')
+        self.qgis_server_url_tenant_suffix = generator_config.get('qgis_server_url_tenant_suffix', '').strip('/')
 
         self.themes_reader = themes_reader
         self.force_readonly_datasets = force_readonly_datasets
 
         self.config_models = config_models
         self.permissions_query = PermissionsQuery(config_models, logger)
-        self.permissions_default_allow = generator_config.get(
-            'permissions_default_allow', True
-        )
-        self.inherit_info_permissions = generator_config.get(
-            'inherit_info_permissions', False
-        )
-        self.default_map_role = generator_config.get(
-            'default_map_role', None
-        )
+        self.permissions_default_allow = generator_config.get('permissions_default_allow', True)
+        self.inherit_info_permissions = generator_config.get('inherit_info_permissions', False)
+        self.default_map_role = generator_config.get('default_map_role', None)
 
     def config(self):
         """Return service config."""
@@ -58,8 +50,7 @@ class OGCServiceConfig(ServiceConfig):
         if 'default_qgis_server_url' not in cfg_config:
             # use default QGIS server URL from ConfigGenerator config
             # if not set in service config
-            cfg_config['default_qgis_server_url'] = \
-                self.default_qgis_server_url
+            cfg_config['default_qgis_server_url'] = self.default_qgis_server_url
         if 'qgis_server_url_tenant_suffix' not in cfg_config:
             # use qgis_server_url_tenant_suffix from ConfigGenerator config
             # if not set in service config
@@ -126,7 +117,7 @@ class OGCServiceConfig(ServiceConfig):
 
         for service_name in self.themes_reader.wms_service_names():
             cap = self.themes_reader.wms_capabilities(service_name)
-            if not cap or not 'name' in cap:
+            if not cap or 'name' not in cap:
                 continue
             project_metadata = self.themes_reader.project_metadata(service_name)
             layer_metadata = project_metadata['layer_metadata']
@@ -148,7 +139,7 @@ class OGCServiceConfig(ServiceConfig):
                     url = url.rstrip('/')
                     if not url.endswith('='):
                          url += '/'
-                    online_resources[key] = "%s%s" % (url, service_name)
+                    online_resources[key] = f"{url}{service_name}"
                 wms_service['online_resources'] = online_resources
 
             # collect WMS layers
@@ -167,12 +158,14 @@ class OGCServiceConfig(ServiceConfig):
 
         return wms_services
 
-    def collect_wms_layers(self, layer, layer_metadata, parent_edit_layers = []):
+    def collect_wms_layers(self, layer, layer_metadata, parent_edit_layers = None):
         """Recursively collect WMS layer info for layer subtree from
         capabilities and return nested WMS layers.
 
         :param obj layer: Layer or group layer
         """
+        parent_edit_layers = parent_edit_layers or []
+
         # NOTE: use ordered keys
         wms_layer = OrderedDict()
         edit_layers = []
@@ -183,10 +176,9 @@ class OGCServiceConfig(ServiceConfig):
 
         if 'layers' in layer:
             # group layer
-            sublayers = []
-            for sublayer in layer['layers']:
-                # recursively collect sub layer
-                sublayers.append(self.collect_wms_layers(sublayer, layer_metadata, edit_layers))
+            sublayers = [
+                self.collect_wms_layers(sublayer, layer_metadata, edit_layers) for sublayer in layer['layers']
+            ]
 
             wms_layer['layers'] = sublayers
         else:
@@ -201,7 +193,7 @@ class OGCServiceConfig(ServiceConfig):
             if 'display_field' in layer:
                 wms_layer['display_field'] = layer['display_field']
 
-            if layer_metadata.get(layer['name'], {}).get('editable') == True:
+            if layer_metadata.get(layer['name'], {}).get('editable'):
                 edit_layers.append(layer['name'])
 
         wms_layer['edit_layers'] = edit_layers
@@ -215,7 +207,7 @@ class OGCServiceConfig(ServiceConfig):
 
         for service_name in self.themes_reader.wfs_service_names():
             cap = self.themes_reader.wfs_capabilities(service_name)
-            if not cap or not 'name' in cap:
+            if not cap or 'name' not in cap:
                 continue
 
             # NOTE: use ordered keys
@@ -320,12 +312,15 @@ class OGCServiceConfig(ServiceConfig):
                     self.logger.info(role_map_restrictions)
                     role_info_service_restrictions = \
                         self.permissions_query.resource_hierarchy(
-                            self.permissions_query.resource_restrictions_query('info_services', self.default_map_role, session).all()
+                            self.permissions_query.resource_restrictions_query(
+                                'info_services', self.default_map_role, session
+                            ).all()
                         )
                     map_permitted_for_role = service_name not in role_map_restrictions
                     info_service_permitted_for_role = service_name not in role_info_service_restrictions
 
-            # If service is not restricted for public or permitted for role, allow info_service unless restricted if permissions_default_allow or inherit_info_permissions
+            # If service is not restricted for public or permitted for role, allow info_service unless restricted if
+            # permissions_default_allow or inherit_info_permissions
             if (
                 self.permissions_default_allow or self.inherit_info_permissions
             ) and (
@@ -338,7 +333,7 @@ class OGCServiceConfig(ServiceConfig):
                 continue
 
             cap = self.themes_reader.wms_capabilities(service_name)
-            if not cap or not 'name' in cap:
+            if not cap or 'name' not in cap:
                 continue
             project_metadata = self.themes_reader.project_metadata(service_name)
 
@@ -402,24 +397,21 @@ class OGCServiceConfig(ServiceConfig):
 
         # lookup permissions
         if self.permissions_default_allow:
-            layer_restricted_for_public = layer['name'] in \
-                public_restrictions['layers'].get(service_name, {})
+            layer_restricted_for_public = layer['name'] in public_restrictions['layers'].get(service_name, {})
             info_layer_restricted_for_public = layer_restricted_for_public or \
                 layer['name'] in public_restrictions['info_layers'].get(service_name, {})
         else:
-            layer_restricted_for_public = layer['name'] not in \
-                public_permissions['layers'].get(service_name, {})
+            layer_restricted_for_public = layer['name'] not in public_permissions['layers'].get(service_name, {})
             info_layer_restricted_for_public = layer_restricted_for_public or \
                 layer['name'] not in public_permissions['info_layers'].get(service_name, {})
 
-        layer_permissions = role_permissions[
-            'layers'].get(service_name, {})
-        all_layers_permitted = "*" in layer_permissions.keys()
-        layer_permitted_for_role = all_layers_permitted or \
-            layer['name'] in layer_permissions
+        layer_permissions = role_permissions['layers'].get(service_name, {})
+        all_layers_permitted = "*" in layer_permissions
+        layer_permitted_for_role = all_layers_permitted or layer['name'] in layer_permissions
         layer_or_parent_restricted = layer_restricted_for_public or parent_restricted
         info_layer_permitted_for_role = layer['name'] in role_permissions['info_layers'].get(service_name, {})
-        # If layer is not restricted for public or permitted for role, allow info_layer unless restricted if permissions_default_allow or inherit_info_permissions
+        # If layer is not restricted for public or permitted for role, allow info_layer unless restricted if
+        # permissions_default_allow or inherit_info_permissions
         if (
              self.permissions_default_allow or self.inherit_info_permissions
         ) and (
@@ -468,12 +460,10 @@ class OGCServiceConfig(ServiceConfig):
                 if is_public_role:
                     # collect all permitted attributes
                     restricted_attributes = (
-                        public_restrictions['attributes'].
-                        get(service_name, {}).get(layer['name'], {})
+                        public_restrictions['attributes'].get(service_name, {}).get(layer['name'], {})
                     )
                     wms_layer['attributes'] = [
-                        attr for attr in layer['attributes']
-                        if attr not in restricted_attributes
+                        attr for attr in layer['attributes'] if attr not in restricted_attributes
                     ]
                 else:
                     attributes = None
@@ -481,29 +471,24 @@ class OGCServiceConfig(ServiceConfig):
                     if layer_or_parent_restricted:
                         # collect restricted attributes not permitted for role
                         restricted_attributes = set(
-                            public_restrictions['attributes'].
-                            get(service_name, {}).get(layer['name'], {}).keys()
+                            public_restrictions['attributes'].get(service_name, {}).get(layer['name'], {}).keys()
                         )
                         permitted_attributes = set(
-                            role_permissions['attributes'].
-                            get(service_name, {}).get(layer['name'], {}).keys()
+                            role_permissions['attributes'].get(service_name, {}).get(layer['name'], {}).keys()
                         )
                         restricted_attributes -= permitted_attributes
 
                         # collect all permitted attributes
                         attributes = [
-                            attr for attr in layer['attributes']
-                            if attr not in restricted_attributes
+                            attr for attr in layer['attributes'] if attr not in restricted_attributes
                         ]
                     else:
                         # collect additional attributes
                         permitted_attributes = (
-                            role_permissions['attributes'].
-                            get(service_name, {}).get(layer['name'], {}).keys()
+                            role_permissions['attributes'].get(service_name, {}).get(layer['name'], {}).keys()
                         )
                         attributes = [
-                            attr for attr in layer['attributes']
-                            if attr in permitted_attributes
+                            attr for attr in layer['attributes'] if attr in permitted_attributes
                         ]
 
                     if attributes:
@@ -518,7 +503,7 @@ class OGCServiceConfig(ServiceConfig):
             elif wms_layer.get('attributes', []):
                 # add layer with additional attributes
                 wms_layers.append(wms_layer)
-            elif (info_service_restricted_for_public or info_layer_restricted_for_public) and wms_layer['queryable'] == True:
+            elif (info_service_restricted_for_public or info_layer_restricted_for_public) and wms_layer['queryable']:
                 # add layer with restricted queryable status
                 wms_layers.append(wms_layer)
 
@@ -542,58 +527,36 @@ class OGCServiceConfig(ServiceConfig):
         print_layers = []
 
         # collect print layer permissions and restrictions
-        role_permitted_layers = set(
-            role_permissions['layers'].get(service_name, {}).keys()
-        )
-        public_permitted_layers = set(
-            public_permissions['layers'].get(service_name, {}).keys()
-        )
-        public_restricted_layers = set(
-            public_restrictions['layers'].get(service_name, {}).keys()
-        )
+        role_permitted_layers = set(role_permissions['layers'].get(service_name, {}).keys())
+        public_permitted_layers = set(public_permissions['layers'].get(service_name, {}).keys())
+        public_restricted_layers = set(public_restrictions['layers'].get(service_name, {}).keys())
 
         internal_print_layers = list(set(cap.get('internal_print_layers', [])))
         if is_public_role:
             # collect all permitted print layers
             if self.permissions_default_allow:
                 internal_print_layers = [
-                    layer for layer in internal_print_layers
-                    if layer not in public_restricted_layers
+                    layer for layer in internal_print_layers if layer not in public_restricted_layers
                 ]
             else:
                 internal_print_layers = [
-                    layer for layer in internal_print_layers
-                    if layer in public_permitted_layers
+                    layer for layer in internal_print_layers if layer in public_permitted_layers
                 ]
         else:
             # collect additional print layers
             if self.permissions_default_allow:
                 if map_restricted:
-                    # collect print layers permitted for role
-                    #   including print layers permitted for public
-                    public_print_layers = (
-                        set(internal_print_layers) - public_restricted_layers
-                    )
-                    permitted_layers = (
-                        role_permitted_layers | public_print_layers
-                    )
+                    # collect print layers permitted for role including print layers permitted for public
+                    public_print_layers = set(internal_print_layers) - public_restricted_layers
+                    permitted_layers = role_permitted_layers | public_print_layers
                 else:
-                    # collect print layers permitted for role
-                    #   and restricted for public
-                    permitted_layers = (
-                        role_permitted_layers & public_restricted_layers
-                    )
+                    # collect print layers permitted for role and restricted for public
+                    permitted_layers = role_permitted_layers & public_restricted_layers
             else:
-                # collect print layers permitted for role
-                #   and not permitted for public
-                permitted_layers = (
-                    role_permitted_layers - public_permitted_layers
-                )
+                # collect print layers permitted for role and not permitted for public
+                permitted_layers = role_permitted_layers - public_permitted_layers
 
-            internal_print_layers = [
-                layer for layer in internal_print_layers
-                if layer in permitted_layers
-            ]
+            internal_print_layers = [layer for layer in internal_print_layers if layer in permitted_layers]
 
         for name in internal_print_layers:
             # NOTE: use ordered keys
@@ -619,27 +582,19 @@ class OGCServiceConfig(ServiceConfig):
                                     for public
         """
         # collect print template permissions and restrictions
-        role_permitted_templates = set(
-            role_permissions['print_templates'].get(service_name, {}).keys()
-        )
-        public_permitted_templates = set(
-            public_permissions['print_templates'].get(service_name, {}).keys()
-        )
-        public_restricted_templates = set(
-            public_restrictions['print_templates'].get(service_name, {}).keys()
-        )
+        role_permitted_templates = set(role_permissions['print_templates'].get(service_name, {}).keys())
+        public_permitted_templates = set(public_permissions['print_templates'].get(service_name, {}).keys())
+        public_restricted_templates = set(public_restrictions['print_templates'].get(service_name, {}).keys())
 
         if is_public_role:
             # collect all permitted print templates
             if self.permissions_default_allow:
                 print_templates = [
-                    template for template in print_templates
-                    if template['name'] not in public_restricted_templates
+                    template for template in print_templates if template['name'] not in public_restricted_templates
                 ]
             else:
                 print_templates = [
-                    template for template in print_templates
-                    if template['name'] in public_permitted_templates
+                    template for template in print_templates if template['name'] in public_permitted_templates
                 ]
         else:
             # collect additional print templates
@@ -647,32 +602,25 @@ class OGCServiceConfig(ServiceConfig):
                 if map_restricted:
                     # collect print templates permitted for role
                     #   including print templates permitted for public
-                    public_templates = set(
+                    public_templates = {
                         template['name'] for template in print_templates
                         if template['name'] not in public_restricted_templates
-                    ).union(set(
+                    }.union({
                         template['legendLayout'] for template in print_templates
                         if template['name'] not in public_restricted_templates and 'legendLayout' in template
-                    ))
-                    permitted_templates = (
-                        role_permitted_templates | public_templates
-                    )
+                    })
+                    permitted_templates = role_permitted_templates | public_templates
                 else:
                     # collect print templates permitted for role
                     #   and restricted for public
-                    permitted_templates = (
-                        role_permitted_templates & public_restricted_templates
-                    )
+                    permitted_templates = role_permitted_templates & public_restricted_templates
             else:
                 # collect print templates permitted for role
                 #   and not permitted for public
-                permitted_templates = (
-                    role_permitted_templates - public_permitted_templates
-                )
+                permitted_templates = role_permitted_templates - public_permitted_templates
 
             print_templates = [
-                template for template in print_templates
-                if template['name'] in permitted_templates
+                template for template in print_templates if template['name'] in permitted_templates
             ]
 
         return print_templates
@@ -709,12 +657,9 @@ class OGCServiceConfig(ServiceConfig):
         public_permissions = {
             'wfs_service': permitted_resources('wfs_service', public_role, session),
             'wfs_layer': permitted_resources('wfs_layer', public_role, session),
-            'wfs_layer_create':
-                permitted_resources('wfs_layer_create', public_role, session),
-            'wfs_layer_update':
-                permitted_resources('wfs_layer_update', public_role, session),
-            'wfs_layer_delete':
-                permitted_resources('wfs_layer_delete', public_role, session)
+            'wfs_layer_create': permitted_resources('wfs_layer_create', public_role, session),
+            'wfs_layer_update': permitted_resources('wfs_layer_update', public_role, session),
+            'wfs_layer_delete': permitted_resources('wfs_layer_delete', public_role, session)
         }
 
         # collect public restrictions from ConfigDB
@@ -726,21 +671,23 @@ class OGCServiceConfig(ServiceConfig):
         # NOTE: replace special characters in layer/attribute names
         # (WFS capabilities/etc report cleaned names)
         replace_unicode_pat = re.compile(r'[^\w.\-_]', flags=re.UNICODE)
-        clean_layer_name = lambda layer_name: layer_name.replace(' ', '_').replace(':', '-')
-        clean_attr_name = lambda attr_name: replace_unicode_pat.sub('', attr_name.replace(' ', '_'))
+        def clean_layer_name(layer_name):
+            return layer_name.replace(' ', '_').replace(':', '-')
+        def clean_attr_name(attr_name):
+            return replace_unicode_pat.sub('', attr_name.replace(' ', '_'))
 
         for perm in (role_permissions, public_permissions, public_restrictions):
             for resource in ['wfs_layer', 'wfs_layer_create', 'wfs_layer_update', 'wfs_layer_delete']:
                 for service_name in perm.get(resource, []):
-                    perm[resource][service_name] = dict([
-                        (clean_layer_name(layer_name), {}) for layer_name in perm[resource][service_name]
-                    ])
+                    perm[resource][service_name] = {
+                        clean_layer_name(layer_name): {} for layer_name in perm[resource][service_name]
+                    }
             for service_name in perm.get('attributes', []):
-                perm['attributes'][service_name] = dict([
-                    (clean_layer_name(layer_name_attrs[0]), dict([
-                        (clean_attr_name(attr_name), {}) for attr_name in layer_name_attrs[1]
-                    ])) for layer_name_attrs in perm['attributes'][service_name].items()
-                ])
+                perm['attributes'][service_name] = {
+                    clean_layer_name(layer_name_attrs[0]): {clean_attr_name(attr_name): {}
+                    for attr_name in layer_name_attrs[1]}
+                    for layer_name_attrs in perm['attributes'][service_name].items()
+                }
 
         # collect write permissions for role
         # with highest priority for all datasets
@@ -783,7 +730,7 @@ class OGCServiceConfig(ServiceConfig):
                 continue
 
             cap = self.themes_reader.wfs_capabilities(service_name)
-            if not cap or not 'name' in cap:
+            if not cap or 'name' not in cap:
                 continue
 
             # NOTE: use ordered keys
@@ -815,8 +762,7 @@ class OGCServiceConfig(ServiceConfig):
         :param obj role_permissions: Lookup for role permissions
         :param obj public_permissions: Lookup for public permissions
         :param obj public_restrictions: Lookup for public restrictions
-        :param bool service_restricted_for_public: Whether parent service is restricted
-                                    for public
+        :param bool service_restricted_for_public: Whether parent service is restricted for public
         """
         wfs_layers = []
 
@@ -839,16 +785,15 @@ class OGCServiceConfig(ServiceConfig):
                 layer_restricted_for_public = layer['name'] in \
                     public_restrictions['wfs_layer'].get(service_name, {})
             else:
-                # NOTE: restricted by default, permitted also if any of 'wfs_layer_create', wfs_layer_update', 'wfs_layer_delete' are permitted
+                # NOTE: restricted by default, permitted if any of 'wfs_layer_create', wfs_layer_update', 'wfs_layer_delete'
+                # are permitted
                 layer_restricted_for_public = True
                 for resource_type in ['wfs_layer', 'wfs_layer_create', 'wfs_layer_update', 'wfs_layer_delete']:
-                    layer_restricted_for_public &= layer['name'] not in \
-                        public_permissions[resource_type].get(service_name, {})
+                    layer_restricted_for_public &= layer['name'] not in public_permissions[resource_type].get(service_name, {})
 
             layer_permitted_for_role = False
             for resource_type in ['wfs_layer', 'wfs_layer_create', 'wfs_layer_update', 'wfs_layer_delete']:
-                layer_permitted_for_role |= layer['name'] in \
-                    role_permissions[resource_type].get(service_name, {})
+                layer_permitted_for_role |= layer['name'] in role_permissions[resource_type].get(service_name, {})
 
             if layer_restricted_for_public and not layer_permitted_for_role:
                 # wfs_layer not permitted at least for reading
@@ -868,15 +813,10 @@ class OGCServiceConfig(ServiceConfig):
 
             # combine with detailed CRUD data permissions
             if not self.force_readonly_datasets:
-                creatable |= layer['name'] in \
-                    role_permissions['wfs_layer_create'].get(service_name, {})
-                updatable |= layer['name'] in \
-                    role_permissions['wfs_layer_update'].get(service_name, {})
-                deletable |= layer['name'] in \
-                    role_permissions['wfs_layer_delete'].get(service_name, {})
-                writable |= (
-                    creatable and readable and updatable and deletable
-                )
+                creatable |= layer['name'] in role_permissions['wfs_layer_create'].get(service_name, {})
+                updatable |= layer['name'] in role_permissions['wfs_layer_update'].get(service_name, {})
+                deletable |= layer['name'] in role_permissions['wfs_layer_delete'].get(service_name, {})
+                writable |= creatable and readable and updatable and deletable
 
             if is_public_role or layer_or_service_restricted:
                 # collect all CRUD permissions
@@ -901,12 +841,10 @@ class OGCServiceConfig(ServiceConfig):
             # collect WFS attribute permissions
             # NOTE: attributes are always allowed by default
             restricted_attributes = set(
-                public_restrictions['attributes'].
-                get(service_name, {}).get(layer['name'], {}).keys()
+                public_restrictions['attributes'].get(service_name, {}).get(layer['name'], {}).keys()
             )
             permitted_attributes = set(
-                role_permissions['attributes'].
-                get(service_name, {}).get(layer['name'], {}).keys()
+                role_permissions['attributes'].get(service_name, {}).get(layer['name'], {}).keys()
             )
             if layer_or_service_restricted:
                  # collect attributes which are unrestricted or permitted for role
@@ -914,20 +852,17 @@ class OGCServiceConfig(ServiceConfig):
 
                 # collect all permitted attributes
                 layer_permissions['attributes'] = [
-                    attr for attr in layer['attributes']
-                    if attr not in restricted_attributes
+                    attr for attr in layer['attributes'] if attr not in restricted_attributes
                 ]
             elif is_public_role:
                 # collect all attributes which are not restricted
                 layer_permissions['attributes'] = [
-                    attr for attr in layer['attributes']
-                    if attr not in restricted_attributes
+                    attr for attr in layer['attributes'] if attr not in restricted_attributes
                 ]
             else:
                 # collect additional attributes which are restricted for public and permitted for role
                 permitted_attributes = (
-                    role_permissions['attributes'].
-                    get(service_name, {}).get(layer['name'], {}).keys()
+                    role_permissions['attributes'].get(service_name, {}).get(layer['name'], {}).keys()
                 )
                 attributes = [
                     attr for attr in layer['attributes']

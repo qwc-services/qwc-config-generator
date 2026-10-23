@@ -1,14 +1,13 @@
-from collections import OrderedDict
-import json
 import os
-import re
-from pathlib import Path
 import posixpath
-import requests
-import traceback
+import re
 import urllib.parse
+from collections import OrderedDict
+from pathlib import Path
 
-from .external_layer_utils import resolve_external_layer, clear_capabilities_cache
+import requests
+
+from .external_layer_utils import clear_capabilities_cache, resolve_external_layer
 from .permissions_query import PermissionsQuery
 from .service_config import ServiceConfig
 
@@ -21,7 +20,7 @@ class MapViewerConfig(ServiceConfig):
 
     # lookup for edit geometry types:
     #     PostGIS geometry type -> QWC2 edit geometry type
-    EDIT_GEOM_TYPES = {
+    EDIT_GEOM_TYPES = {  # noqa: RUF012
         None: None,
         'NOGEOMETRY': None,
         'POINT': 'Point',
@@ -54,7 +53,7 @@ class MapViewerConfig(ServiceConfig):
 
     # lookup for edit field types:
     #     PostgreSQL data_type -> QWC2 edit field type
-    EDIT_FIELD_TYPES = {
+    EDIT_FIELD_TYPES = {  # noqa: RUF012
         'bigint': 'number',
         'boolean': 'boolean',
         'character varying': 'text',
@@ -114,33 +113,21 @@ class MapViewerConfig(ServiceConfig):
         self.default_qgis_server_url = generator_config.get(
             'default_qgis_server_url', 'http://localhost:8001/ows/'
         ).rstrip('/') + '/'
-        self.qgis_server_url_tenant_suffix = generator_config.get(
-            'qgis_server_url_tenant_suffix', ''
-        ).strip('/')
+        self.qgis_server_url_tenant_suffix = generator_config.get('qgis_server_url_tenant_suffix', '').strip('/')
 
         # Use default map thumbnail instead of generating via GetMap
-        self.use_default_map_thumbnail = generator_config.get(
-            'use_default_map_thumbnail', False
-        )
+        self.use_default_map_thumbnail = generator_config.get('use_default_map_thumbnail', False)
 
         # Timeout for generating thumbnail via GetMap request
-        self.generate_thumbnail_timeout = generator_config.get(
-            "generate_thumbnail_timeout", 10
-        )
+        self.generate_thumbnail_timeout = generator_config.get("generate_thumbnail_timeout", 10)
 
-        self.project_settings_read_timeout = generator_config.get(
-            "project_settings_read_timeout", 60
-        )
+        self.project_settings_read_timeout = generator_config.get("project_settings_read_timeout", 60)
 
         # automatically generate configurations for SensorThingsTool plugin from QGIS project metadata
-        self.autogen_sensor_things_tool_configs = generator_config.get(
-            'autogen_sensor_things_tool_configs', False
-        )
+        self.autogen_sensor_things_tool_configs = generator_config.get('autogen_sensor_things_tool_configs', False)
 
-        qgis_projects_base_dir = generator_config.get(
-            'qgis_projects_base_dir').rstrip('/') + '/'
-        qgis_projects_scan_base_dir = generator_config.get(
-            'qgis_projects_scan_base_dir')
+        qgis_projects_base_dir = generator_config.get('qgis_projects_base_dir').rstrip('/') + '/'
+        qgis_projects_scan_base_dir = generator_config.get('qgis_projects_scan_base_dir')
         if qgis_projects_scan_base_dir:
             self.scan_prefix = os.path.relpath(qgis_projects_scan_base_dir, qgis_projects_base_dir) + "/"
             self.strip_scan_prefix = generator_config.get('strip_scan_prefix_from_theme_names', False)
@@ -252,10 +239,6 @@ class MapViewerConfig(ServiceConfig):
         # NOTE: use ordered keys
         qwc2_themes = OrderedDict()
 
-        # additional service config
-        cfg_generator_config = self.service_config.get('generator_config', {})
-        cfg_qwc2_themes = cfg_generator_config.get('qwc2_themes', {})
-
         # QWC2 themes config
         themes_config = self.themes_reader.themes_config
         themes_config_themes = themes_config.get('themes', {})
@@ -275,15 +258,18 @@ class MapViewerConfig(ServiceConfig):
         bgLayerCrs = {}
         autogenPluginDataConfigs = {}
         for item in themes_config_themes.get('items', []):
-            theme_item = self.theme_item(item, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs, autogenPluginDataConfigs)
+            theme_item = self.theme_item(
+                item, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs, autogenPluginDataConfigs
+            )
             if theme_item is not None and not theme_item['wmsOnly']:
                 items.append(theme_item)
         themes['items'] = items
 
         # collect theme groups
-        groups = []
-        for group in themes_config_themes.get('groups', []):
-            groups.append(self.theme_group(group, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs, autogenPluginDataConfigs))
+        groups = [
+            self.theme_group(group, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs, autogenPluginDataConfigs)
+            for group in themes_config_themes.get('groups', [])
+        ]
         themes['subdirs'] = groups
 
         if not self.default_theme and self.theme_ids:
@@ -299,8 +285,8 @@ class MapViewerConfig(ServiceConfig):
         )
         for backgroundLayer in themes['backgroundLayers']:
             backgroundLayer["attribution"] = {
-                "Title": backgroundLayer["attribution"] if "attribution" in backgroundLayer else None,
-                "OnlineResource": backgroundLayer["attributionUrl"] if "attributionUrl" in backgroundLayer else None
+                "Title": backgroundLayer.get("attribution"),
+                "OnlineResource": backgroundLayer.get("attributionUrl")
             }
             backgroundLayer.pop("attributionUrl", None)
 
@@ -310,14 +296,20 @@ class MapViewerConfig(ServiceConfig):
             elif not os.path.isfile(os.path.join(assets_dir, imgPath)):
                 imgPath = "img/mapthumbs/" + backgroundLayer.get("thumbnail", "")
                 if not os.path.isfile(os.path.join(assets_dir, imgPath)):
-                    self.logger.warn("Could not find thumbnail %s for background layer %s, using default thumbnail" % (backgroundLayer.get("thumbnail", ""), backgroundLayer.get("name", "")))
+                    self.logger.warn(
+                        f'Could not find thumbnail {backgroundLayer.get("thumbnail", "")} '
+                        f'for background layer {backgroundLayer.get("name", "")}, using default thumbnail'
+                    )
                     imgPath = "img/mapthumbs/default.jpg"
             backgroundLayer["thumbnail"] = imgPath
 
         # Resolve background layers
         for entry in themes['backgroundLayers']:
             if "resource" in entry:
-                layer = resolve_external_layer(entry["resource"], self.logger, self.project_settings_read_timeout, entry.get("projection", bgLayerCrs.get(entry["name"])), self.use_cached_project_metadata, self.cache_dir)
+                layer = resolve_external_layer(
+                    entry["resource"], self.logger, self.project_settings_read_timeout, entry.get("projection",
+                    bgLayerCrs.get(entry["name"])), self.use_cached_project_metadata, self.cache_dir
+                )
                 if layer:
                     layer["name"] = entry["name"]
                     layer["title"] = entry.get("title", layer["title"])
@@ -326,7 +318,9 @@ class MapViewerConfig(ServiceConfig):
 
         # Resolve external layers
         for entry in autogenExternalLayers:
-            layer = resolve_external_layer(entry, self.logger, self.project_settings_read_timeout, None, self.use_cached_project_metadata, self.cache_dir)
+            layer = resolve_external_layer(
+                entry, self.logger, self.project_settings_read_timeout, None, self.use_cached_project_metadata, self.cache_dir
+            )
             if layer:
                 themes["externalLayers"].append(layer)
 
@@ -338,15 +332,11 @@ class MapViewerConfig(ServiceConfig):
             plugin_data[plugin] += entries
         themes['pluginData'] = plugin_data
 
-        themes['themeInfoLinks'] = themes_config_themes.get(
-            'themeInfoLinks', []
-        )
+        themes['themeInfoLinks'] = themes_config_themes.get('themeInfoLinks', [])
 
         themes['defaultMapCrs'] = themes_config.get('defaultMapCrs')
         themes['defaultMapExtent'] = themes_config.get('defaultMapExtent')
-        themes['defaultWMSVersion'] = themes_config.get(
-            'defaultWMSVersion', '1.3.0'
-        )
+        themes['defaultWMSVersion'] = themes_config.get('defaultWMSVersion', '1.3.0')
         themes['defaultScales'] = themes_config.get('defaultScales')
         themes['defaultPrintScales'] = themes_config.get('defaultPrintScales')
         themes['defaultPrintResolutions'] = themes_config.get('defaultPrintResolutions')
@@ -373,22 +363,25 @@ class MapViewerConfig(ServiceConfig):
         # NOTE: use ordered keys
         group = OrderedDict()
         self.groupCounter += 1
-        group['id'] = "g%d" % self.groupCounter
+        group['id'] = f"g{self.groupCounter}"
         group['title'] = cfg_group.get('title')
         group['titleMsgId'] = cfg_group.get('titleMsgId')
 
         # collect sub theme items
         items = []
         for item in cfg_group.get('items', []):
-            theme_item = self.theme_item(item, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs, autogenPluginDataConfigs)
+            theme_item = self.theme_item(
+                item, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs, autogenPluginDataConfigs
+            )
             if theme_item is not None and not theme_item['wmsOnly']:
                 items.append(theme_item)
         group['items'] = items
 
         # recursively collect sub theme groups
-        subgroups = []
-        for subgroup in cfg_group.get('groups', []):
-            subgroups.append(self.theme_group(subgroup, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs, autogenPluginDataConfigs))
+        subgroups = [
+            self.theme_group(subgroup, themes_config, assets_dir, autogenExternalLayers, bgLayerCrs, autogenPluginDataConfigs)
+            for subgroup in cfg_group.get('groups', [])
+        ]
         group['subdirs'] = subgroups
 
         return group
@@ -408,12 +401,12 @@ class MapViewerConfig(ServiceConfig):
 
         service_name = self.themes_reader.service_name(cfg_item['url'])
 
-        if cfg_item.get('wmsOnly') == True:
-            self.logger.info("Configuring %s as WMS-only theme" % service_name)
+        if cfg_item.get('wmsOnly'):
+            self.logger.info(f"Configuring {service_name} as WMS-only theme")
 
         # get capabilities
         cap = self.themes_reader.wms_capabilities(service_name)
-        if not cap or not 'name' in cap:
+        if not cap or 'name' not in cap:
             return None
 
         project_metadata = self.themes_reader.project_metadata(service_name)
@@ -462,7 +455,8 @@ class MapViewerConfig(ServiceConfig):
         autogen_theme_search_provider_expressions = {}
         for layer in root_layer.get('layers', []):
             sublayer = self.collect_layers(
-                layer, search_layers, 1, collapseLayerGroupsBelowLevel, newExternalLayers, project_metadata, featureReports, lockedPreset, [], layer_titles, newSearchProviders, autogen_theme_search_provider_expressions
+                layer, search_layers, 1, collapseLayerGroupsBelowLevel, newExternalLayers, project_metadata, featureReports,
+                lockedPreset, [], layer_titles, newSearchProviders, autogen_theme_search_provider_expressions
             )
             if sublayer:
                 layers.append(sublayer)
@@ -485,7 +479,8 @@ class MapViewerConfig(ServiceConfig):
                     "expression": autogen_theme_search_provider_expressions
                 }
             })
-            self.logger.info(f"Adding QGIS search provider with layers {", ".join(autogen_theme_search_provider_expressions.keys())}")
+            provider_keys = ', '.join(autogen_theme_search_provider_expressions.keys())
+            self.logger.info(f"Adding QGIS search provider with layers {provider_keys}")
 
         item['abstract'] = cap.get('abstract', '')
         item['attribution'] = {
@@ -605,7 +600,7 @@ class MapViewerConfig(ServiceConfig):
         for entry in item.get('backgroundLayers', []):
             bgLayerCrs[entry['name']] = item['mapCrs']
 
-        autogenExternalLayers += list(map(lambda entry: entry["name"], newExternalLayers))
+        autogenExternalLayers += [entry["name"] for entry in newExternalLayers]
 
         return item
 
@@ -623,17 +618,15 @@ class MapViewerConfig(ServiceConfig):
             if os.path.exists(os.path.join(thumbnail_directory, cfg_item['thumbnail'])):
                 return os.path.join('img/mapthumbs', cfg_item['thumbnail'])
             else:
-                self.logger.warn("Specified thumbnail %s for theme %s does not exist" % (
-                    cfg_item['thumbnail'], service_name))
+                self.logger.warn(f"Specified thumbnail {cfg_item['thumbnail']} for theme {service_name} does not exist")
 
         # Scanning for thumbnail
-        thumbnail_filename = "%s.png" % Path(service_name).stem
+        thumbnail_filename = f"{Path(service_name).stem}.png"
         thumbnail_path = os.path.join(
                 thumbnail_directory, thumbnail_filename)
 
         if os.path.exists(thumbnail_path):
-            self.logger.info("Using manually provided thumbnail %s for theme %s" % (
-                thumbnail_filename, service_name))
+            self.logger.info(f"Using manually provided thumbnail {thumbnail_filename} for theme {service_name}")
             return os.path.join('img/mapthumbs', thumbnail_filename)
 
         if self.use_default_map_thumbnail:
@@ -642,10 +635,9 @@ class MapViewerConfig(ServiceConfig):
 
         basename = cfg_item["url"].rsplit("/")[-1].rstrip("?") + ".png"
         thumbnail = os.path.join(assets_dir, "img/genmapthumbs", basename)
-        if self.use_cached_project_metadata:
-            if os.path.isfile(thumbnail):
-                self.logger.info("Using pre-existing autogenerated thumbnail for " + service_name)
-                return 'img/genmapthumbs/' + basename
+        if self.use_cached_project_metadata and os.path.isfile(thumbnail):
+            self.logger.info("Using pre-existing autogenerated thumbnail for " + service_name)
+            return 'img/genmapthumbs/' + basename
 
         self.logger.info("Using WMS GetMap to generate thumbnail for " + service_name)
 
@@ -662,9 +654,7 @@ class MapViewerConfig(ServiceConfig):
             float(bbox[3])  # maxy
         ]
 
-        layers = []
-        for layer in root_layer.get('layers', []):
-            layers.append(layer['name'])
+        layers = [layer['name'] for layer in root_layer.get('layers', [])]
 
         # WMS GetMap request
         url = urllib.parse.urljoin(
@@ -685,8 +675,7 @@ class MapViewerConfig(ServiceConfig):
                 bboxw = bboxh * imgratio
         else:
             bboxw = bboxh * imgratio
-        adjustedExtent = [bboxcx - 0.5 * bboxw, bboxcy - 0.5 * bboxh,
-                          bboxcx + 0.5 * bboxw, bboxcy + 0.5 * bboxh]
+        adjustedExtent = [bboxcx - 0.5 * bboxw, bboxcy - 0.5 * bboxh, bboxcx + 0.5 * bboxw, bboxcy + 0.5 * bboxh]
 
         try:
             response = requests.get(
@@ -706,10 +695,7 @@ class MapViewerConfig(ServiceConfig):
             )
 
             if response.status_code != requests.codes.ok:
-                self.logger.warn(
-                    "Error generating thumbnail for WMS %s:\n%s" %
-                    (service_name, response.content)
-                )
+                self.logger.warn(f"Error generating thumbnail for WMS {service_name}:\n{response.content}")
                 return 'img/mapthumbs/default.jpg'
 
             document = response.content
@@ -718,7 +704,7 @@ class MapViewerConfig(ServiceConfig):
                 os.makedirs(os.path.join(assets_dir, "img/genmapthumbs/"))
             except Exception as e:
                 if not isinstance(e, FileExistsError):
-                    self.logger.warn("The directory for auto generated thumbnails could not be created\n %s" % (str(e)))
+                    self.logger.warn(f"The directory for auto generated thumbnails could not be created\n {e!s}")
             with open(thumbnail, "wb") as fh:
                 fh.write(document)
             return 'img/genmapthumbs/' + basename
@@ -737,7 +723,7 @@ class MapViewerConfig(ServiceConfig):
         suffix = 1
         while theme_id in self.theme_ids:
             # add suffix to name
-            theme_id = "%s_%s" % (name, suffix)
+            theme_id = f"{name}_{suffix}"
             suffix += 1
 
         # add to used IDs
@@ -755,7 +741,10 @@ class MapViewerConfig(ServiceConfig):
         if field in cfg_item:
             item[field] = cfg_item.get(field)
 
-    def collect_layers(self, layer, search_layers, level, collapseBelowLevel, externalLayers, project_metadata, featureReports, lockedPreset, parentGroups, layer_titles, autogen_search_providers, autogen_theme_search_provider_expressions):
+    def collect_layers(
+        self, layer, search_layers, level, collapseBelowLevel, externalLayers, project_metadata, featureReports,
+        lockedPreset, parentGroups, layer_titles, autogen_search_providers, autogen_theme_search_provider_expressions
+    ):
         """Recursively collect layer tree from capabilities.
 
         :param obj layer: Layer or group layer
@@ -765,7 +754,7 @@ class MapViewerConfig(ServiceConfig):
         item_layer = OrderedDict()
 
         item_layer['name'] = layer['name']
-        layerPath = "/".join(parentGroups + [layer['name']])
+        layerPath = "/".join([*parentGroups, layer['name']])
         if 'title' in layer:
             item_layer['title'] = layer['title']
             layer_titles[layer['name']] = layer['title']
@@ -776,7 +765,9 @@ class MapViewerConfig(ServiceConfig):
             for sublayer in layer['layers']:
                 # recursively collect sub layer
                 item_sublayer = self.collect_layers(
-                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers, project_metadata, featureReports, lockedPreset, parentGroups + [layer['name']], layer_titles, autogen_search_providers, autogen_theme_search_provider_expressions
+                    sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers, project_metadata, featureReports,
+                    lockedPreset, [*parentGroups, layer['name']], layer_titles, autogen_search_providers,
+                    autogen_theme_search_provider_expressions
                 )
                 if item_sublayer:
                     sublayers.append(item_sublayer)
@@ -793,8 +784,7 @@ class MapViewerConfig(ServiceConfig):
 
             # expanded
             if layer.get("expanded") is True:
-                item_layer['expanded'] = False if collapseBelowLevel >= 0 and \
-                    level >= collapseBelowLevel else True
+                item_layer['expanded'] = not (collapseBelowLevel >= 0 and level >= collapseBelowLevel)
             else:
                 item_layer['expanded'] = False
 
@@ -805,7 +795,7 @@ class MapViewerConfig(ServiceConfig):
             item_layer['visibility'] = layer['visible']
 
             if lockedPreset and layerPath in lockedPreset:
-                item_layer['visibility'] = lockedPreset[layerPath]['checked'] == True
+                item_layer['visibility'] = bool(lockedPreset[layerPath]['checked'])
         else:
 
             geometryType = layer.get('geometryType')
@@ -824,7 +814,7 @@ class MapViewerConfig(ServiceConfig):
             if 'default' in item_layer['styles']:
                 item_layer['style'] = 'default'
             elif len(item_layer['styles']) > 0:
-                item_layer['style'] = list(item_layer['styles'])[0]
+                item_layer['style'] = next(iter(item_layer['styles']))
             else:
                 item_layer['style'] = ''
 
@@ -832,7 +822,7 @@ class MapViewerConfig(ServiceConfig):
                 layerPreset = lockedPreset[layerPath]
                 item_layer['styles'] = {layerPreset["style"]: layerPreset["style"]}
                 item_layer['style'] = layerPreset["style"]
-                item_layer['visibility'] = layerPreset["checked"] == True
+                item_layer['visibility'] = bool(layerPreset["checked"])
 
             if 'display_field' in layer:
                 item_layer['displayField'] = layer.get('display_field')
@@ -876,7 +866,10 @@ class MapViewerConfig(ServiceConfig):
             # dataUrl
             if 'dataUrl' in layer:
                 item_layer['dataUrl'] = layer.get('dataUrl', '')
-                if item_layer["dataUrl"].startswith("wms:") or item_layer["dataUrl"].startswith("wmts:") or item_layer["dataUrl"].startswith("mvt:"):
+                if (
+                    item_layer["dataUrl"].startswith("wms:") or item_layer["dataUrl"].startswith("wmts:") or
+                    item_layer["dataUrl"].startswith("mvt:")
+                ):
                     externalLayers.append({"internalLayer": layer['name'], "name": item_layer["dataUrl"]})
                 item_layer["dataUrl"] = ""
 
@@ -896,27 +889,34 @@ class MapViewerConfig(ServiceConfig):
             item_layer['refreshInterval'] = meta.get('refresh_interval', 0)
 
             # Auto-generated QGIS searchProviders
-            if project_metadata['variables'].get('qwc_autogen_searchproviders', 'false').lower() == "true":
-                if layer.get('queryable'):
-                    attributes = layer.get('attributes', {})
+            qwc_autogen_searchproviders = project_metadata['variables'].get('qwc_autogen_searchproviders', 'false')
+            if qwc_autogen_searchproviders.lower() == "true" and layer.get('queryable'):
+                attributes = layer.get('attributes', {})
 
-                    if layer.get('display_field', None) is not None:
-                        # Try to add the displayField to global search
-                        fieldName = next((name for name, attrDef in attributes.items() if attrDef['alias'] == layer['display_field']), None)
-                        if fieldName is not None:
-                            # Don't use field if it's defined as not searchable in QGIS
-                            searchable = meta.get('fields', {}).get(fieldName, {}).get('searchable', False)
-                            if searchable:
-                                if attributes[fieldName]['type'] == 'QString':
-                                    autogen_theme_search_provider_expressions[layer['name']] = f"\"{fieldName}\" ILIKE '%$TEXT$%'"
-                                else:
-                                    # We cannot support other types (int, etc) as PG will fail when entering text
-                                    # We could support boolean, but it doesn't make sense
-                                    self.logger.debug(f"{layer['name']}: skipping displayField '{fieldName}': unhandled type '{attributes[fieldName]['type']}'")
+                if layer.get('display_field', None) is not None:
+                    # Try to add the displayField to global search
+                    fieldName = next(
+                        (name for name, attrDef in attributes.items() if attrDef['alias'] == layer['display_field']), None
+                    )
+                    if fieldName is not None:
+                        # Don't use field if it's defined as not searchable in QGIS
+                        searchable = meta.get('fields', {}).get(fieldName, {}).get('searchable', False)
+                        if searchable:
+                            if attributes[fieldName]['type'] == 'QString':
+                                autogen_theme_search_provider_expressions[layer['name']] = f"\"{fieldName}\" ILIKE '%$TEXT$%'"
                             else:
-                                self.logger.debug(f"{layer['name']}: skipping displayField '{fieldName}': not searchable")
+                                # We cannot support other types (int, etc) as PG will fail when entering text
+                                # We could support boolean, but it doesn't make sense
+                                self.logger.debug(
+                                    f"{layer['name']}: skipping displayField '{fieldName}': "
+                                    f"unhandled type '{attributes[fieldName]['type']}'"
+                                )
                         else:
-                            self.logger.debug(f"{layer['name']}: skipping displayField: could not find field with alias '{layer['display_field']}'")
+                            self.logger.debug(f"{layer['name']}: skipping displayField '{fieldName}': not searchable")
+                    else:
+                        self.logger.debug(
+                            f"{layer['name']}: skipping displayField: cannot find field with alias '{layer['display_field']}'"
+                        )
 
                     # Try to define a search for that layer
                     expressions = []
@@ -959,7 +959,9 @@ class MapViewerConfig(ServiceConfig):
                         if fieldType is not None:
                             fields[paramName] = {'label': attrDef['alias'], 'type': fieldType, 'options': fieldOptions}
                         else:
-                            self.logger.debug(f"{layer['name']} skipping search field '{fieldName}': unhandled type '{attrDef['type']}'")
+                            self.logger.debug(
+                                f"{layer['name']} skipping search field '{fieldName}': unhandled type '{attrDef['type']}'"
+                            )
 
                     if len(expressions) > 0:
                         expressions.pop()  # pop last "and"
@@ -975,7 +977,8 @@ class MapViewerConfig(ServiceConfig):
                                 'fields': fields,
                             }
                         })
-                        self.logger.info(f"Adding QGIS search provider for '{layer['name']}' with fields {", ".join(list(fields.keys()))}")
+                        provider_keys = ", ".join(fields.keys())
+                        self.logger.info(f"Adding QGIS search provider for '{layer['name']}' with fields {provider_keys}")
 
         return item_layer
 
@@ -995,16 +998,14 @@ class MapViewerConfig(ServiceConfig):
                 # No edit metadata available
                 continue
 
-            dataset_name = "%s.%s" % (map_name, layer_name)
+            dataset_name = f"{map_name}.{layer_name}"
 
             # check geometry type
             if layer_metadata.get('geometry_type') not in self.EDIT_GEOM_TYPES:
-                table = (
-                    "%s.%s" % (layer_metadata.get('schema'), layer_metadata.get('table_name'))
-                )
+                table = "{layer_metadata.get('schema')}.{layer_metadata.get('table_name')}"
                 self.logger.warning(
-                    "Unsupported geometry type '%s' for edit dataset '%s' on table '%s'" %
-                    (layer_metadata.get('geometry_type'), dataset_name, table)
+                    f"Unsupported geometry type '{layer_metadata.get('geometry_type')}' "
+                    f"for edit dataset '{dataset_name}' on table '{table}'"
                 )
                 continue
 
@@ -1091,22 +1092,22 @@ class MapViewerConfig(ServiceConfig):
                     if sensor_things_metadata.get('entity') != 'Location':
                         # skip if SensorThings layer is not based on Location
                         self.logger.info(
-                            "Skipping automatic plugin config for SensorThings layer '%s' of theme '%s': "
-                            "Layer entity type is not 'Location'" % (layer_name, service_name)
+                            f"Skipping auto plugin config for SensorThings layer '{layer_name}' of theme '{service_name}': "
+                            "Layer entity type is not 'Location'"
                         )
                         continue
                     if sensor_things_metadata.get('geometry_type') is None:
                         # skip if SensorThings layer has no geometry
                         self.logger.info(
-                            "Skipping automatic plugin config for SensorThings layer '%s' of theme '%s': "
-                            "Layer has no geometry" % (layer_name, service_name)
+                            f"Skipping auto plugin config for SensorThings layer '{layer_name}' of theme '{service_name}': "
+                            "Layer has no geometry"
                         )
                         continue
                     if re.match(r'^https?://.+:.+@', sensor_things_metadata.get('url')):
                         # skip if SensorThings layer has basic auth in URL
                         self.logger.info(
-                            "Skipping automatic plugin config for SensorThings layer '%s' of theme '%s': "
-                            "Layer requires authentication" % (layer_name, service_name)
+                            f"Skipping auto plugin config for SensorThings layer '{layer_name}' of theme '{service_name}': "
+                            "Layer requires authentication"
                         )
                         continue
 
@@ -1129,25 +1130,19 @@ class MapViewerConfig(ServiceConfig):
                     if geom_type is None:
                         # skip if SensorThings layer geometry type is not supported
                         self.logger.info(
-                            "Skipping automatic plugin config for SensorThings layer '%s' of theme '%s': "
-                            "Layer geometry type '%s' is not supported" %
-                            (layer_name, service_name, sensor_things_metadata.get('geometry_type'))
+                            f"Skipping auto plugin config for SensorThings layer '{layer_name}' of theme '{service_name}': "
+                            f"Layer geometry type '{sensor_things_metadata.get('geometry_type')}' is not supported"
                         )
                         continue
 
                     # build sensorThingsApiUrls entry
-                    cfg = {
-                        'url': sensor_things_metadata['url']
-                    }
+                    cfg = {'url': sensor_things_metadata['url']}
 
                     # add geometry type filter
-                    locations_filter = (
-                        "location/type eq '%s' or location/geometry/type eq '%s'" %
-                        (geom_type, geom_type)
-                    )
+                    locations_filter = f"location/type eq '{geom_type}' or location/geometry/type eq '{geom_type}'"
                     # append any custom locations filter
                     if sensor_things_metadata.get('filter'):
-                        locations_filter = "(%s) and (%s)" % (locations_filter, sensor_things_metadata['filter'])
+                        locations_filter = f"({locations_filter}) and ({sensor_things_metadata['filter']})"
 
                     cfg['locationsFilter'] = locations_filter
                     sensor_things_api_urls.append(cfg)
@@ -1168,8 +1163,8 @@ class MapViewerConfig(ServiceConfig):
                     })
             else:
                 self.logger.info(
-                    "Skipping automatic plugin config for SensorThings layers of theme '%s': "
-                    "sensorThingsTool plugin config is already present" % service_name
+                    f"Skipping automatic plugin config for SensorThings layers of theme '{service_name}': "
+                    "sensorThingsTool plugin config is already present"
                 )
 
         return plugin_data
@@ -1199,7 +1194,7 @@ class MapViewerConfig(ServiceConfig):
             with open(target_path, 'w') as f:
                 f.write(index_contents)
         except Exception as e:
-            self.logger.error("Could not copy QWC2 index.html:\n%s" % e)
+            self.logger.error(f"Could not copy QWC2 index.html:\n{e!s}")
 
 
     # Permissions
@@ -1210,7 +1205,6 @@ class MapViewerConfig(ServiceConfig):
 
         :param str role: Role name
         """
-        background_layers = []
 
         # TODO: get permissions and restrictions from ConfigDB
         #       everything permitted to public role for now
@@ -1221,10 +1215,7 @@ class MapViewerConfig(ServiceConfig):
         themes_config = self.themes_reader.themes_config
         themes_config_themes = themes_config.get('themes', {})
 
-        for bg_layer in themes_config_themes.get('backgroundLayers', []):
-            background_layers.append(bg_layer.get('name'))
-
-        return background_layers
+        return [bg_layer.get('name') for bg_layer in themes_config_themes.get('backgroundLayers', [])]
 
     def permitted_plugin_data_resources(self, role, session):
         """Return permitted plugin data resources from ConfigDB.
@@ -1238,17 +1229,13 @@ class MapViewerConfig(ServiceConfig):
         plugin_permissions = []
 
         # collect role permissions from ConfigDB
-        for plugin, plugin_data in self.permitted_resources(
-            'plugin_data', role, session
-        ).items():
+        for plugin, plugin_data in self.permitted_resources('plugin_data', role, session).items():
             # add permitted plugin data resources grouped by plugin
             # NOTE: use ordered keys
             plugin_permission = OrderedDict()
             plugin_permission['name'] = plugin
-            plugin_permission['resources'] = sorted(list(plugin_data.keys()))
+            plugin_permission['resources'] = sorted(plugin_data.keys())
             plugin_permissions.append(plugin_permission)
 
         # order by plugin name
-        return sorted(
-            plugin_permissions, key=lambda plugin: plugin.get('name')
-        )
+        return sorted(plugin_permissions, key=lambda plugin: plugin.get('name'))

@@ -1,30 +1,29 @@
 import argparse
-from collections import OrderedDict
-from datetime import datetime
 import threading
+from datetime import datetime
 
 from config_generator.config_generator import ConfigGenerator
 
 
-class Logger():
+class Logger:
     """Simple logger class"""
     def debug(self, msg):
-        print("[%s] \033[36mDEBUG: %s\033[0m" % (self.timestamp(), msg))
+        print(f"[{self.timestamp()}] \033[36mDEBUG: {msg}\033[0m")
 
     def info(self, msg):
-        print("[%s] INFO: %s" % (self.timestamp(), msg))
+        print(f"[{self.timestamp()}] INFO: {msg}")
 
     def warning(self, msg):
-        print("[%s] \033[33mWARNING: %s\033[0m" % (self.timestamp(), msg))
+        print(f"[{self.timestamp()}] \033[33mWARNING: {msg}\033[0m")
 
     def warn(self, msg):
         self.warning(msg)
 
     def error(self, msg):
-        print("[%s] \033[31mERROR: %s\033[0m" % (self.timestamp(), msg))
+        print(f"[{self.timestamp()}] \033[31mERROR: {msg}\033[0m")
 
     def critical(self, msg):
-        print("[%s] \033[91mCRITICAL: %s\033[0m" % (self.timestamp(), msg))
+        print(f"[{self.timestamp()}] \033[91mCRITICAL: {msg}\033[0m")
 
     def timestamp(self):
         return datetime.now()
