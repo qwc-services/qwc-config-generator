@@ -49,6 +49,13 @@ class PermissionsTests(unittest.TestCase):
             with open('qwc-docker/volumes/config-in/default/tenantConfig.json') as fh:
                 data = json.load(fh)
 
+            # Remove legacy featureInfo, legend and print sections
+            # FIXME: remove as soon as qwc-docker sample config has removed these
+            data["services"] = [
+                serviceConfig for serviceConfig in data["services"]
+                if serviceConfig["name"] not in ["featureInfo", "legend", "print"]
+            ]
+
             data["config"].update(generator_config)
             data["config"]["validate_schema"] = False
             data["config"]["default_qgis_server_url"] = "http://localhost:8001/ows"
