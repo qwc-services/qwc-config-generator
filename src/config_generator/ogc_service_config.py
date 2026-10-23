@@ -75,7 +75,29 @@ class OGCServiceConfig(ServiceConfig):
         # collect WFS service resources from capabilities
         resources['wfs_services'] = self.wfs_services()
 
+        # merge additional resources
+        for add_entry in self.service_config.get('resources', {}).get('wms_services', []):
+            wms_service = next(filter(lambda entry: entry['name'] == add_entry['name'], resources['wms_services']), None)
+            if wms_service:
+                self.__merge_resources(wms_service["root_layer"], add_entry.get("root_layer", {}))
+        for add_entry in self.service_config.get('resources', {}).get('wfs_services', []):
+            wfs_service = next(filter(lambda entry: entry['name'] == add_entry['name'], resources['wfs_services']), None)
+            if wfs_service:
+                self.__merge_resources(wms_service, add_entry.get("root_layer", {}))
+
         return config
+
+    def __merge_resources(self, base_entry, add_entry):
+        """Recursively merge resources collected from capabilitites with additional resources.
+        """
+        # Overwrite all keys except "layers"
+        self.logger.debug('Merging ' + add_entry['name'])
+        base_entry.update({k: v for k, v in add_entry.items() if k != "layers"})
+        # Recurse to children
+        add_child_layers = {layer['name']: layer for layer in add_entry.get('layers', [])}
+        for child_layer in base_entry.get("layers", []):
+            if add_child_layer := add_child_layers.get(child_layer['name']):
+                self.__merge_resources(child_layer, add_child_layer)
 
     def permissions(self, role):
         """Return service permissions for a role.
@@ -170,9 +192,14 @@ class OGCServiceConfig(ServiceConfig):
         else:
             # layer
             if 'attributes' in layer:
-                wms_layer['attributes'] = {k: v['alias'] for k, v in layer['attributes'].items()}
+                wms_layer['attributes'] = [
+                    {"name": k, "alias": v['alias']} for k, v in layer['attributes'].items()
+                ]
 
             wms_layer['queryable'] = layer.get('queryable', False)
+
+            if 'display_field' in layer:
+                wms_layer['display_field'] = layer['display_field']
 
             if layer_metadata.get(layer['name'], {}).get('editable') == True:
                 edit_layers.append(layer['name'])
@@ -207,7 +234,9 @@ class OGCServiceConfig(ServiceConfig):
                 wfs_layer = OrderedDict()
 
                 wfs_layer['name'] = layer_cap['name']
-                wfs_layer['attributes'] = layer_cap['attributes']
+                wfs_layer['attributes'] = [
+                    {"name": k, "alias": v} for k, v in layer_cap['attributes'].items()
+                ]
 
                 wfs_layers.append(wfs_layer)
 
