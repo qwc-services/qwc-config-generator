@@ -44,9 +44,10 @@ class PermissionsTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdirpath:
             os.makedirs(os.path.join(tmpdirpath, "config-in", "default"))
             os.makedirs(os.path.join(tmpdirpath, "config", "default"))
+            qwc_docker_dir = os.getenv("QWC_DOCKER_DIR", "qwc-docker")
 
             # Copy and adjust tenantConfig.json
-            with open('qwc-docker/volumes/config-in/default/tenantConfig.json') as fh:
+            with open(f'{qwc_docker_dir}/volumes/config-in/default/tenantConfig.json') as fh:
                 data = json.load(fh)
 
             # Remove legacy featureInfo, legend and print sections
@@ -59,8 +60,8 @@ class PermissionsTests(unittest.TestCase):
             data["config"].update(generator_config)
             data["config"]["validate_schema"] = False
             data["config"]["default_qgis_server_url"] = "http://localhost:8001/ows"
-            data["config"]["qgis_projects_base_dir"] = "qwc-docker/volumes/qgs-resources"
-            data["config"]["qgis_projects_scan_base_dir"] = "qwc-docker/volumes/qgs-resources/scan"
+            data["config"]["qgis_projects_base_dir"] = f"{qwc_docker_dir}/volumes/qgs-resources"
+            data["config"]["qgis_projects_scan_base_dir"] = f"{qwc_docker_dir}/volumes/qgs-resources/scan"
             for serviceConfig in data["services"]:
                 if serviceConfig["name"] == "mapViewer":
                     serviceConfig["config"]["qwc2_path"] = os.path.join(tmpdirpath, "qwc2")
@@ -75,7 +76,7 @@ class PermissionsTests(unittest.TestCase):
             # Copy index.html, config.json, themesConfig.json
             for fileName in ["config.json", "index.html", "themesConfig.json"]:
                 shutil.copyfile(
-                    os.path.join('qwc-docker', 'volumes', 'config-in', 'default', fileName),
+                    os.path.join(qwc_docker_dir, 'volumes', 'config-in', 'default', fileName),
                     os.path.join(tmpdirpath, "config-in", "default", fileName)
                 )
 

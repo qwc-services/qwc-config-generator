@@ -45,7 +45,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r requirements.txt
           until PGSERVICEFILE=$PWD/qwc-docker/pg_service_local.conf psql service=qwc_configdb -c "select 1" > /dev/null 2>&1; do echo "Waiting for postgres server..."; sleep 1; done
-          PGSERVICEFILE=$PWD/qwc-docker/pg_service_local.conf PYTHONPATH=$PWD/src python3 test.py
+          PGSERVICEFILE=$PWD/qwc-docker/pg_service_local.conf PYTHONPATH=$PWD/src QWC_DOCKER_DIR=$PWD/qwc-docker python3 test.py
 
       - name: Validate schema
         run: |
