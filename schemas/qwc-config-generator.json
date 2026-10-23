@@ -151,7 +151,8 @@
         "default_qgis_server_url",
         "config_db_url",
         "qgis_projects_base_dir"
-      ]
+      ],
+      "additionalProperties": false
     },
     "services": {
       "title": "Service configs",
