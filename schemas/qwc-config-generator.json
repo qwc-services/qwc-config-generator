@@ -114,10 +114,6 @@
           "description": "Skip group layers containing print layers. Default: `false`",
           "type": "boolean"
         },
-        "layer_opacities": {
-          "description": "Layer opacity values for QGIS <= 3.10. Default: `{}`",
-          "type": "object"
-        },
         "project_settings_read_timeout": {
           "description": "Timeout for GetProjectSettings, GetCapabilities and DescribeFeatureType requests, in seconds. Default: `60`",
           "type": "number"

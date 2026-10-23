@@ -36,9 +36,6 @@ class CapabilitiesReader():
             'qgis_server_url_tenant_suffix', ''
         ).strip('/')
 
-        # layer opacity values for QGIS <= 3.10 from ConfigGenerator config
-        self.layer_opacities = generator_config.get("layer_opacities", {})
-
         # Skip group layers containing print layers
         self.skip_print_layer_groups = generator_config.get(
             'skip_print_layer_groups', False)
@@ -415,10 +412,7 @@ class CapabilitiesReader():
         elif layer.get('opacity'):
             wms_layer['opacity'] = int(float(layer.get("opacity")) * 255)
         else:
-            # custom layer opacities (default: 255)
-            # name = getChildElementValue(layer, [np['ns'] + "Name"], ns)
-            opacity = self.layer_opacities.get(layer_name, 255)
-            wms_layer['opacity'] = opacity
+            wms_layer['opacity'] = 255
 
         minScale = layer.find('%sMinScaleDenominator' % np, ns)
         maxScale = layer.find('%sMaxScaleDenominator' % np, ns)
