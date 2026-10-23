@@ -131,6 +131,7 @@ class QGSReader:
             "print_templates": self.__print_templates(root, shortname_map, theme_item, global_print_layouts),
             "visibility_presets": self.__visibility_presets(root, theme_item, shortname_id_map, geom_types),
             "variables": self.__project_variables(root),
+            "view_settings": self.__project_view_settings(root),
             "layer_metadata": self.__layer_metadata(
                 root, shortname_map, map_prefix, edit_datasets, relations, theme_item, qgs_dir
             )
@@ -390,6 +391,15 @@ class QGSReader:
                 if element.text.startswith('qwc_'):
                     variables[element.text] = parent.find(f'./variableValues/value[{i+1}]').text
         return variables
+
+    def __project_view_settings(self, root):
+        """ Read project View settings from QGS. """
+        viewSettings = OrderedDict()
+        parent = root.find('./ProjectViewSettings')
+        if parent is not None:
+            if parent.get('UseProjectScales', '0') == '1':
+                viewSettings['scales'] = [int(element.get('Value')) for element in parent.findall('./Scales/Scale') if element.get('Value') is not None]
+        return viewSettings
 
     def __print_templates(self, root, shortname_map, theme_item, global_print_layouts):
         """ Collect print templates from QGS and merge with global print layouts. """

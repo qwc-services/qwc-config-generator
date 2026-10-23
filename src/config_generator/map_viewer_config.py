@@ -423,6 +423,7 @@ class MapViewerConfig(ServiceConfig):
         internal_print_layers = cap.get('internal_print_layers', [])
         visibilityPresets = self.themes_reader.project_metadata(service_name)['visibility_presets']
         lockedPreset = visibilityPresets.get(cfg_item.get('lockedVisibilityPreset'))
+        viewSettings = self.themes_reader.project_metadata(service_name)['view_settings']
 
         # get search layers from searchProviders
         search_providers = cfg_item.get('searchProviders', themes_config.get('defaultSearchProviders', []))
@@ -584,6 +585,10 @@ class MapViewerConfig(ServiceConfig):
         self.set_optional_config(cfg_item, 'version', item)
         self.set_optional_config(cfg_item, 'visibility', item)
         self.set_optional_config(cfg_item, 'watermark', item)
+
+        # View settings (predefined scales in project)
+        if viewSettings.get('scales'):
+            item['scales'] = viewSettings['scales']
 
         if not cfg_item.get('wmsOnly', False):
             item['thumbnail'] = self.get_thumbnail(cfg_item, service_name, cap, assets_dir)
