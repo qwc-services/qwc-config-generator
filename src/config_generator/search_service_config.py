@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from .permissions_query import PermissionsQuery
 from .service_config import ServiceConfig
 
@@ -32,7 +30,7 @@ class SearchServiceConfig(ServiceConfig):
         cfg_resources = self.service_config.get('resources', {})
 
         # get resources directly from service config
-        resources = OrderedDict()
+        resources = {}
         resources['facets'] = cfg_resources.get('facets', {})
         config['resources'] = resources
 
@@ -44,7 +42,7 @@ class SearchServiceConfig(ServiceConfig):
         :param str role: Role name
         """
         # NOTE: use ordered keys
-        permissions = OrderedDict()
+        permissions = {}
 
         if 'permissions' not in self.service_config:
             # collect permissions from ConfigDB

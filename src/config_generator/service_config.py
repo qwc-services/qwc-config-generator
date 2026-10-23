@@ -1,6 +1,3 @@
-from collections import OrderedDict
-
-
 class ServiceConfig:
     """ServiceConfig base class
 
@@ -32,8 +29,7 @@ class ServiceConfig:
 
         Implement in subclass
         """
-        # NOTE: use ordered keys
-        config = OrderedDict()
+        config = {}
         config['$schema'] = self.schema
         config['service'] = self.service_name_in_config or self.service_name
         # additional service config

@@ -2,7 +2,6 @@ import json
 import os
 import re
 import tempfile
-from collections import OrderedDict
 from concurrent.futures import CancelledError
 from datetime import UTC, datetime
 from logging import Logger as Log
@@ -142,7 +141,7 @@ class ConfigGenerator:
         try:
             with open(config_file, encoding='utf-8') as f:
                 # parse config JSON with original order of keys
-                config = json.load(f, object_pairs_hook=OrderedDict)
+                config = json.load(f)
         except Exception as e:
             msg = f"Error loading ConfigGenerator config file {config_file}:\n{e}"
             self.logger.critical(msg)
@@ -176,7 +175,7 @@ class ConfigGenerator:
             try:
                 with open(config_template_path, encoding='utf-8') as fh:
                     config_template_data = fh.read().replace('$tenant$', self.tenant)
-                    config_template = json.loads(config_template_data, object_pairs_hook=OrderedDict)
+                    config_template = json.loads(config_template_data)
 
                     # Handle themesConfig if it has also been templated
                     themes_config_template = config_template.get("themesConfig", None)
@@ -395,7 +394,7 @@ class ConfigGenerator:
             self.logger.info(f"Reading viewer config '{viewer_config_file}'")
             with open(viewer_config_file, encoding='utf-8') as f:
                 # parse config JSON with original order of keys
-                viewer_config = json.load(f, object_pairs_hook=OrderedDict)
+                viewer_config = json.load(f)
         except Exception as e:
             msg = f"Error loading viewer config file {viewer_config_file}:\n{e}"
             self.logger.critical(msg)
@@ -410,7 +409,7 @@ class ConfigGenerator:
             try:
                 with open(viewer_config_template_path, encoding='utf-8') as fh:
                     viewer_config_template_data = fh.read().replace('$tenant$', self.tenant)
-                    viewer_config_template = json.loads(viewer_config_template_data, object_pairs_hook=OrderedDict)
+                    viewer_config_template = json.loads(viewer_config_template_data)
 
                     viewer_config_plugins = {}
                     viewer_config_template_plugins = {}
@@ -536,7 +535,7 @@ class ConfigGenerator:
         for resource_type in custom_resource_types:
             for role in permissions['roles']:
 
-                res_permissions = OrderedDict()
+                res_permissions = {}
                 with self.config_models.session() as session:
                     permitted_resources = permissions_query.permitted_resources
                     resources = permitted_resources(resource_type, role['role'], session).keys()
@@ -667,7 +666,7 @@ class ConfigGenerator:
             instance = error.instance
             if isinstance(error.instance, dict):
                 # get first level of properties of concerned subconfig
-                instance = OrderedDict()
+                instance = {}
                 for key, value in error.instance.items():
                     if isinstance(value, dict) and value.keys():
                         first_value_key = next(iter(value.keys()))
@@ -738,7 +737,7 @@ class ConfigGenerator:
                     # Search if dir is already a group
                     if not list(filter(lambda group: group["title"] == item.name, groups)):
                         self.logger.info(f"Create group {item.name} in themes configuration")
-                        group = OrderedDict()
+                        group = {}
                         group["title"] = item.name
                         group["items"] = []
                         group["groups"] = []
@@ -751,7 +750,7 @@ class ConfigGenerator:
                     # Search if dir is already a group in group parent
                     if not list(filter(lambda group: group["title"] == item.name, group_parent["groups"])):
                         self.logger.info(f"Create group {item.name} in themes configuration group {group_parent['title']}")
-                        group = OrderedDict()
+                        group = {}
                         group["title"] = item.name
                         group["items"] = []
                         group["groups"] = []
@@ -770,7 +769,7 @@ class ConfigGenerator:
                     continue
 
                 # Add to themes items
-                theme_item = OrderedDict()
+                theme_item = {}
                 theme_item["url"] = wmspath
                 theme_item["backgroundLayers"] = themes_config.get(
                     "defaultBackgroundLayers", [])
@@ -839,7 +838,7 @@ class ConfigGenerator:
                 # Read ConfigGenerator config file
                 try:
                     with open(tenant_config_path, encoding='utf-8') as fh:
-                        tenant_config = json.load(fh, object_pairs_hook=OrderedDict)
+                        tenant_config = json.load(fh)
                 except OSError as e:
                     self.logger.error(f"Error reading tenantConfig.json: {e.strerror}")
                 if tenant_config["themesConfig"] != themes_config:
@@ -873,7 +872,7 @@ class ConfigGenerator:
 
         :param str map_name: Map name
         """
-        map_details = OrderedDict()
+        map_details = {}
         map_details['map'] = map_name
         map_details['layers'] = []
 

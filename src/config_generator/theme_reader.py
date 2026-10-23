@@ -1,5 +1,4 @@
 import os
-from collections import OrderedDict
 from pathlib import Path
 from urllib.parse import urlparse
 from xml.etree import ElementTree
@@ -38,7 +37,7 @@ class ThemeReader:
         self.viewer_languages = viewer_languages
 
         # Dictionary storing theme metadata
-        self.theme_metadata = OrderedDict()
+        self.theme_metadata = {}
 
 
         self.capabilities_reader = CapabilitiesReader(config, logger, use_cached_project_metadata, cache_dir)

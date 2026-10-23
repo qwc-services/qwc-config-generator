@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from .permissions_query import PermissionsQuery
 from .service_config import ServiceConfig
 
@@ -32,7 +30,7 @@ class ExtServiceConfig(ServiceConfig):
         config['config'] = self.service_config.get('config', {})
 
         # service resources
-        config['resources'] = OrderedDict(self.service_config.get('resources', {}))
+        config['resources'] = self.service_config.get('resources', {})
 
         return config
 
@@ -41,7 +39,7 @@ class ExtServiceConfig(ServiceConfig):
 
         :param str role: Role name
         """
-        permissions = OrderedDict()
+        permissions = {}
 
         # collect permissions from ConfigDB
         with self.config_models.session() as session:
