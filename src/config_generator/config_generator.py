@@ -19,14 +19,11 @@ from qwc_services_core.runtime_config import RuntimeConfig
 from .theme_reader import ThemeReader
 from .data_service_config import DataServiceConfig
 from .ext_service_config import ExtServiceConfig
-from .feature_info_service_config import FeatureInfoServiceConfig
 from .map_viewer_config import MapViewerConfig
 from .ogc_service_config import OGCServiceConfig
 from .permissions_config import PermissionsConfig
-from .print_service_config import PrintServiceConfig
 from .search_service_config import SearchServiceConfig
 from .document_service_config import DocumentServiceConfig
-from .legend_service_config import LegendServiceConfig
 from .mapinfo_service_config import MapInfoServiceConfig
 from .service_config import ServiceConfig
 from .permissions_query import PermissionsQuery
@@ -340,15 +337,6 @@ class ConfigGenerator():
                 self.service_config('mapViewer'), self.logger,
                 use_cached_project_metadata, capabilities_cache_dir
             ),
-            'featureInfo': FeatureInfoServiceConfig(
-                generator_config, self.theme_reader, self.config_models,
-                self.schema_urls.get('featureInfo'),
-                self.service_config('featureInfo'), self.logger
-            ),
-            'print': PrintServiceConfig(
-                self.theme_reader, self.schema_urls.get('print'),
-                self.service_config('print'), self.logger
-            ),
             'search': SearchServiceConfig(
                 self.config_models, self.schema_urls.get('search'),
                 self.service_config('search'), self.logger
@@ -356,11 +344,6 @@ class ConfigGenerator():
             'document': DocumentServiceConfig(
                 generator_config, self.config_models, self.schema_urls.get('document'),
                 self.service_config('document'), self.logger
-            ),
-            'legend': LegendServiceConfig(
-                generator_config, self.theme_reader, self.config_models,
-                self.schema_urls.get('legend'), self.service_config('legend'),
-                self.logger
             ),
             'data': DataServiceConfig(
                 generator_config, self.theme_reader, self.config_models,
