@@ -284,9 +284,9 @@ jsonpath-ng==1.8.0 ; python_full_version < '3.11' \
     --hash=sha256:54252968134b5e549ea5b872f1df1168bd7defe1a52fed5a358c194e1943ddc3 \
     --hash=sha256:b8dde192f8af58d646fc031fac9c99fe4d00326afc4148f1f043c601a8cfe138
     # via qwc-config-generator
-jsonpath-ng==1.13.0 ; python_full_version >= '3.11' \
-    --hash=sha256:da54eff64eef303b90a8491f50c607e6beb2eb4a6e66828edab948766d40c531 \
-    --hash=sha256:f58e7f88cdd2eb04a402c0d542e7d6db71909e521f4c23c62f4d2ee73266361e
+jsonpath-ng==1.14.0 ; python_full_version >= '3.11' \
+    --hash=sha256:748ffe4fce1a5f7f67f5414206ab4919bab99f800598de1f60df280a211d71df \
+    --hash=sha256:8c8b0b32c24421ba150621863c6a943e84861edbe6a4414261d1ad7cba7828bc
     # via qwc-config-generator
 jsonschema==4.25.1 \
     --hash=sha256:3fba0169e345c7175110351d456342c364814cfcf3b964ba4587f22915230a63 \
