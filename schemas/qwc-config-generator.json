@@ -58,6 +58,10 @@
           "type": "string",
           "format": "uri"
         },
+        "qgis_server_url_tenant_suffix": {
+          "description": "Suffix to default_qgis_server_url to tenant data. I.e. projects will be loaded from `<qgis_projects_base_dir>/<qgis_server_url_tenant_suffix>`.",
+          "type": "string"
+        },
         "qgis_project_extension": {
           "description": "The QGIS project file extension to look for. Default: `.qgs`",
           "type": "string"
