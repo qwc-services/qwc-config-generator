@@ -9,6 +9,8 @@ from xml.etree import ElementTree
 
 import requests
 
+from .cache_utils import cached_file_valid, stamp_cached_file
+
 
 class CapabilitiesReader:
     """CapabilitiesReader class
@@ -42,10 +44,10 @@ class CapabilitiesReader:
         self.have_get_translations = None
 
 
-    def fetch_cached(self, request_url, params, cache_name, description, silent=False):
+    def fetch_cached(self, request_url, params, cache_name, description, silent=False, project_mtime=None):
         document = None
         cache_file = os.path.join(self.cache_dir, request_url.replace('/', '_').replace(':', '_') + cache_name)
-        if self.use_cached_project_metadata:
+        if self.use_cached_project_metadata and cached_file_valid(cache_file, project_mtime):
             try:
                 with open(cache_file) as fh:
                     document = fh.read()
@@ -73,17 +75,19 @@ class CapabilitiesReader:
                 os.makedirs(os.path.dirname(cache_file), exist_ok=True)
                 with open(cache_file, "w") as fh:
                     fh.write(document.decode('utf-8'))
+                stamp_cached_file(cache_file, project_mtime)
             except Exception as e:
                 self.logger.debug(f"Failed to store {description} for {request_url} in cache: {e!s}")
 
         return document
 
-    def read_wms_service_capabilities(self, service_name, item, themes_config):
+    def read_wms_service_capabilities(self, service_name, item, themes_config, project_mtime=None):
         """Load and parse WMS GetProjectSettings for a theme item.
 
         :param str service_name: service name
         :param object item: theme item
         :param object themes_config: themes config
+        :param int project_mtime: project modification time, which cached metadata must match
         """
 
         try:
@@ -98,7 +102,9 @@ class CapabilitiesReader:
                 'REQUEST': 'GetProjectSettings',
                 'CLEARCACHE': '1'
             }
-            document = self.fetch_cached(full_url, params, "WMS_GetProjectSettings", "WMS GetProjectSettings")
+            document = self.fetch_cached(
+                full_url, params, "WMS_GetProjectSettings", "WMS GetProjectSettings", project_mtime=project_mtime
+            )
             if not document:
                 return {}
 
@@ -425,13 +431,14 @@ class CapabilitiesReader:
 
         return wms_layer
 
-    def read_wfs_service_capabilities(self, service_name, item):
+    def read_wfs_service_capabilities(self, service_name, item, project_mtime=None):
         """Load and parse WFS GetCapabilities for a theme item.
 
         NOTE: returns empty result if WFS does not contains any layers
 
         :param str service_name: service name
         :param object item: theme item
+        :param int project_mtime: project modification time, which cached metadata must match
         """
         try:
             # get GetProjectSettings
@@ -445,7 +452,9 @@ class CapabilitiesReader:
                 'REQUEST': 'GetCapabilities',
                 'CLEARCACHE': '1'
             }
-            document = self.fetch_cached(full_url, params, "WFS_GetCapabilities", "WFS GetCapabilities")
+            document = self.fetch_cached(
+                full_url, params, "WFS_GetCapabilities", "WFS GetCapabilities", project_mtime=project_mtime
+            )
             if not document:
                 return {}
 
@@ -519,7 +528,7 @@ class CapabilitiesReader:
             }
 
             # collect WFS layer attributes
-            wfs_layers_attributes = self.collect_wfs_layers_attributes(full_url)
+            wfs_layers_attributes = self.collect_wfs_layers_attributes(full_url, project_mtime)
 
             # collect WFS layers
             wfs_layers = []
@@ -545,12 +554,13 @@ class CapabilitiesReader:
             self.logger.debug(traceback.format_exc())
             return {}
 
-    def collect_wfs_layers_attributes(self, full_url):
+    def collect_wfs_layers_attributes(self, full_url, project_mtime=None):
         """Get all WFS layer attributes from WFS DescribeFeatureType.
 
         Returns dict as {<layer name>: [<attributes>]}
 
         :param str full_url: WFS URL
+        :param int project_mtime: project modification time, which cached metadata must match
         """
         try:
             params = {
@@ -559,7 +569,9 @@ class CapabilitiesReader:
                 'REQUEST': 'DescribeFeatureType',
                 'CLEARCACHE': '1'
             }
-            document = self.fetch_cached(full_url, params, "WFS_DescribeFeatureType", "WFS DescribeFeatureType")
+            document = self.fetch_cached(
+                full_url, params, "WFS_DescribeFeatureType", "WFS DescribeFeatureType", project_mtime=project_mtime
+            )
             if not document:
                 return {}
 
@@ -603,10 +615,11 @@ class CapabilitiesReader:
             self.logger.debug(traceback.format_exc())
             return {}
 
-    def read_project_translations(self, service_name, viewer_languages):
+    def read_project_translations(self, service_name, viewer_languages, project_mtime=None):
         """ Read translations from QGIS Server.
         :param str service_name: service name
         :param list viewer_languages: viewer languages
+        :param int project_mtime: project modification time, which cached metadata must match
 
         """
         if self.have_get_translations is None:
@@ -636,7 +649,7 @@ class CapabilitiesReader:
                     'LANG': language
                 }
                 document = self.fetch_cached(
-                    full_url, params, "GetTranslations_" + language, "GetTranslations " + language, True
+                    full_url, params, "GetTranslations_" + language, "GetTranslations " + language, True, project_mtime
                 )
                 if not document:
                     continue

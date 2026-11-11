@@ -15,8 +15,9 @@ from xml.etree import ElementTree
 from qwc_services_core.database import DatabaseEngine
 from sqlalchemy.sql import text as sql_text
 
+from .cache_utils import cached_file_valid, stamp_cached_file
 from .dnd_form_generator import DnDFormGenerator
-from .qgs_reader_utils import element_attr, element_find_by_attribute, element_text, find_maplayer
+from .qgs_reader_utils import element_attr, element_find_by_attribute, element_text, find_maplayer, pg_project_mtime
 
 
 class QGSReader:
@@ -40,6 +41,10 @@ class QGSReader:
         self.nested_nrels = config.get('generate_nested_nrel_forms', False)
 
         self.qgs_project_cache = {}
+        # Modification times in nanoseconds, truncated to milliseconds as not all file systems store finer times
+        self.qgs_project_mtimes = {}
+        # Modification time of the project of each theme, including the projects it embeds
+        self.theme_mtimes = {}
 
         self.db_engine = DatabaseEngine()
 
@@ -66,6 +71,7 @@ class QGSReader:
         root = self.__read_project(qgs_filename, qgs_path)
         if root is None:
             return None
+        mtimes = [self.qgs_project_mtimes.get(qgs_path)]
 
         # Check if WMSUseLayerIDs is set
         if element_text(root.find('./properties/WMSUseLayerIDs')) == "true" \
@@ -94,6 +100,7 @@ class QGSReader:
                 embedded_qgs_path = os.path.join(os.path.dirname(qgs_path), maplayer.get('project'))
                 embedded_qgs_filename = os.path.relpath(embedded_qgs_path, self.qgs_resources_path)
                 embedded_root = self.__read_project(embedded_qgs_filename, embedded_qgs_path)
+                mtimes.append(self.qgs_project_mtimes.get(embedded_qgs_path))
                 for embedded_maplayer in embedded_root.findall(".//maplayer"):
                     if element_text(embedded_maplayer.find("id")) == maplayer.get("id"):
                         maplayer = embedded_maplayer
@@ -108,6 +115,13 @@ class QGSReader:
                 shortname_map[layername] = shortname
                 shortname_id_map[layerid] = shortname
                 geom_types[layerid] = maplayer.get('wkbType')
+
+        # The project of an embedded group is only referenced in the layer tree
+        for option in root.findall(".//layer-tree-group/customproperties//Option[@name='embedded_project']"):
+            embedded_qgs_path = os.path.join(os.path.dirname(qgs_path), option.get('value'))
+            if os.path.exists(embedded_qgs_path):
+                mtimes.append(os.stat(embedded_qgs_path).st_mtime_ns // 10**6 * 10**6)
+        self.theme_mtimes[map_prefix] = None if None in mtimes else max(mtimes)
 
         relations = {}
         for relation in root.findall('./relations/relation'):
@@ -323,7 +337,7 @@ class QGSReader:
 
                 with qgis_projects_db.connect() as conn:
                     sql = sql_text("""
-                        SELECT content FROM "{schema}"."{table}"
+                        SELECT content, metadata FROM "{schema}"."{table}"
                         WHERE name = :project;
                     """.format(schema=parts['schema'], table="qgis_projects"))
                     result = conn.execute(sql, {
@@ -335,6 +349,7 @@ class QGSReader:
                         self.qgs_project_cache[qgs_path] = None
                         return None
 
+                    self.qgs_project_mtimes[qgs_path] = pg_project_mtime(row['metadata'])
                     qgz = zipfile.ZipFile(io.BytesIO(row['content']))
                     for filename in qgz.namelist():
                         if filename.endswith('.qgs'):
@@ -349,6 +364,7 @@ class QGSReader:
                     self.qgs_project_cache[qgs_path] = None
                     return None
 
+                self.qgs_project_mtimes[qgs_path] = os.stat(qgs_path).st_mtime_ns // 10**6 * 10**6
                 if self.qgs_ext == ".qgz":
 
                     with zipfile.ZipFile(qgs_path, 'r') as qgz:
@@ -1159,8 +1175,9 @@ class QGSReader:
         outputdir = os.path.join(self.assets_dir, 'forms', 'autogen')
         outputfile = os.path.join(outputdir, f"{projectname}_{layername}.ui")
 
+        project_mtime = self.theme_mtimes[map_prefix]
         uipath = None
-        if self.use_cached_project_metadata and os.path.exists(outputfile):
+        if self.use_cached_project_metadata and cached_file_valid(outputfile, project_mtime):
             self.logger.info(f"Using cached edit form {projectname}_{layername}.ui")
             uipath = f":/forms/autogen/{projectname}_{layername}.ui?v={round(time.time())}"
 
@@ -1172,6 +1189,7 @@ class QGSReader:
                 try:
                     os.makedirs(outputdir, exist_ok=True)
                     shutil.copy(formpath, outputfile)
+                    stamp_cached_file(outputfile, project_mtime)
                     self.logger.info(f"Copied edit form to {projectname}_{layername}.ui")
                     uipath = f":/forms/autogen/{projectname}_{layername}.ui?v={round(time.time())}"
                 except Exception as e:
@@ -1194,6 +1212,7 @@ class QGSReader:
                     fh.write(form)
                     self.logger.info(f"Wrote edit form to {projectname}_{layername}.ui")
                     uipath = f":/forms/autogen/{projectname}_{layername}.ui?v={round(time.time())}"
+                stamp_cached_file(outputfile, project_mtime)
             except Exception as e:
                 self.logger.warning(f"Failed to write edit form: {e!s}")
 

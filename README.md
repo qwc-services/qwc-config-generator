@@ -99,7 +99,7 @@ Generate permissions file:
 
 Additionally, the following command line args may be specified:
 
-- `--use_cached_project_metadata=1`: Whether to use cached project metadata
+- `--use_cached_project_metadata=1`: Whether to use cached project metadata. The cached metadata of a theme (capabilities, translations, edit forms and thumbnails) is reused unless the modification time of its QGIS project, or of a project it embeds, has changed. Changes outside the project files, such as a new column in a database table, an edited `.ui` form file, a change in an external WMS/WMTS service or a QGIS Server upgrade, need a run without this option.
 - `--force_readonly_datasets=1`: Whether to force read-only dataset permissions
 
 ### Service interface
@@ -128,7 +128,7 @@ Generate both service configs and permissions for `default` tenant:
 
 Additionally, the following query parameters may be specified:
 
-- `use_cached_project_metadata=1`: Whether to use cached project metadata
+- `use_cached_project_metadata=1`: Whether to use cached project metadata, see above
 - `force_readonly_datasets=1`: Whether to force read-only dataset permissions
 
 Watch config generator task status:

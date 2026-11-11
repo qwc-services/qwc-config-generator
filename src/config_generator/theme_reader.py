@@ -133,15 +133,22 @@ class ThemeReader:
 
         self.logger.info(f"<b>Reading theme {url}</b>")
 
-        wms_capabilities = self.capabilities_reader.read_wms_service_capabilities(service_name, item, self.themes_config)
-        self.check_cancelled()
-
-        wfs_capabilities = self.capabilities_reader.read_wfs_service_capabilities(service_name, item)
-        self.check_cancelled()
-
-        project_translations = self.capabilities_reader.read_project_translations(service_name, self.viewer_languages)
+        # Read the project first, as cached metadata is only reused if the project was not modified since
         project_metadata = self.qgs_reader.read(
             service_name, item, self.__get_edit_datasets(service_name), self.global_print_layouts
+        )
+        project_mtime = self.qgs_reader.theme_mtimes.get(service_name)
+
+        wms_capabilities = self.capabilities_reader.read_wms_service_capabilities(
+            service_name, item, self.themes_config, project_mtime
+        )
+        self.check_cancelled()
+
+        wfs_capabilities = self.capabilities_reader.read_wfs_service_capabilities(service_name, item, project_mtime)
+        self.check_cancelled()
+
+        project_translations = self.capabilities_reader.read_project_translations(
+            service_name, self.viewer_languages, project_mtime
         )
 
         self.theme_metadata[service_name] = {
@@ -151,6 +158,7 @@ class ThemeReader:
             'wfs_capabilities': wfs_capabilities,
             'project_translations': project_translations,
             'project_metadata': project_metadata,
+            'project_mtime': project_mtime,
             'hidden_in_ows_landing_page': item.get('hidden_in_ows_landing_page', False)
         }
         # Use title specified in themes configuration
@@ -217,6 +225,10 @@ class ThemeReader:
     def project_metadata(self, service_name):
         """ Return the QGS project metadata for the specified OWS service. """
         return self.theme_metadata.get(service_name, {}).get('project_metadata', {})
+
+    def project_mtime(self, service_name):
+        """ Return the QGS project modification time for the specified OWS service. """
+        return self.theme_metadata.get(service_name, {}).get('project_mtime')
 
     def project_hidden_in_landing_page(self, service_name):
         """ Return whether the project should be hidden in the langing page. """
