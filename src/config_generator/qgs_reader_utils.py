@@ -1,5 +1,14 @@
+from datetime import datetime, timedelta
 from xml.etree import ElementTree
 
+
+def pg_project_mtime(metadata):
+    """ Return the modification time of a project stored in PostgreSQL, from the metadata written by QGIS. """
+    try:
+        mtime = datetime.fromisoformat(metadata['last_modified_time']) - datetime(1970, 1, 1)
+        return mtime // timedelta(milliseconds=1) * 10**6
+    except (TypeError, KeyError, ValueError):
+        return None
 
 def element_attr(element, attr, default=None):
     """ Safely queries the attribute of an element which may be none. """

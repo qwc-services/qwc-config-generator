@@ -1,5 +1,6 @@
 import unittest
 
+from tests.cache_tests import *
 from tests.permissions_tests import *
 from tests.print_layout_tests import *
 
