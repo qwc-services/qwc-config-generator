@@ -39,6 +39,7 @@ class OGCServiceConfig(ServiceConfig):
         self.permissions_default_allow = generator_config.get('permissions_default_allow', True)
         self.inherit_info_permissions = generator_config.get('inherit_info_permissions', False)
         self.default_map_role = generator_config.get('default_map_role', None)
+        self.wfs_service_permissions_default_allow = generator_config.get('wfs_service_permissions_default_allow', False)
 
     def config(self):
         """Return service config."""
@@ -664,6 +665,7 @@ class OGCServiceConfig(ServiceConfig):
 
         # collect public restrictions from ConfigDB
         public_restrictions = {
+            'wfs_service': non_public_resources('wfs_service', session),
             'wfs_layer': non_public_resources('wfs_layer', session),
             'attributes': non_public_resources('wfs_attribute', session)
         }
@@ -723,7 +725,11 @@ class OGCServiceConfig(ServiceConfig):
 
         for service_name in self.themes_reader.wfs_service_names():
             # lookup wfs_service permission (wfs_service restricted by default)
-            service_restricted_for_public = service_name not in public_permissions['wfs_service']
+            if self.wfs_service_permissions_default_allow:
+                service_restricted_for_public = service_name in public_restrictions['wfs_service']
+            else:
+                service_restricted_for_public = service_name not in public_permissions['wfs_service']
+
             service_permitted_for_role = service_name in role_permissions['wfs_service']
             if service_restricted_for_public and not service_permitted_for_role:
                 # service not permitted
