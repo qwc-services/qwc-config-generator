@@ -412,9 +412,10 @@ class QGSReader:
         """ Read project View settings from QGS. """
         viewSettings = OrderedDict()
         parent = root.find('./ProjectViewSettings')
-        if parent is not None:
-            if parent.get('UseProjectScales', '0') == '1':
-                viewSettings['scales'] = [int(element.get('Value')) for element in parent.findall('./Scales/Scale') if element.get('Value') is not None]
+        if parent is not None and parent.get('UseProjectScales', '0') == '1':
+            viewSettings['scales'] = [
+                int(element.get('Value')) for element in parent.findall('./Scales/Scale') if element.get('Value') is not None
+            ]
         return viewSettings
 
     def __print_templates(self, root, shortname_map, theme_item, global_print_layouts):
@@ -560,6 +561,10 @@ class QGSReader:
 
             # Refresh interval
             layer_metadata["refresh_interval"] = int(maplayer.get('autoRefreshTime', 0))
+
+            # Default style
+            styleManager = maplayer.find('map-layer-style-manager')
+            layer_metadata['default_style'] = styleManager.get('current') if styleManager else None
 
             # Dimensions
             layer_metadata["dimensions"] = {
