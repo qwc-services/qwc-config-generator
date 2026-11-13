@@ -74,7 +74,7 @@ class OGCServiceConfig(ServiceConfig):
         for add_entry in self.service_config.get('resources', {}).get('wfs_services', []):
             wfs_service = next(filter(lambda entry: entry['name'] == add_entry['name'], resources['wfs_services']), None)
             if wfs_service:
-                self.__merge_resources(wms_service, add_entry.get("root_layer", {}))
+                self.__merge_resources(wfs_service, add_entry.get("root_layer", {}))
 
         return config
 
