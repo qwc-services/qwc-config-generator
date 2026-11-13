@@ -148,6 +148,10 @@
         "strip_scan_prefix_from_theme_names": {
           "description": "Whether to strip the scan dir prefix from the generated theme names. Avoids the 'scan/<name>' prefix in the theme ids which appear in the t parameter in the viewer URL. Default: `false`",
           "type": "boolean"
+        },
+        "wfs_service_permissions_default_allow": {
+          "description": "Set whether WFS services are allowed or restricted by default. Example: `false`",
+          "type": "boolean"
         }
       },
       "required": [
