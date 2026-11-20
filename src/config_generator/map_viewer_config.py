@@ -455,10 +455,11 @@ class MapViewerConfig(ServiceConfig):
         layer_titles = {}
         newSearchProviders = []
         autogen_theme_search_provider_expressions = {}
+        haveMapTips = [False]
         for layer in root_layer.get('layers', []):
             sublayer = self.collect_layers(
                 layer, search_layers, 1, collapseLayerGroupsBelowLevel, newExternalLayers, project_metadata, featureReports,
-                lockedPreset, [], layer_titles, newSearchProviders, autogen_theme_search_provider_expressions
+                lockedPreset, [], layer_titles, newSearchProviders, autogen_theme_search_provider_expressions, haveMapTips
             )
             if sublayer:
                 layers.append(sublayer)
@@ -598,9 +599,10 @@ class MapViewerConfig(ServiceConfig):
             # set default theme
             self.default_theme = item['id']
 
+        # Enable mapTips if any layer defines some
+
         if item.get("mapTips", None) is None and themes_config.get("defaultMapTips", False):
-            # Enable mapTips if any layer defines some
-            item['mapTips'] = any(layer.get('mapTips') for layer in layers)
+            item['mapTips'] = haveMapTips[0]
 
         # Collect crs of background layers
         for entry in item.get('backgroundLayers', []):
@@ -751,7 +753,8 @@ class MapViewerConfig(ServiceConfig):
 
     def collect_layers(
         self, layer, search_layers, level, collapseBelowLevel, externalLayers, project_metadata, featureReports,
-        lockedPreset, parentGroups, layer_titles, autogen_search_providers, autogen_theme_search_provider_expressions
+        lockedPreset, parentGroups, layer_titles, autogen_search_providers, autogen_theme_search_provider_expressions,
+        haveMapTips
     ):
         """Recursively collect layer tree from capabilities.
 
@@ -775,7 +778,7 @@ class MapViewerConfig(ServiceConfig):
                 item_sublayer = self.collect_layers(
                     sublayer, search_layers, level + 1, collapseBelowLevel, externalLayers, project_metadata, featureReports,
                     lockedPreset, [*parentGroups, layer['name']], layer_titles, autogen_search_providers,
-                    autogen_theme_search_provider_expressions
+                    autogen_theme_search_provider_expressions, haveMapTips
                 )
                 if item_sublayer:
                     sublayers.append(item_sublayer)
@@ -837,6 +840,7 @@ class MapViewerConfig(ServiceConfig):
             if 'display_field' in layer:
                 item_layer['displayField'] = layer.get('display_field')
             item_layer['mapTips'] = meta.get('mapTips', False)
+            haveMapTips[0] |= item_layer['mapTips']
             item_layer['opacity'] = layer['opacity']
             if 'bbox' in layer:
                 item_layer['bbox'] = {
