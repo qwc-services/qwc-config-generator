@@ -310,7 +310,6 @@ class OGCServiceConfig(ServiceConfig):
                         self.permissions_query.resource_hierarchy(
                             self.permissions_query.resource_restrictions_query('map', self.default_map_role, session).all()
                         )
-                    self.logger.info(role_map_restrictions)
                     role_info_service_restrictions = \
                         self.permissions_query.resource_hierarchy(
                             self.permissions_query.resource_restrictions_query(
